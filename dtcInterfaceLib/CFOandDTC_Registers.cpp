@@ -133,6 +133,8 @@ std::string DTCLib::CFOandDTC_Registers::ReadDesignDate(std::optional<uint32_t> 
 		o << "DTC-";
 	else if(((readData>>28)&0xF) == 0xE)
 		o << "CRVDTC-";
+	else if(((readData>>28)&0xF) == 0xF)
+		o << "TEMP-";
 	o << months[mon-1] << "/" << 
 		((readData>>12)&0xF) << ((readData>>8)&0xF) << "/20" << 
 		// ((readData>>28)&0xF) << 
