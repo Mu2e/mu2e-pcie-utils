@@ -311,8 +311,8 @@ static unsigned long mu2e_ch_reg_offset[2][2] = {{0x2000, 0x0}, {0x2100, 0x100}}
 	{                                                             \
 		u32 Reg = Dma_mReadReg(BaseAddress, REG_DMA_CTRL_STATUS); \
 		Reg |= (DMA_INT_ENABLE | DMA_USER_INT_ENABLE);            \
-		TRACE(TLVL_DEBUG+46,"xdma.h macro Dma_mIntEnable(Base=0x%x): OR'd in 0x%x, writing REG_DMA_CTRL_STATUS 0x%08x",\
-		      BaseAddress, (DMA_INT_ENABLE | DMA_USER_INT_ENABLE), Reg);	\
+		TRACE(TLVL_DEBUG+46,"xdma.h macro Dma_mIntEnable(Base=%p): OR'd in 0x%x, writing REG_DMA_CTRL_STATUS 0x%08x",\
+		      (void*)BaseAddress, (DMA_INT_ENABLE | DMA_USER_INT_ENABLE), Reg); \
 		Dma_mWriteReg(BaseAddress, REG_DMA_CTRL_STATUS, Reg);     \
 	}
 
@@ -331,8 +331,8 @@ static unsigned long mu2e_ch_reg_offset[2][2] = {{0x2000, 0x0}, {0x2100, 0x100}}
 	{                                                             \
 		u32 Reg = Dma_mReadReg(BaseAddress, REG_DMA_CTRL_STATUS); \
 		Reg &= ~(DMA_INT_ENABLE | DMA_USER_INT_ENABLE);           \
-		TRACE(TLVL_DEBUG+47,"xdma.h macro Dma_mIntDisable(Base=0x%x): masked off 0x%x, writing REG_DMA_CTRL_STATUS 0x%08x",\
-		      BaseAddress, (DMA_INT_ENABLE | DMA_USER_INT_ENABLE), Reg);	\
+		TRACE(TLVL_DEBUG+47,"xdma.h macro Dma_mIntDisable(Base=%p): masked off 0x%x, writing REG_DMA_CTRL_STATUS 0x%08x",\
+		      (void*)BaseAddress, (DMA_INT_ENABLE | DMA_USER_INT_ENABLE), Reg); \
 		Dma_mWriteReg(BaseAddress, REG_DMA_CTRL_STATUS, Reg);     \
 	} while (0)
 
@@ -354,8 +354,8 @@ static unsigned long mu2e_ch_reg_offset[2][2] = {{0x2000, 0x0}, {0x2100, 0x100}}
 	{                                                             \
 		u32 Reg0 = Dma_mReadReg(BaseAddress, REG_DMA_CTRL_STATUS); \
 		u32 Reg1 = Reg0 | Mask;                                              \
-		TRACE(TLVL_DEBUG+45,"xdma.h macro Dma_mIntAck(Base=0x%x,Mask=0x%08x): writing REG_DMA_CTRL_STATUS 0x%08x",\
-		      BaseAddress, Mask, Reg1);				\
+		TRACE(TLVL_DEBUG+45,"xdma.h macro Dma_mIntAck(Base=%p,Mask=0x%08x): writing REG_DMA_CTRL_STATUS 0x%08x",\
+		      (void*)BaseAddress, Mask, Reg1);			\
 		Dma_mWriteReg(BaseAddress, REG_DMA_CTRL_STATUS, Reg1);     \
 	}
 
