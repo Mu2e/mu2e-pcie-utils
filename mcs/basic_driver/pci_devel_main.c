@@ -99,7 +99,11 @@ int devl_fs_up(void)
 		return (sts);
 	}
 
+#   if RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION( 9, 4 )
 	devl_dev_class = class_create(THIS_MODULE, "devl_dev");
+#   else
+	devl_dev_class = class_create("devl_dev");
+#   endif	
 
 	cdev_init(&devl_cdev, &devl_file_ops);
 
