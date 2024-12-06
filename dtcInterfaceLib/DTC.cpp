@@ -165,7 +165,7 @@ std::vector<std::unique_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetData(DTC_EventWi
 //	Similart to GetData() but retrieves a SubEvent, as opposed to an Event -- This is appropriate for SW Event building or more basic tests.
 std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(DTC_EventWindowTag when, bool matchEventWindowTag)
 {
-	DTC_TLOG(TLVL_GetData) << "GetSubEventData begin EventWindowTag=" << when.GetEventWindowTag(true) << ", matching=" << (matchEventWindowTag ? "true" : "false");
+	DTC_TLOG(TLVL_GetData) << "GetSubEventData begin EventWindowTag=" << when.GetEventWindowTag(true) << ", doMatching=" << (matchEventWindowTag ? "true" : "false");
 	std::vector<std::unique_ptr<DTC_SubEvent>> output;
 	std::unique_ptr<DTC_SubEvent> packet = nullptr;
 
