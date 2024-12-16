@@ -115,6 +115,11 @@ int mu2e_release(struct inode *inode, struct file *filp)
 	int dtc = iminor(inode);
 	spin_lock(&mu2e_fs_spinlock);
 	mu2e_dtc_count[dtc]--;
+	if (mu2e_dtc_count[dtc] == 0)
+	{
+		inode->i_uid = 0;
+		mark_inode_dirty(inode);
+    }
 	spin_unlock(&mu2e_fs_spinlock);
 	return 0;
 }
