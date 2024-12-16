@@ -41,6 +41,7 @@ struct cdev mu2e_cdev;
 
 static int mu2e_dtc_count[MU2E_MAX_NUM_DTCS] = {0};
 static kuid_t mu2e_dtc_owner[MU2E_MAX_NUM_DTCS] = {{0}};
+static kuid_t root_uid = {{0}};
 static DEFINE_SPINLOCK(mu2e_fs_spinlock);
 
 int mu2e_fs_up()
@@ -117,7 +118,7 @@ int mu2e_release(struct inode *inode, struct file *filp)
 	mu2e_dtc_count[dtc]--;
 	if (mu2e_dtc_count[dtc] == 0)
 	{
-		inode->i_uid = (kuid_t)0;
+		inode->i_uid = root_uid;
 		mark_inode_dirty(inode);
     }
 	spin_unlock(&mu2e_fs_spinlock);
