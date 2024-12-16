@@ -98,7 +98,11 @@ int mu2e_open(struct inode *inode, struct file *filp)
 	}
 
 	if (mu2e_dtc_count[dtc] == 0)
+	{
 		mu2e_dtc_owner[dtc] = current_uid(); /* grab it */
+		inode->i_uid = current_uid();
+		mark_inode_dirty(inode);
+	}
 
 	mu2e_dtc_count[dtc]++;
 	spin_unlock(&mu2e_fs_spinlock);
