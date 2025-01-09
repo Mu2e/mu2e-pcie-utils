@@ -3723,7 +3723,7 @@ void DTCLib::DTC_Registers::SetCFO40MHzClockMarkerEnable(DTC_Link_ID const& link
 	std::bitset<32> data = ReadRegister_(DTC_Register_CFOMarkerEnables);
 	if (link == DTC_Link_ALL)
 	{
-		for (uint8_t i = 0; i < 8; ++i)
+		for (uint8_t i = 0; i < 6; ++i) //just ROC links
 			data[i] = enable;
 	}
 	else

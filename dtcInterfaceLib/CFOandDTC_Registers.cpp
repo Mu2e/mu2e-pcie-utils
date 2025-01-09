@@ -896,7 +896,7 @@ DTCLib::RegisterFormatter DTCLib::CFOandDTC_Registers::FormatJitterAttenuatorCSR
 	form.description = "Jitter Attenuator CSR";
 	form.vals.push_back("<field> : [<value>]"); //first value describes format
 	form.vals.push_back(std::string("JA Source Clock Select: [") + 
-		(JAinputSelect.to_ulong() == 0 ? "from CFO"
+		(JAinputSelect.to_ulong() == 0 ? "from emulated CFO"
 	             : (JAinputSelect.to_ulong() == 1 ? "from RJ45"
 	                         : "Timing Card Selectable (SFP+ or FPGA) Input Clock")) + "]");	
 	form.vals.push_back(std::string("JA in Reset:   [") + (data[0] ? "YES" : "No") + "]");
