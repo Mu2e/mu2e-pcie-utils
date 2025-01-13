@@ -86,6 +86,10 @@ void mu2e_fs_down()
 
 int mu2e_open(struct inode *inode, struct file *filp)
 {
+    // Root doesn't have to ask for permission, and shouldn't lock out anyone
+    if (capable(CAP_DAC_OVERRIDE)) {
+		return 0;
+    }
 	int dtc = iminor(inode);
 
 	spin_lock(&mu2e_fs_spinlock);
@@ -114,6 +118,13 @@ int mu2e_open(struct inode *inode, struct file *filp)
 int mu2e_release(struct inode *inode, struct file *filp)
 {
 	int dtc = iminor(inode);
+
+	// Root doesn't have to ask for permission, and shouldn't lock out anyone
+	if (capable(CAP_DAC_OVERRIDE))
+	{
+		return 0;
+	}
+
 	spin_lock(&mu2e_fs_spinlock);
 	mu2e_dtc_count[dtc]--;
 	if (mu2e_dtc_count[dtc] == 0)
