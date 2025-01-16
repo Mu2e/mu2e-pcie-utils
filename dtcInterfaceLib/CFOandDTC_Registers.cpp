@@ -57,12 +57,12 @@ DTCLib::CFOandDTC_Registers::~CFOandDTC_Registers()
 std::string DTCLib::CFOandDTC_Registers::FormattedRegDump(int width,
 	const std::vector<std::function<RegisterFormatter()>>& regVec)
 {
-	std::string divider(width, '=');
 	formatterWidth_ = width - 27 - 65;
 	if (formatterWidth_ < 28)
-	{
 		formatterWidth_ = 28;
-	}
+
+	std::string divider(formatterWidth_ + 27, '=');
+
 	std::string spaces(formatterWidth_ - 4 - 9, ' ');
 	std::ostringstream o;
 	o << "Register Dump: " << std::endl;
@@ -73,7 +73,7 @@ std::string DTCLib::CFOandDTC_Registers::FormattedRegDump(int width,
 		o << placeholder;
 	}
 	o << "Address | Hex Value  |\nRegister Name " << spaces << "| (Translation)" << std::endl;
-	{ //move address to right-align with values
+	{ //move RegisterFormatter to right-align with values
 		std::string placeholder = "";
 		placeholder.resize(formatterWidth_ , ' ');
 		o << placeholder << " | Decorated Values" << std::endl;
