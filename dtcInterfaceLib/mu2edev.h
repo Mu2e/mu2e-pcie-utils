@@ -72,7 +72,7 @@ public:
 	/// <param name="simMemoryFileName">If using simulated DTC, name of the memory file ("mu2esim.bin")</param>
 	/// <returns>0 on success</returns>
 	int init(DTCLib::DTC_SimMode simMode, int deviceIndex, std::string simMemoryFileName = "mu2esim.bin", const std::string& uid = "");
-	void initDMAEngine();	
+	void initDMAEngine();
 
 	/// <summary>
 	/// Reads data from the DTC.
@@ -93,7 +93,7 @@ public:
 	/// <summary>
 	/// Release all buffers held by software on the given channel
 	/// </summary>
-	/// <param name="chn">Channel to release (DAQ or DCS)</param>	
+	/// <param name="chn">Channel to release (DAQ or DCS)</param>
 	/// <returns>0 on success</returns>
 	int release_all(DTC_DMA_Engine const& chn);
 	/// <summary>
@@ -172,7 +172,7 @@ public:
 	/// Output a small protion of each buffer to stdout until ^C.
 	/// </summary>
 	/// <returns>No value is returned.</returns>
-	void spy( int chn, unsigned flags);
+	void spy(int chn, unsigned flags);
 
 private:
 	// unsigned delta_(int chn, int dir);
@@ -185,13 +185,13 @@ private:
 	int activeDeviceIndex_;
 	static std::atomic<std::thread::id> dcs_lock_held_;
 	static std::atomic<int> dcs_lock_count_;
-	
+
 	std::atomic<long long> deviceTime_;
 	std::atomic<size_t> writeSize_;
 	std::atomic<size_t> readSize_;
 
-	std::string			UID_;
-	FILE*				debugFp_ = 0;
+	std::string UID_;
+	FILE* debugFp_ = 0;
 	std::chrono::steady_clock::time_point lastWriteTime_;
 };
 
