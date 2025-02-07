@@ -18,7 +18,7 @@ int mu2e_mmap(struct file *file, struct vm_area_struct *vma)
 	page2chDirMap(vma->vm_pgoff, ch, dir, map);
 	TRACE(TLVL_DEBUG+4, "mu2e_mmap: vm_pgoff:%lu dtc:%d ch:%d dir:%d map:%d: %p", vma->vm_pgoff, dtc, ch, dir, map,
 		  mu2e_mmap_ptrs[dtc][ch][dir][map]);
-	if (map == MU2E_MAP_META) vma->vm_flags &= ~VM_WRITE;
+	if (map == MU2E_MAP_META) vm_flags_clear(vma, VM_WRITE);
 
 	if (dir == C2S && map == MU2E_MAP_BUFF)
 	{
