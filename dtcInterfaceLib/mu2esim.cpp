@@ -165,26 +165,27 @@ int mu2esim::read_data(int chn, void** buffer, int tmo_ms)
 			if (!ddrFile_->is_open() || ddrFile_->fail())
 			{
 				TLOG(TLVL_ReadData) << "mu2esim::read_data: Simulating DTC data DMA subevent trasfer";
-				uint64_t size = sizeof(header_) + 6*16 + 6*3*16; //subevent header + ROC headers + ROC payloads
 
 				auto ptr = reinterpret_cast<uint8_t*>(dmaData_[chn][swIdx_[chn]]);
 
-				DTC_SubEventHeader header;				
+				DTCLib::DTC_SubEventHeader header;				
+				uint64_t size = sizeof(header) + 6*16 + 6*3*16; //subevent header + ROC headers + ROC payloads
+
 				header.event_tag_low = simDataEWT_++;
-				memcpy(ptr, &header_, sizeof(header_));				
-				SetEventWindowTag(tag);
-				SetEventMode(mode);
-				header_.inclusive_subevent_byte_count = data_size;
+				memcpy(ptr, &header, sizeof(header));				
+				// SetEventWindowTag(tag);
+				// SetEventMode(mode);
+				header.inclusive_subevent_byte_count = size;
 
 
 				TLOG(TLVL_DEBUG + 6) << "Found sub event inclusive byte count as: " <<
-					header_.inclusive_subevent_byte_count << " 0x" << 
-					std::hex << std::setw(4) << std::setfill('0') << header_.inclusive_subevent_byte_count << ". i.e., " << std::dec << std::setw(0) << 
-							(header_.inclusive_subevent_byte_count - sizeof(header_))/16 << " subevent packets.";
+					header.inclusive_subevent_byte_count << " 0x" << 
+					std::hex << std::setw(4) << std::setfill('0') << header.inclusive_subevent_byte_count << ". i.e., " << std::dec << std::setw(0) << 
+							(header.inclusive_subevent_byte_count - sizeof(header))/16 << " subevent packets.";
 
-				ptr += sizeof(header_); //moving ptr past subevent header
+				ptr += sizeof(header); //moving ptr past subevent header
 
-				size_t num_of_packets = (header_.inclusive_subevent_byte_count - sizeof(header_))/16;
+				size_t num_of_packets = (header.inclusive_subevent_byte_count - sizeof(header))/16;
 				size_t packets_per_roc = num_of_packets/6;
 				TLOG(TLVL_DEBUG + 6) << "num_of_packets = " << num_of_packets;
 				TLOG(TLVL_DEBUG + 6) << "packets_per_roc = " << packets_per_roc;
@@ -200,9 +201,9 @@ int mu2esim::read_data(int chn, void** buffer, int tmo_ms)
 					
 					*((uint16_t *)(&(ptr[1*2]))) = 0x8000 | (i << 8) | (5<<4); //packet type Data Header 0x5
 					*((uint16_t *)(&(ptr[2*2]))) = packets_this_roc; //packet count
-					*((uint16_t *)(&(ptr[3*2]))) = tag.GetEventWindowTag(true); //packet count
-					*((uint16_t *)(&(ptr[4*2]))) = tag.GetEventWindowTag(true)>>16; //packet count
-					*((uint16_t *)(&(ptr[5*2]))) = tag.GetEventWindowTag(true)>>32; //packet count
+					*((uint16_t *)(&(ptr[3*2]))) = simDataEWT_; //tag.GetEventWindowTag(true); //packet count
+					*((uint16_t *)(&(ptr[4*2]))) = simDataEWT_ >> 16; //tag.GetEventWindowTag(true)>>16; //packet count
+					*((uint16_t *)(&(ptr[5*2]))) = 0; //tag.GetEventWindowTag(true)>>32; //packet count
 				
 					ptr += 16*1 + 16*packets_this_roc; //move ptr past ROC header + data
 				} //end ROC loop
