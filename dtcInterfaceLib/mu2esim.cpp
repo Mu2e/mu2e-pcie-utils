@@ -164,17 +164,19 @@ int mu2esim::read_data(int chn, void** buffer, int tmo_ms)
 		{
 			if (!ddrFile_->is_open() || ddrFile_->fail())
 			{
-				TLOG(TLVL_ReadData) << "mu2esim::read_data: Simulating DTC data DMA subevent trasfer";
-
+				TLOG(TLVL_ReadData) << "mu2esim::read_data: Simulating DTC data DMA subevent trasfer...";
+				sleep(1);
+				TLOG(TLVL_ReadData) << "mu2esim::read_data: Simulating DTC data DMA subevent trasfer, after sleep.";
+				
 				auto ptr = reinterpret_cast<uint8_t*>(dmaData_[chn][swIdx_[chn]]);
+				ptr += sizeof(uint64_t); //advance past data size
 
 				DTCLib::DTC_SubEventHeader header;				
 				uint64_t size = sizeof(header) + 6*16 + 6*3*16; //subevent header + ROC headers + ROC payloads
 
 				header.event_tag_low = simDataEWT_++;
-				memcpy(ptr, &header, sizeof(header));				
-				// SetEventWindowTag(tag);
-				// SetEventMode(mode);
+				header.event_mode = 1;
+				memcpy(ptr, &header, sizeof(header));								
 				header.inclusive_subevent_byte_count = size;
 
 
@@ -208,6 +210,8 @@ int mu2esim::read_data(int chn, void** buffer, int tmo_ms)
 					ptr += 16*1 + 16*packets_this_roc; //move ptr past ROC header + data
 				} //end ROC loop
 
+				memcpy(dmaData_[chn][swIdx_[chn]], &size, sizeof(uint64_t));
+				bytesReturned = size;
 			} //end generate sim data 
 			else 
 			{
