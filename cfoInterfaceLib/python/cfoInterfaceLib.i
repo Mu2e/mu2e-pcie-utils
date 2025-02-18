@@ -9,6 +9,7 @@
 %include "typemaps.i"
 
 %{
+#include "dtcInterfaceLib/CFOandDTC_Registers.h"
 #include "cfoInterfaceLib/CFO_Registers.h"
 #include "cfoInterfaceLib/CFO.h"
 #include "cfoInterfaceLib/CFO_Compiler.hh"
@@ -23,6 +24,7 @@ using namespace CFOLib;
 // Process symbols in the headers
 //-----------------------------------------------------------------------------
 // %include "mu2e_driver/mu2e_mmap_ioctl.h"
+%include "dtcInterfaceLib/CFOandDTC_Registers.h"
 %include "cfoInterfaceLib/CFO_Registers.h"
 %include "cfoInterfaceLib/CFO.h"
 %include "cfoInterfaceLib/CFO_Compiler.hh"

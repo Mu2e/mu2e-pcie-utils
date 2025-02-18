@@ -46,18 +46,15 @@ add_subdirectory(test)
 
 # Add subdirectories for each language if desired
 
-set(BUILD_PYTHON_INTERFACE $ENV{BUILD_PYTHON_INTERFACE})
-set(BUILD_ROOT_INTERFACE   $ENV{BUILD_ROOT_INTERFACE}  )
-
-if ($ENV{BUILD_PYTHON_INTERFACE})
-   message(-- mu2e_pcie_utils/dtcInterfaceLib::BUILD_PYTHON_INTERFACE=$ENV{BUILD_PYTHON_INTERFACE})
+if (${BUILD_PYTHON_INTERFACE})
+   message(-- mu2e_pcie_utils/dtcInterfaceLib::BUILD_PYTHON_INTERFACE=${BUILD_PYTHON_INTERFACE})
 
    find_package(SWIG REQUIRED)
    include(${SWIG_USE_FILE})
    add_subdirectory(python)
 endif()
 
-if($ENV{BUILD_ROOT_INTERFACE})
+if(${BUILD_ROOT_INTERFACE})
   message(-- mu2e_pcie_utils/dtcInterfaceLib::BUILD_ROOT_INTERFACE=${BUILD_ROOT_INTERFACE})
   add_subdirectory(root)
 endif()
