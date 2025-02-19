@@ -35,12 +35,18 @@ find_package(TRACE 3.17.05 REQUIRED)
 find_package(messagefacility REQUIRED)
 find_package(artdaq_core_mu2e REQUIRED)
 
-set(BUILD_PYTHON_INTERFACE TRUE)
-set(BUILD_ROOT_INTERFACE TRUE)
+set(BUILD_PYTHON_INTERFACE FALSE)
+set(BUILD_ROOT_INTERFACE FALSE)
 
-if(DEFINED BUILD_PYTHON_INTERFACE)
-   find_package(SWIG REQUIRED)
-   include(${SWIG_USE_FILE})
+find_package(canvas-root-io)
+if(${CANVAS_ROOT_IO_FOUND})
+    set(BUILD_ROOT_INTERFACE TRUE)
+endif()
+
+find_package(SWIG)
+if(${SWIG_FOUND})
+	set(BUILD_PYTHON_INTERFACE TRUE)
+	include(${SWIG_USE_FILE})
 endif()
 
 # source
