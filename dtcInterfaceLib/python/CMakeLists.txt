@@ -1,17 +1,10 @@
 # Include python
 find_package(Python COMPONENTS Interpreter Development REQUIRED)
 include_directories(${PYTHON_INCLUDE_PATH}
-                    ../			       
-                    $ENV{$TRACE_INC} 
-                    $ENV{$MESSAGEFACILITY_INC}
-                    $ENV{CETLIB_INC}
-                    $ENV{CETLIB_EXCEPT_INC}
-		    )	
+					../
+				   )	
 
-include(CetCMakeEnv)
-cet_cmake_env()
-
-set(CMAKE_SWIG_FLAGS "-v")
+#set(CMAKE_SWIG_FLAGS "-v")
 set_source_files_properties(dtcInterfaceLib.i PROPERTIES CPLUSPLUS ON USE_TARGET_INCLUDE_DIRECTORIES ON)
 
 # Add swig module

@@ -38,7 +38,7 @@ find_package(artdaq_core_mu2e REQUIRED)
 set(BUILD_PYTHON_INTERFACE FALSE)
 set(BUILD_ROOT_INTERFACE FALSE)
 
-find_package(canvas-root-io)
+find_package(canvas_root_io)
 if(${CANVAS_ROOT_IO_FOUND})
     set(BUILD_ROOT_INTERFACE TRUE)
 endif()
