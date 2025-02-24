@@ -127,7 +127,9 @@ std::string DTCLib::CFOandDTC_Registers::ReadDesignDate(std::optional<uint32_t> 
 		__SS_THROW__;
 		// throw std::runtime_error("Invalid register read for firmware design date: " + std::to_string(mon));
 	}
-	if(((readData>>28)&0xF) == 0xC)
+	if(((readData>>28)&0xF) == 0xA)
+		o << "SIM-";
+	else if(((readData>>28)&0xF) == 0xC)
 		o << "CFO-";
 	else if(((readData>>28)&0xF) == 0xD)
 		o << "DTC-";
