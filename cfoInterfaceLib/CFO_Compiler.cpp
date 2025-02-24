@@ -630,7 +630,7 @@ uint64_t CFOLib::CFO_Compiler::calculateParameterAndErrorCheck(CFO_INSTR instruc
 			}
 			labelMap_[opArguments_[1]] = binLineNumber_;
 			return 1;  // indicate MAIN LABEL to CFO firmware as valid location to dynamically switch run plans
-			// otherwise, a normal noop label
+					   // otherwise, a normal noop label
 		case CFO_INSTR::SET_MODE_BITS:
 		case CFO_INSTR::AND_MODE_BITS:
 		case CFO_INSTR::OR_MODE_BITS: {
