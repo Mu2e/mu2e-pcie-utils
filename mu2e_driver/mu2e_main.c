@@ -88,7 +88,6 @@ bool mu2e_dcs_locks[MU2E_MAX_NUM_DTCS] = {0};
 /* forward decl */
 static int ReadPCIState(struct pci_dev *pdev, m_ioc_pcistate_t *pcistate);
 
-
 /**
    Currently called from mu2e_event.c:DmaInterrupt and ioctl BUF_GIVE
  */
@@ -228,10 +227,10 @@ IOCTL_RET_TYPE mu2e_ioctl(IOCTL_ARGS(struct inode *inode, struct file *filp, uns
 			}
 
 			/* First, get the user state */
-			eng.Buffers = 4;          // ustate.Buffers;
-			eng.MinPktSize = 64;      // ustate.MinPktSize;
+			eng.Buffers = 4;                        // ustate.Buffers;
+			eng.MinPktSize = 64;                    // ustate.MinPktSize;
 			eng.MaxPktSize = SET_DTC_MAX_DMA_SIZE;  // ustate.MaxPktSize;
-			eng.TestMode = 1;         // ustate.TestMode;
+			eng.TestMode = 1;                       // ustate.TestMode;
 
 			/* Now add the DMA state */
 			eng.BDs = 399;    /* FNAL devel -- linked to sguser.c:#define NUM_BUFS  and DmaSetupTransmit(handle[0],100) ??? */
@@ -390,7 +389,7 @@ IOCTL_RET_TYPE mu2e_ioctl(IOCTL_ARGS(struct inode *inode, struct file *filp, uns
 						TRACE(20, "mu2e_ioctl: cmd=GET_INFO: Skipping wait due to 0 timeout");
 					}
 					else if (wait_event_interruptible_lock_irq_timeout(get_info_wait_queue,
-											   mu2e_chn_info_delta_(dtc, get_info.chn, C2S, &mu2e_channel_info_),
+																	   mu2e_chn_info_delta_(dtc, get_info.chn, C2S, &mu2e_channel_info_),
 																	   GetInfoLock,
 																	   tmo_jiffies) == 0)
 					{

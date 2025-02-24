@@ -42,9 +42,9 @@ int main(int argc, char* argv[])
 	char devfile[11];
 	int dtc = -1;
 
-	int opt_v = 0, opt_chn=0;
+	int opt_v = 0, opt_chn = 0;
 	int opt;
-	//int opt_packets = 8;
+	// int opt_packets = 8;
 	unsigned opt_loops = 1;  // saying -l10 will cause the thing to happen 10 times (i.e "loop back around 9 times")
 	unsigned opt_test_check = 0;
 	while (1)
@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
 				opt_v++;
 				break;
 			case 'p':
-				//opt_packets = strtoul(optarg, NULL, 0);
+				// opt_packets = strtoul(optarg, NULL, 0);
 				break;
 			case 'd':
 				dtc = strtol(optarg, NULL, 0);
@@ -109,11 +109,10 @@ int main(int argc, char* argv[])
 			dtc = 0;
 	}
 
-
-	if (strcmp(cmd, "start") == 0 || 
-		strcmp(cmd, "stop") == 0 || 
-		strcmp(cmd, "dump") == 0 || 
-		strcmp(cmd, "read") == 0 )
+	if (strcmp(cmd, "start") == 0 ||
+		strcmp(cmd, "stop") == 0 ||
+		strcmp(cmd, "dump") == 0 ||
+		strcmp(cmd, "read") == 0)
 	{
 		snprintf(devfile, 11, "/dev/" MU2E_DEV_FILE, dtc);
 
@@ -124,8 +123,8 @@ int main(int argc, char* argv[])
 			return (1);
 		}
 	}
-	else if(strcmp(cmd, "write") == 0 ||
-			strcmp(cmd, "spy") == 0 )
+	else if (strcmp(cmd, "write") == 0 ||
+			 strcmp(cmd, "spy") == 0)
 	{
 		dev.init(DTCLib::DTC_SimMode_Disabled, dtc);
 	}
@@ -193,14 +192,14 @@ int main(int argc, char* argv[])
 			printf(USAGE);
 			return (1);
 		}
-	
+
 		uint32_t writeAddress = strtoul(argv[optind++], NULL, 0);
 		uint32_t writeValue = strtoul(argv[optind++], NULL, 0);
 		uint32_t readbackValue;
-		dev.write_register_checked(writeAddress,100,writeValue,
-			&readbackValue);
-		if(writeValue != readbackValue)	
-			printf("NOTE: Write value mismatch 0x%X vs readback 0x%X\n", writeValue,readbackValue);	
+		dev.write_register_checked(writeAddress, 100, writeValue,
+								   &readbackValue);
+		if (writeValue != readbackValue)
+			printf("NOTE: Write value mismatch 0x%X vs readback 0x%X\n", writeValue, readbackValue);
 
 		// reg_access.reg_offset = strtoul(argv[optind++], NULL, 0);
 		// reg_access.access_type = 1;
@@ -214,7 +213,7 @@ int main(int argc, char* argv[])
 	}
 	else if (strcmp(cmd, "dump") == 0)
 	{
-		sts = ioctl(fd, M_IOC_DUMP); // dumps to kernel TRACE (/proc/trace/buffer or printk (NAME=mu2e_main))
+		sts = ioctl(fd, M_IOC_DUMP);  // dumps to kernel TRACE (/proc/trace/buffer or printk (NAME=mu2e_main))
 		if (sts)
 		{
 			perror("ioctl M_IOC_REG_ACCESS write");
@@ -223,9 +222,9 @@ int main(int argc, char* argv[])
 	}
 	else if (strcmp(cmd, "spy") == 0)
 	{
-		unsigned optsmsk=0;
+		unsigned optsmsk = 0;
 		if (argc - optind >= 1) optsmsk = strtoul(argv[optind], NULL, 0);
-		std::cout << "Calling dev.spy(chn) with optsmsk="<<optsmsk<<"\n";
+		std::cout << "Calling dev.spy(chn) with optsmsk=" << optsmsk << "\n";
 		dev.spy(opt_chn, optsmsk);
 	}
 	// else if (strcmp(cmd,"write_loopback_data") == 0)

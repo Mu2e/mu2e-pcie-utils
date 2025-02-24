@@ -61,8 +61,6 @@ class CFOandDTC_DMAs
 public:
 	/// <summary>
 
-
-
 	/// <summary>
 	/// Release all buffers to the hardware on the given channel
 	/// </summary>
@@ -95,7 +93,6 @@ public:
 	};
 	static int GetCurrentBuffer(DMAInfo* info);
 	static uint16_t GetBufferByteCount(DMAInfo* info, size_t index);
-
 };
 }  // namespace DTCLib
-#endif //end CFO_AND_DTC_DMAS_H
+#endif  // end CFO_AND_DTC_DMAS_H

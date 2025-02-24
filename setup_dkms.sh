@@ -27,7 +27,7 @@ cat >Makefile <<EOF
 EXTRA_SYMBOLS=KBUILD_EXTRA_SYMBOLS=$PWD/trace/src_module/Module.symvers
 TRACE_INC=$PWD/trace/include
 
-all: 
+all:
 	make -C trace/src_module/
 	make -C mu2e_driver/ CC=/usr/bin/gcc EXTRA_SYMBOLS=\${EXTRA_SYMBOLS} TRACE_INC=\${TRACE_INC}
 	make -C mcs/basic_driver/ CC=/usr/bin/gcc EXTRA_SYMBOLS=\${EXTRA_SYMBOLS} TRACE_INC=\${TRACE_INC}

@@ -287,8 +287,8 @@ typedef struct
 
 //------------------------------------------
 
-typedef unsigned char mu2e_databuff_t[0x10000];    /** sizeof(mu2e_databuff_t) is what we tell DTC FPGA (black box) DMA ENGINE MAX_DMA_SIZE */
-#define SET_DTC_MAX_DMA_SIZE           0xfff8      /* NOTE: max 32 bits!!! See use in mu2e_mem.c */
+typedef unsigned char mu2e_databuff_t[0x10000]; /** sizeof(mu2e_databuff_t) is what we tell DTC FPGA (black box) DMA ENGINE MAX_DMA_SIZE */
+#define SET_DTC_MAX_DMA_SIZE 0xfff8             /* NOTE: max 32 bits!!! See use in mu2e_mem.c */
 typedef char mu2e_string_t[100];
 
 typedef enum
