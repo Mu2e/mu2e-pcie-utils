@@ -65,8 +65,8 @@ mu2esim::mu2esim(std::string ddrFileName)
 		hwIdx_[ii] = 0;
 	for (unsigned ii = 0; ii < SIM_BUFFCOUNT; ++ii)
 	{
-		dmaData_[0][ii] = reinterpret_cast<mu2e_databuff_t*>(new char[0x10000]);
-		dmaData_[1][ii] = reinterpret_cast<mu2e_databuff_t*>(new char[0x10000]);
+		dmaData_[0][ii] = reinterpret_cast<mu2e_databuff_t *>(new char[0x10000]);
+		dmaData_[1][ii] = reinterpret_cast<mu2e_databuff_t *>(new char[0x10000]);
 	}
 	release_all(0);
 	release_all(1);
@@ -121,19 +121,19 @@ int mu2esim::init(DTCLib::DTC_SimMode mode)
 
 	TLOG(TLVL_Init) << "Initializing registers";
 	// Set initial register values...
-	registers_[DTCLib::CFOandDTC_Register_DesignVersion] = 0x00006363;           // v99.99
-	registers_[DTCLib::CFOandDTC_Register_DesignDate] = 0xA5020796;              // A for sim mode, 6-ROC, and date sim functionaliy was last modified
-	registers_[DTCLib::CFOandDTC_Register_Control] = 0x00000003;              // System Clock, Timing Enable
-	registers_[DTCLib::CFOandDTC_Register_DMATransferLength] = 0x80000010;       // Default value from HWUG
-	registers_[DTCLib::CFOandDTC_Register_SERDES_LoopbackEnable] = 0x00000000;    // SERDES Loopback Disabled
-	registers_[DTCLib::CFOandDTC_Register_ClockOscillatorStatus] = 0x20002;       // Initialization Complete, no IIC Error
-	registers_[DTCLib::DTC_Register_ROCEmulationEnable] = 0x3F;            // ROC Emulators enabled (of course!)
-	registers_[DTCLib::CFOandDTC_Register_LinkEnable] = 0x3F3F;                  // All links Tx/Rx enabled, CFO and timing disabled
-	registers_[DTCLib::CFOandDTC_Register_SERDES_PLLLocked] = 0x7F;              // SERDES PLL Locked
-	registers_[DTCLib::CFOandDTC_Register_SERDES_ResetDone] = 0xFFFFFFFF;        // SERDES Resets Done
-	registers_[DTCLib::DTC_Register_SERDES_RXCDRLockStatus] = 0x7F00007F;  // RX CDR Locked
-	registers_[DTCLib::DTC_Register_DMATimeoutPreset] = 0x800;             // DMA Timeout Preset
-	registers_[DTCLib::DTC_Register_ROCReplyTimeout] = 0x200000;           // ROC Timeout Preset
+	registers_[DTCLib::CFOandDTC_Register_DesignVersion] = 0x00006363;          // v99.99
+	registers_[DTCLib::CFOandDTC_Register_DesignDate] = 0xA5020796;             // A for sim mode, 6-ROC, and date sim functionaliy was last modified
+	registers_[DTCLib::CFOandDTC_Register_Control] = 0x00000003;                // System Clock, Timing Enable
+	registers_[DTCLib::CFOandDTC_Register_DMATransferLength] = 0x80000010;      // Default value from HWUG
+	registers_[DTCLib::CFOandDTC_Register_SERDES_LoopbackEnable] = 0x00000000;  // SERDES Loopback Disabled
+	registers_[DTCLib::CFOandDTC_Register_ClockOscillatorStatus] = 0x20002;     // Initialization Complete, no IIC Error
+	registers_[DTCLib::DTC_Register_ROCEmulationEnable] = 0x3F;                 // ROC Emulators enabled (of course!)
+	registers_[DTCLib::CFOandDTC_Register_LinkEnable] = 0x3F3F;                 // All links Tx/Rx enabled, CFO and timing disabled
+	registers_[DTCLib::CFOandDTC_Register_SERDES_PLLLocked] = 0x7F;             // SERDES PLL Locked
+	registers_[DTCLib::CFOandDTC_Register_SERDES_ResetDone] = 0xFFFFFFFF;       // SERDES Resets Done
+	registers_[DTCLib::DTC_Register_SERDES_RXCDRLockStatus] = 0x7F00007F;       // RX CDR Locked
+	registers_[DTCLib::DTC_Register_DMATimeoutPreset] = 0x800;                  // DMA Timeout Preset
+	registers_[DTCLib::DTC_Register_ROCReplyTimeout] = 0x200000;                // ROC Timeout Preset
 	registers_[DTCLib::CFOandDTC_Register_SERDESClock_IICBusLow] = 0xFFFFFFFF;
 	registers_[DTCLib::CFOandDTC_Register_SERDESClock_IICBusHigh] = 0x77f3f;
 	registers_[DTCLib::DTC_Register_DDRReferenceClockFrequency] = 0xbebc200;
@@ -151,11 +151,11 @@ int mu2esim::init(DTCLib::DTC_SimMode mode)
    read_data
    returns number of bytes read; negative value indicates an error
    */
-int mu2esim::read_data(int chn, void** buffer, int tmo_ms)
+int mu2esim::read_data(int chn, void **buffer, int tmo_ms)
 {
 	auto start = std::chrono::steady_clock::now();
 	size_t bytesReturned = 0;
-	if (delta_(chn, C2S) == 0) //no data, generate if ddrFile
+	if (delta_(chn, C2S) == 0)  // no data, generate if ddrFile
 	{
 		TLOG(TLVL_ReadData) << "mu2esim::read_data: Clearing output buffer";
 		clearBuffer_(chn, false);
@@ -167,57 +167,51 @@ int mu2esim::read_data(int chn, void** buffer, int tmo_ms)
 				TLOG(TLVL_ReadData) << "mu2esim::read_data: Simulating DTC data DMA subevent trasfer...";
 				sleep(1);
 				TLOG(TLVL_ReadData) << "mu2esim::read_data: Simulating DTC data DMA subevent trasfer, after sleep.";
-				
-				auto ptr = reinterpret_cast<uint8_t*>(dmaData_[chn][swIdx_[chn]]);
-				ptr += sizeof(uint64_t); //advance past data size
 
-				DTCLib::DTC_SubEventHeader header;				
-				uint64_t size = sizeof(header) + 6*16 + 6*3*16; //subevent header + ROC headers + ROC payloads
+				auto ptr = reinterpret_cast<uint8_t *>(dmaData_[chn][swIdx_[chn]]);
+				ptr += sizeof(uint64_t);  // advance past data size
+
+				DTCLib::DTC_SubEventHeader header;
+				uint64_t size = sizeof(header) + 6 * 16 + 6 * 3 * 16;  // subevent header + ROC headers + ROC payloads
 
 				header.event_tag_low = simDataEWT_++;
 				header.event_mode = 1;
-				memcpy(ptr, &header, sizeof(header));								
+				memcpy(ptr, &header, sizeof(header));
 				header.inclusive_subevent_byte_count = size;
 
+				TLOG(TLVL_DEBUG + 6) << "Found sub event inclusive byte count as: " << header.inclusive_subevent_byte_count << " 0x" << std::hex << std::setw(4) << std::setfill('0') << header.inclusive_subevent_byte_count << ". i.e., " << std::dec << std::setw(0) << (header.inclusive_subevent_byte_count - sizeof(header)) / 16 << " subevent packets.";
 
-				TLOG(TLVL_DEBUG + 6) << "Found sub event inclusive byte count as: " <<
-					header.inclusive_subevent_byte_count << " 0x" << 
-					std::hex << std::setw(4) << std::setfill('0') << header.inclusive_subevent_byte_count << ". i.e., " << std::dec << std::setw(0) << 
-							(header.inclusive_subevent_byte_count - sizeof(header))/16 << " subevent packets.";
+				ptr += sizeof(header);  // moving ptr past subevent header
 
-				ptr += sizeof(header); //moving ptr past subevent header
-
-				size_t num_of_packets = (header.inclusive_subevent_byte_count - sizeof(header))/16;
-				size_t packets_per_roc = num_of_packets/6;
+				size_t num_of_packets = (header.inclusive_subevent_byte_count - sizeof(header)) / 16;
+				size_t packets_per_roc = num_of_packets / 6;
 				TLOG(TLVL_DEBUG + 6) << "num_of_packets = " << num_of_packets;
 				TLOG(TLVL_DEBUG + 6) << "packets_per_roc = " << packets_per_roc;
 
-				for(int i=0; i>6; ++i)
+				for (int i = 0; i > 6; ++i)
 				{
 					size_t packets_this_roc = packets_per_roc;
-					if(i == 5) packets_this_roc = num_of_packets;
-					if(packets_this_roc > 2023) packets_this_roc = 0; //assume wrapped around negative
-					TLOG(TLVL_TRACE) << "Setup ROC-" << i << " data header. packets_this_roc = " << 
-						packets_this_roc;
+					if (i == 5) packets_this_roc = num_of_packets;
+					if (packets_this_roc > 2023) packets_this_roc = 0;  // assume wrapped around negative
+					TLOG(TLVL_TRACE) << "Setup ROC-" << i << " data header. packets_this_roc = " << packets_this_roc;
 
-					
-					*((uint16_t *)(&(ptr[1*2]))) = 0x8000 | (i << 8) | (5<<4); //packet type Data Header 0x5
-					*((uint16_t *)(&(ptr[2*2]))) = packets_this_roc; //packet count
-					*((uint16_t *)(&(ptr[3*2]))) = simDataEWT_; //tag.GetEventWindowTag(true); //packet count
-					*((uint16_t *)(&(ptr[4*2]))) = simDataEWT_ >> 16; //tag.GetEventWindowTag(true)>>16; //packet count
-					*((uint16_t *)(&(ptr[5*2]))) = 0; //tag.GetEventWindowTag(true)>>32; //packet count
-				
-					ptr += 16*1 + 16*packets_this_roc; //move ptr past ROC header + data
-				} //end ROC loop
+					*((uint16_t *)(&(ptr[1 * 2]))) = 0x8000 | (i << 8) | (5 << 4);  // packet type Data Header 0x5
+					*((uint16_t *)(&(ptr[2 * 2]))) = packets_this_roc;              // packet count
+					*((uint16_t *)(&(ptr[3 * 2]))) = simDataEWT_;                   // tag.GetEventWindowTag(true); //packet count
+					*((uint16_t *)(&(ptr[4 * 2]))) = simDataEWT_ >> 16;             // tag.GetEventWindowTag(true)>>16; //packet count
+					*((uint16_t *)(&(ptr[5 * 2]))) = 0;                             // tag.GetEventWindowTag(true)>>32; //packet count
+
+					ptr += 16 * 1 + 16 * packets_this_roc;  // move ptr past ROC header + data
+				}                                           // end ROC loop
 
 				memcpy(dmaData_[chn][swIdx_[chn]], &size, sizeof(uint64_t));
 				bytesReturned = size;
-			} //end generate sim data 
-			else 
+			}  // end generate sim data
+			else
 			{
 				TLOG(TLVL_ReadData) << "mu2esim::read_data: Reading size from memory file";
 				uint64_t size;
-				ddrFile_->read(reinterpret_cast<char*>(&size), sizeof(uint64_t) / sizeof(char));
+				ddrFile_->read(reinterpret_cast<char *>(&size), sizeof(uint64_t) / sizeof(char));
 
 				TLOG(TLVL_ReadData) << "mu2esim::read_data: Size is " << size;
 
@@ -228,7 +222,7 @@ int mu2esim::read_data(int chn, void** buffer, int tmo_ms)
 					ddrFile_->seekg(std::ios::beg);
 
 					TLOG(TLVL_ReadData) << " mu2esim::read_data: Re-reading size from memory file";
-					ddrFile_->read(reinterpret_cast<char*>(&size), sizeof(uint64_t));
+					ddrFile_->read(reinterpret_cast<char *>(&size), sizeof(uint64_t));
 					TLOG(TLVL_ReadData) << "mu2esim::read_data: Size is " << size;
 					if (ddrFile_->eof())
 					{
@@ -237,29 +231,28 @@ int mu2esim::read_data(int chn, void** buffer, int tmo_ms)
 					}
 				}
 				TLOG(TLVL_ReadData) << "Size of data is " << size - sizeof(uint64_t) << ", reading into buffer " << swIdx_[chn] << ", at "
-								<< (void*)dmaData_[chn][swIdx_[chn]];
+									<< (void *)dmaData_[chn][swIdx_[chn]];
 				memcpy(dmaData_[chn][swIdx_[chn]], &size, sizeof(uint64_t));
-				ddrFile_->read(reinterpret_cast<char*>(dmaData_[chn][swIdx_[chn]]) + sizeof(uint64_t), size - sizeof(uint64_t));
+				ddrFile_->read(reinterpret_cast<char *>(dmaData_[chn][swIdx_[chn]]) + sizeof(uint64_t), size - sizeof(uint64_t));
 				bytesReturned = size;
-			} //end DDR File sim read			
+			}  // end DDR File sim read
 		}
 		else if (chn == 1)
 		{
-			// Data should already be in appropriate buffer, generated by dcsPacketSimulator_()			
+			// Data should already be in appropriate buffer, generated by dcsPacketSimulator_()
 		}
 	}
-	else //there is data to read, calculate size
-	if (chn == 1)
-	{
-		uint64_t dcsSize = *reinterpret_cast<uint64_t*>(dmaData_[chn][swIdx_[chn]]);
-		TLOG(TLVL_ReadData2) << "mu2esim::read_data: dcsSize = " << dcsSize;
-		bytesReturned = (size_t)dcsSize;
-	}
+	else  // there is data to read, calculate size
+		if (chn == 1)
+		{
+			uint64_t dcsSize = *reinterpret_cast<uint64_t *>(dmaData_[chn][swIdx_[chn]]);
+			TLOG(TLVL_ReadData2) << "mu2esim::read_data: dcsSize = " << dcsSize;
+			bytesReturned = (size_t)dcsSize;
+		}
 
 	*buffer = dmaData_[chn][swIdx_[chn]];
-	TLOG(TLVL_ReadData2) << "mu2esim::read_data: *buffer (" << (void*)*buffer << ") should now be equal to dmaData_[" << chn << "]["
-						 << swIdx_[chn] << "] (" << (void*)dmaData_[chn][swIdx_[chn]] << "), bytesReturned = " << bytesReturned <<
-						 " data = 0x" << std::hex << *reinterpret_cast<uint64_t*>(dmaData_[chn][swIdx_[chn]]);
+	TLOG(TLVL_ReadData2) << "mu2esim::read_data: *buffer (" << (void *)*buffer << ") should now be equal to dmaData_[" << chn << "]["
+						 << swIdx_[chn] << "] (" << (void *)dmaData_[chn][swIdx_[chn]] << "), bytesReturned = " << bytesReturned << " data = 0x" << std::hex << *reinterpret_cast<uint64_t *>(dmaData_[chn][swIdx_[chn]]);
 	swIdx_[chn] = (swIdx_[chn] + 1) % SIM_BUFFCOUNT;
 
 	auto duration =
@@ -268,19 +261,19 @@ int mu2esim::read_data(int chn, void** buffer, int tmo_ms)
 	return static_cast<int>(bytesReturned);
 }
 
-int mu2esim::write_data(int chn, void* buffer, size_t bytes)
+int mu2esim::write_data(int chn, void *buffer, size_t bytes)
 {
 	if (chn == 0)
 	{
 		TLOG(TLVL_WriteData) << "mu2esim::write_data: adding buffer to simulated DDR memory sz=" << bytes
-							 << ", *buffer=" << *((uint64_t*)buffer);
+							 << ", *buffer=" << *((uint64_t *)buffer);
 		if (bytes <= sizeof(mu2e_databuff_t))
 		{
 			if (event_) closeEvent_();
 
 			// Strip off first 64-bit word
-			auto writeBytes = *reinterpret_cast<uint64_t*>(buffer) - sizeof(uint64_t);
-			auto ptr = reinterpret_cast<char*>(buffer) + (sizeof(uint64_t) / sizeof(char));
+			auto writeBytes = *reinterpret_cast<uint64_t *>(buffer) - sizeof(uint64_t);
+			auto ptr = reinterpret_cast<char *>(buffer) + (sizeof(uint64_t) / sizeof(char));
 			ddrFile_->write(ptr, writeBytes);
 			registers_[DTCLib::DTC_Register_DetEmulation_DataEndAddress] += static_cast<uint32_t>(writeBytes);
 			ddrFile_->flush();
@@ -292,14 +285,14 @@ int mu2esim::write_data(int chn, void* buffer, size_t bytes)
 	{
 		TLOG(TLVL_WriteData) << "mu2esim::write_data start: chn=" << chn << ", buf=" << buffer << ", bytes=" << bytes;
 
-		//extract target ROC link "activeDAQLink" from bufer
+		// extract target ROC link "activeDAQLink" from bufer
 		uint32_t worda;
-		memcpy(&worda, reinterpret_cast<uint64_t*>(buffer) + 1, sizeof worda);
+		memcpy(&worda, reinterpret_cast<uint64_t *>(buffer) + 1, sizeof worda);
 		auto word = static_cast<uint16_t>(worda >> 16);
 		TLOG(TLVL_WriteData) << "mu2esim::write_data worda is 0x" << std::hex << worda << " and word is 0x" << std::hex << word;
 		auto activeLink = static_cast<DTCLib::DTC_Link_ID>((word & 0x0F00) >> 8);
 
-		DTCLib::DTC_EventWindowTag ts(reinterpret_cast<uint8_t*>(buffer) + 6);
+		DTCLib::DTC_EventWindowTag ts(reinterpret_cast<uint8_t *>(buffer) + 6);
 		if ((word & 0x8010) == 0x8010)
 		{
 			TLOG(TLVL_WriteData) << "mu2esim::write_data: Readout Request: activeDAQLink=" << activeLink
@@ -321,7 +314,7 @@ int mu2esim::write_data(int chn, void* buffer, size_t bytes)
 
 					if (mode_ == DTCLib::DTC_SimMode_Performance || mode_ == DTCLib::DTC_SimMode_Timeout)
 					{
-						auto packetCount = *(reinterpret_cast<uint16_t*>(buffer) + 7);
+						auto packetCount = *(reinterpret_cast<uint16_t *>(buffer) + 7);
 						packetSimulator_(ts, activeLink, packetCount);
 					}
 					else if (mode_ == DTCLib::DTC_SimMode_Tracker)
@@ -351,14 +344,12 @@ int mu2esim::write_data(int chn, void* buffer, size_t bytes)
 			TLOG(TLVL_WriteData) << "mu2esim::write_data activeDCSLink is " << activeLink;
 			if (activeLink != DTCLib::DTC_Link_Unused)
 			{
-				DTCLib::DTC_DataPacket packet(reinterpret_cast<uint64_t*>(buffer) + 1); //skip 64-bit packet size
+				DTCLib::DTC_DataPacket packet(reinterpret_cast<uint64_t *>(buffer) + 1);  // skip 64-bit packet size
 				TLOG(TLVL_WriteData) << "packet " << packet.toJSON();
-
 
 				DTCLib::DTC_DCSRequestPacket thisPacket(packet);
 
-
-				if(thisPacket.GetType() == DTCLib::DTC_DCSOperationType_Write || 
+				if (thisPacket.GetType() == DTCLib::DTC_DCSOperationType_Write ||
 					thisPacket.GetType() == DTCLib::DTC_DCSOperationType_BlockWrite)
 				{
 					TLOG(TLVL_WriteData) << "mu2esim::write_data: Recieved DCS Write Request:" << thisPacket.toJSON();
@@ -366,22 +357,20 @@ int mu2esim::write_data(int chn, void* buffer, size_t bytes)
 					auto request1 = thisPacket.GetRequest(false);
 					rocRegisters_[activeLink][request1.first] = request1.second;
 
-					if(thisPacket.GetType() == DTCLib::DTC_DCSOperationType_BlockWrite)
+					if (thisPacket.GetType() == DTCLib::DTC_DCSOperationType_BlockWrite)
 					{
 						auto request2 = thisPacket.GetRequest(true);
 						rocRegisters_[activeLink][request2.first] = request2.second;
 					}
 				}
 
-				//Note: write's can request ack
+				// Note: write's can request ack
 				if (thisPacket.GetType() == DTCLib::DTC_DCSOperationType_Read ||
 					thisPacket.GetType() == DTCLib::DTC_DCSOperationType_BlockRead || thisPacket.RequestsAck())
 				{
-					TLOG(TLVL_WriteData) << "mu2esim::write_data: Recieved DCS Request:" << thisPacket.toJSON();					
+					TLOG(TLVL_WriteData) << "mu2esim::write_data: Recieved DCS Request:" << thisPacket.toJSON();
 					dcsPacketSimulator_(thisPacket, activeLink);
 				}
-				
-			
 			}
 		}
 	}
@@ -397,8 +386,7 @@ int mu2esim::read_release(int chn, unsigned num)
 	{
 		if (delta_(chn, C2S) != 0) swIdx_[chn] = (swIdx_[chn] + 1) % SIM_BUFFCOUNT;
 	}
-	TLOG(TLVL_DeltaChn) << "mu2esim::read_release: After release... chn=" << chn << 
-		" hw=" << hwIdx_[chn] << " sw=" << swIdx_[chn];
+	TLOG(TLVL_DeltaChn) << "mu2esim::read_release: After release... chn=" << chn << " hw=" << hwIdx_[chn] << " sw=" << swIdx_[chn];
 	return 0;
 }
 
@@ -409,7 +397,7 @@ int mu2esim::release_all(int chn)
 	return 0;
 }
 
-int mu2esim::read_register(uint16_t address, int tmo_ms, uint32_t* output)
+int mu2esim::read_register(uint16_t address, int tmo_ms, uint32_t *output)
 {
 	auto start = std::chrono::steady_clock::now();
 	*output = 0;
@@ -701,12 +689,10 @@ void mu2esim::dcsPacketSimulator_(DTCLib::DTC_DCSRequestPacket in, DTCLib::DTC_L
 	TLOG(TLVL_DCSPacketSimulator) << "dataPacket.toJSON() " << dataPacket.toJSON();
 
 	size_t packetSize = dataPacket.GetSize();
-	TLOG(TLVL_DCSPacketSimulator) << "packetSize = " << packetSize <<
-		" into buffer hw=" << hwIdx_[1] << " sw=" << swIdx_[1];
-	*reinterpret_cast<uint64_t*>(dmaData_[1][hwIdx_[1]]) = packetSize;
-	memcpy(reinterpret_cast<uint64_t*>(dmaData_[1][hwIdx_[1]]) + 1, dataPacket.GetData(), packetSize);
-	TLOG(TLVL_DCSPacketSimulator) << "mu2esim::dcsPacketSimulator_: copied packetSize=" << packetSize <<
-		" into buffer #" << hwIdx_[1] << " data = 0x" << std::hex << *reinterpret_cast<uint64_t*>(dmaData_[1][hwIdx_[1]]);
+	TLOG(TLVL_DCSPacketSimulator) << "packetSize = " << packetSize << " into buffer hw=" << hwIdx_[1] << " sw=" << swIdx_[1];
+	*reinterpret_cast<uint64_t *>(dmaData_[1][hwIdx_[1]]) = packetSize;
+	memcpy(reinterpret_cast<uint64_t *>(dmaData_[1][hwIdx_[1]]) + 1, dataPacket.GetData(), packetSize);
+	TLOG(TLVL_DCSPacketSimulator) << "mu2esim::dcsPacketSimulator_: copied packetSize=" << packetSize << " into buffer #" << hwIdx_[1] << " data = 0x" << std::hex << *reinterpret_cast<uint64_t *>(dmaData_[1][hwIdx_[1]]);
 	hwIdx_[1] = (hwIdx_[1] + 1) % SIM_BUFFCOUNT;
 
 	TLOG(TLVL_DCSPacketSimulator) << "After... hw=" << hwIdx_[1] << " sw=" << swIdx_[1];
@@ -729,7 +715,7 @@ void mu2esim::eventSimulator_(DTCLib::DTC_EventWindowTag ts)
 	for (auto ii = 0; ii < num_trk_dtcs; ++ii, ++DTCID)
 	{
 		TLOG(TLVL_EventSimulator) << "Generating Tracker data, DTCID " << DTCID << ", TRK DTC " << ii + 1 << "/" << num_trk_dtcs;
-		sub_event_->SetDTCMAC( DTCID);
+		sub_event_->SetDTCMAC(DTCID);
 		sub_event_->SetSourceDTC(DTCID, DTCLib::DTC_Subsystem_Tracker);
 
 		for (auto link : DTCLib::DTC_ROC_Links)
@@ -743,7 +729,7 @@ void mu2esim::eventSimulator_(DTCLib::DTC_EventWindowTag ts)
 	for (auto ii = 0; ii < num_calo_dtcs; ++ii, ++DTCID)
 	{
 		TLOG(TLVL_EventSimulator) << "Generating Calorimeter data, DTCID " << DTCID << ", Calo DTC " << ii + 1 << "/" << num_calo_dtcs;
-		sub_event_->SetDTCMAC( DTCID);
+		sub_event_->SetDTCMAC(DTCID);
 		sub_event_->SetSourceDTC(DTCID, DTCLib::DTC_Subsystem_Calorimeter);
 
 		for (auto link : DTCLib::DTC_ROC_Links)
@@ -757,7 +743,7 @@ void mu2esim::eventSimulator_(DTCLib::DTC_EventWindowTag ts)
 	for (auto ii = 0; ii < num_crv_dtcs; ++ii, ++DTCID)
 	{
 		TLOG(TLVL_EventSimulator) << "Generating CRV data, DTCID " << DTCID << ", CRV DTC " << ii + 1 << "/" << num_crv_dtcs;
-		sub_event_->SetDTCMAC( DTCID);
+		sub_event_->SetDTCMAC(DTCID);
 		sub_event_->SetSourceDTC(DTCID, DTCLib::DTC_Subsystem_CRV);
 
 		for (auto link : DTCLib::DTC_ROC_Links)
@@ -822,7 +808,7 @@ void mu2esim::calorimeterBlockSimulator_(DTCLib::DTC_EventWindowTag ts, DTCLib::
 
 	// Board ID
 	uint16_t roc_id = static_cast<uint8_t>(link) + (DTCID * 6);
-	uint8_t board_number = (roc_id)&0x3F;  // 6 bits
+	uint8_t board_number = (roc_id) & 0x3F;  // 6 bits
 	buffer.push_back(0xFC00 + (board_number << 3));
 	buffer.push_back(0x3FFF);
 
@@ -834,9 +820,9 @@ void mu2esim::calorimeterBlockSimulator_(DTCLib::DTC_EventWindowTag ts, DTCLib::
 		buffer.push_back(board_number);
 		buffer.push_back(10 * roc_id);  // DIRAC B...do we need to put something here?
 
-		buffer.push_back(0);                           // No error flags
+		buffer.push_back(0);                        // No error flags
 		buffer.push_back((idx * t0Step) & 0xFFFF);  // Time
-		buffer.push_back(0x0607);                      // Max sample/num samples
+		buffer.push_back(0x0607);                   // Max sample/num samples
 
 		// Digitizer samples
 		buffer.push_back(0x1111);
@@ -848,7 +834,8 @@ void mu2esim::calorimeterBlockSimulator_(DTCLib::DTC_EventWindowTag ts, DTCLib::
 		buffer.push_back(0x7777);
 	}
 
-	while (buffer.size() % 8 != 0) {
+	while (buffer.size() % 8 != 0)
+	{
 		buffer.push_back(0);
 	}
 
@@ -988,7 +975,7 @@ void mu2esim::packetSimulator_(DTCLib::DTC_EventWindowTag ts, DTCLib::DTC_Link_I
 		packet[14] = 0xfe;
 		packet[15] = 0xca;
 
-		TLOG(TLVL_PacketSimulator) << "mu2esim::packetSimulator_ Writing Data Header packet to memory file, chn=0, packet=" << (void*)packet;
+		TLOG(TLVL_PacketSimulator) << "mu2esim::packetSimulator_ Writing Data Header packet to memory file, chn=0, packet=" << (void *)packet;
 
 		DTCLib::DTC_DataBlock block(sizeof(packet));
 		memcpy(&(*block.allocBytes)[0], packet, sizeof(packet));

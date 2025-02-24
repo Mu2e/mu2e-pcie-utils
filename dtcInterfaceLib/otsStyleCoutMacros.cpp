@@ -12,7 +12,7 @@ std::string otsStyleStackTrace()
 {
 	__SS__ << "ots::stackTrace:\n";
 
-	void*  array[10];
+	void* array[10];
 	size_t size;
 
 	// get void*'s for all entries on the stack
@@ -24,7 +24,7 @@ std::string otsStyleStackTrace()
 
 	// skip first stack frame (points here)
 	// char syscom[256];
-	for(unsigned int i = 1; i < size && messages != NULL; ++i)
+	for (unsigned int i = 1; i < size && messages != NULL; ++i)
 	{
 		// mangled name needs to be converted to get nice name and line number
 		// line number not working... FIXME
@@ -40,17 +40,17 @@ std::string otsStyleStackTrace()
 		char *mangled_name = 0, *offset_begin = 0, *offset_end = 0;
 
 		// find parentheses and +address offset surrounding mangled name
-		for(char* p = messages[i]; *p; ++p)
+		for (char* p = messages[i]; *p; ++p)
 		{
-			if(*p == '(')
+			if (*p == '(')
 			{
 				mangled_name = p;
 			}
-			else if(*p == '+')
+			else if (*p == '+')
 			{
 				offset_begin = p;
 			}
-			else if(*p == ')')
+			else if (*p == ')')
 			{
 				offset_end = p;
 				break;
@@ -58,17 +58,17 @@ std::string otsStyleStackTrace()
 		}
 
 		// if the line could be processed, attempt to demangle the symbol
-		if(mangled_name && offset_begin && offset_end && mangled_name < offset_begin)
+		if (mangled_name && offset_begin && offset_end && mangled_name < offset_begin)
 		{
 			*mangled_name++ = '\0';
 			*offset_begin++ = '\0';
-			*offset_end++   = '\0';
+			*offset_end++ = '\0';
 
-			int   status;
+			int status;
 			char* real_name = abi::__cxa_demangle(mangled_name, 0, 0, &status);
 
 			// if demangling is successful, output the demangled function name
-			if(status == 0)
+			if (status == 0)
 			{
 				ss << "[" << i << "] " << messages[i] << " : " << real_name << "+" << offset_begin << offset_end << std::endl;
 			}

@@ -12,150 +12,150 @@ void DTCLib::Mu2eUtil::parse_arguments(int argc, char** argv)
 		{
 			switch (argv[optind][1])
 			{
-			case 'i':
-				incrementTimestamp = false;
-				break;
-			case 'd':
-				delay = DTCLib::Utilities::getOptionValue(&optind, &argv);
-				break;
-			case 'D':
-				cfodelay = DTCLib::Utilities::getOptionValue(&optind, &argv);
-				break;
-			case 'S':
-				syncRequests = true;
-				break;
-			case 'n':
-				number = DTCLib::Utilities::getOptionValue(&optind, &argv);
-				break;
-			case 'o':
-				timestampOffset = DTCLib::Utilities::getOptionValueLong(&optind, &argv) & 0x0000FFFFFFFFFFFF;  // Timestamps are 48 bits
-				break;
-			case 'c':
-				packetCount = DTCLib::Utilities::getOptionValue(&optind, &argv);
-				break;
-			case 'N':
-				forceNoDebug = true;
-				break;
-			case 'b':
-				blockCount = DTCLib::Utilities::getOptionValue(&optind, &argv);
-				break;
-			case 'E':
-				eventCount = DTCLib::Utilities::getOptionValue(&optind, &argv);
-				break;
-			case 'a':
-				requestsAhead = DTCLib::Utilities::getOptionValue(&optind, &argv);
-				break;
-			case 'q':
-				quiet = true;
-				quietCount = DTCLib::Utilities::getOptionValue(&optind, &argv);
-				break;
-			case 'p':
-				useSimFile = true;
-				break;
-			case 'P':
-				useSimFile = true;
-				simFile = DTCLib::Utilities::getOptionValue(&optind, &argv);
-				break;
-			case 'G':
-				readGenerated = true;
-				break;
-			case 'Q':
-				quiet = true;
-				reallyQuiet = true;
-				break;
-			case 's':
-				checkSERDES = true;
-				break;
-			case 'e':
-				useCFOEmulator = false;
-				break;
-			case 'f':
-				rawOutput = true;
-				rawOutputFile = DTCLib::Utilities::getOptionString(&optind, &argv);
-				break;
-			case 'H':
-				writeDMAHeadersToOutput = true;
-				break;
-			case 't':
-				debugType = DTC_DebugType_ExternalSerialWithReset;
-				stickyDebugType = false;
-				break;
-			case 'T':
-				val = DTCLib::Utilities::getOptionValue(&optind, &argv);
-				if (val < static_cast<int>(DTC_DebugType_Invalid))
+				case 'i':
+					incrementTimestamp = false;
+					break;
+				case 'd':
+					delay = DTCLib::Utilities::getOptionValue(&optind, &argv);
+					break;
+				case 'D':
+					cfodelay = DTCLib::Utilities::getOptionValue(&optind, &argv);
+					break;
+				case 'S':
+					syncRequests = true;
+					break;
+				case 'n':
+					number = DTCLib::Utilities::getOptionValue(&optind, &argv);
+					break;
+				case 'o':
+					timestampOffset = DTCLib::Utilities::getOptionValueLong(&optind, &argv) & 0x0000FFFFFFFFFFFF;  // Timestamps are 48 bits
+					break;
+				case 'c':
+					packetCount = DTCLib::Utilities::getOptionValue(&optind, &argv);
+					break;
+				case 'N':
+					forceNoDebug = true;
+					break;
+				case 'b':
+					blockCount = DTCLib::Utilities::getOptionValue(&optind, &argv);
+					break;
+				case 'E':
+					eventCount = DTCLib::Utilities::getOptionValue(&optind, &argv);
+					break;
+				case 'a':
+					requestsAhead = DTCLib::Utilities::getOptionValue(&optind, &argv);
+					break;
+				case 'q':
+					quiet = true;
+					quietCount = DTCLib::Utilities::getOptionValue(&optind, &argv);
+					break;
+				case 'p':
+					useSimFile = true;
+					break;
+				case 'P':
+					useSimFile = true;
+					simFile = DTCLib::Utilities::getOptionValue(&optind, &argv);
+					break;
+				case 'G':
+					readGenerated = true;
+					break;
+				case 'Q':
+					quiet = true;
+					reallyQuiet = true;
+					break;
+				case 's':
+					checkSERDES = true;
+					break;
+				case 'e':
+					useCFOEmulator = false;
+					break;
+				case 'f':
+					rawOutput = true;
+					rawOutputFile = DTCLib::Utilities::getOptionString(&optind, &argv);
+					break;
+				case 'H':
+					writeDMAHeadersToOutput = true;
+					break;
+				case 't':
+					debugType = DTC_DebugType_ExternalSerialWithReset;
+					stickyDebugType = false;
+					break;
+				case 'T':
+					val = DTCLib::Utilities::getOptionValue(&optind, &argv);
+					if (val < static_cast<int>(DTC_DebugType_Invalid))
+					{
+						stickyDebugType = true;
+						debugType = static_cast<DTC_DebugType>(val);
+						break;
+					}
+					TLOG(TLVL_ERROR) << "Invalid Debug Type passed to -T!" << std::endl;
+					printHelpMsg();
+					break;
+				case 'r':
+					rocMask = DTCLib::Utilities::getOptionValue(&optind, &argv);
+					break;
+				case 'C':
+					clockToProgram = DTCLib::Utilities::getOptionValue(&optind, &argv) % 3;
+					break;
+				case 'F':
+					targetFrequency = DTCLib::Utilities::getOptionValue(&optind, &argv);
+					break;
+				case 'v':
+					expectedDesignVersion = DTCLib::Utilities::getOptionString(&optind, &argv);
+					break;
+				case 'V':
+					skipVerify = true;
+					break;
+				case '-':  // Long option
 				{
-					stickyDebugType = true;
-					debugType = static_cast<DTC_DebugType>(val);
+					auto option = DTCLib::Utilities::getLongOptionOption(&optind, &argv);
+					if (option == "--timestamp-list")
+					{
+						timestampFile = DTCLib::Utilities::getLongOptionString(&optind, &argv);
+					}
+					else if (option == "--dtc")
+					{
+						dtc = DTCLib::Utilities::getLongOptionValue(&optind, &argv);
+					}
+					else if (option == "--cfoDRP")
+					{
+						useCFODRP = true;
+					}
+					else if (option == "--heartbeats")
+					{
+						heartbeatsAfter = DTCLib::Utilities::getLongOptionValue(&optind, &argv);
+					}
+					else if (option == "--binary-file-mode")
+					{
+						binaryFileOutput = true;
+						rawOutput = true;
+						rawOutputFile = DTCLib::Utilities::getLongOptionString(&optind, &argv);
+					}
+					else if (option == "--stop-verify")
+					{
+						stopOnVerifyFailure = true;
+					}
+					else if (option == "--stop-on-timeout")
+					{
+						stopOnTimeout = true;
+					}
+					else if (option == "--extra-reads")
+					{
+						extraReads = DTCLib::Utilities::getLongOptionValue(&optind, &argv);
+					}
+					else if (option == "--help")
+					{
+						printHelpMsg();
+					}
 					break;
 				}
-				TLOG(TLVL_ERROR) << "Invalid Debug Type passed to -T!" << std::endl;
-				printHelpMsg();
-				break;
-			case 'r':
-				rocMask = DTCLib::Utilities::getOptionValue(&optind, &argv);
-				break;
-			case 'C':
-				clockToProgram = DTCLib::Utilities::getOptionValue(&optind, &argv) % 3;
-				break;
-			case 'F':
-				targetFrequency = DTCLib::Utilities::getOptionValue(&optind, &argv);
-				break;
-			case 'v':
-				expectedDesignVersion = DTCLib::Utilities::getOptionString(&optind, &argv);
-				break;
-			case 'V':
-				skipVerify = true;
-				break;
-			case '-':  // Long option
-			{
-				auto option = DTCLib::Utilities::getLongOptionOption(&optind, &argv);
-				if (option == "--timestamp-list")
-				{
-					timestampFile = DTCLib::Utilities::getLongOptionString(&optind, &argv);
-				}
-				else if (option == "--dtc")
-				{
-					dtc = DTCLib::Utilities::getLongOptionValue(&optind, &argv);
-				}
-				else if (option == "--cfoDRP")
-				{
-					useCFODRP = true;
-				}
-				else if (option == "--heartbeats")
-				{
-					heartbeatsAfter = DTCLib::Utilities::getLongOptionValue(&optind, &argv);
-				}
-				else if (option == "--binary-file-mode")
-				{
-					binaryFileOutput = true;
-					rawOutput = true;
-					rawOutputFile = DTCLib::Utilities::getLongOptionString(&optind, &argv);
-				}
-				else if (option == "--stop-verify")
-				{
-					stopOnVerifyFailure = true;
-				}
-				else if (option == "--stop-on-timeout")
-				{
-					stopOnTimeout = true;
-				}
-				else if (option == "--extra-reads")
-				{
-					extraReads = DTCLib::Utilities::getLongOptionValue(&optind, &argv);
-				}
-				else if (option == "--help")
-				{
+				default:
+					TLOG(TLVL_ERROR) << "Unknown option: " << argv[optind] << std::endl;
 					printHelpMsg();
-				}
-				break;
-			}
-			default:
-				TLOG(TLVL_ERROR) << "Unknown option: " << argv[optind] << std::endl;
-				printHelpMsg();
-				break;
-			case 'h':
-				printHelpMsg();
-				break;
+					break;
+				case 'h':
+					printHelpMsg();
+					break;
 			}
 		}
 		else
@@ -165,19 +165,19 @@ void DTCLib::Mu2eUtil::parse_arguments(int argc, char** argv)
 	}
 
 	TLOG(TLVL_DEBUG) << "Options are: " << std::boolalpha
-		<< "Operation: " << std::string(op) << ", DTC: " << dtc << ", Num: " << number << ", Delay: " << delay
-		<< ", CFO Delay: " << cfodelay << ", TS Offset: " << timestampOffset << ", PacketCount: " << packetCount
-		<< ", Force NO Debug Flag: " << forceNoDebug << ", DataBlock Count: " << blockCount;
+					 << "Operation: " << std::string(op) << ", DTC: " << dtc << ", Num: " << number << ", Delay: " << delay
+					 << ", CFO Delay: " << cfodelay << ", TS Offset: " << timestampOffset << ", PacketCount: " << packetCount
+					 << ", Force NO Debug Flag: " << forceNoDebug << ", DataBlock Count: " << blockCount;
 	TLOG(TLVL_DEBUG) << std::boolalpha << ", Event Count: " << eventCount << ", Requests Ahead of Reads: " << requestsAhead
-		<< ", Synchronous Request Mode: " << syncRequests << ", Use DTC CFO Emulator: " << useCFOEmulator << (useCFODRP ? " (CFO Emulator DRPs)" : " (DTC DRPs)")
-		<< ", Increment TS: " << incrementTimestamp << ", Quiet Mode: " << quiet << " (" << quietCount << ")"
-		<< ", Really Quiet Mode: " << reallyQuiet << ", Check SERDES Error Status: " << checkSERDES;
+					 << ", Synchronous Request Mode: " << syncRequests << ", Use DTC CFO Emulator: " << useCFOEmulator << (useCFODRP ? " (CFO Emulator DRPs)" : " (DTC DRPs)")
+					 << ", Increment TS: " << incrementTimestamp << ", Quiet Mode: " << quiet << " (" << quietCount << ")"
+					 << ", Really Quiet Mode: " << reallyQuiet << ", Check SERDES Error Status: " << checkSERDES;
 	TLOG(TLVL_DEBUG) << std::boolalpha << ", Read Data from DDR: " << readGenerated
-		<< ", Use Sim File: " << useSimFile << ", Skip Verify: " << skipVerify << ", ROC Mask: " << std::hex
-		<< rocMask << ", Debug Type: " << DTC_DebugTypeConverter(debugType).toString()
-		<< ", Target Frequency: " << std::dec << targetFrequency;
+					 << ", Use Sim File: " << useSimFile << ", Skip Verify: " << skipVerify << ", ROC Mask: " << std::hex
+					 << rocMask << ", Debug Type: " << DTC_DebugTypeConverter(debugType).toString()
+					 << ", Target Frequency: " << std::dec << targetFrequency;
 	TLOG(TLVL_DEBUG) << std::boolalpha << ", Clock To Program: " << (clockToProgram == 0 ? "SERDES" : (clockToProgram == 1 ? "DDR" : "Timing"))
-		<< ", Expected Design Version: " << expectedDesignVersion << ", Heartbeats: " << heartbeatsAfter;
+					 << ", Expected Design Version: " << expectedDesignVersion << ", Heartbeats: " << heartbeatsAfter;
 	if (rawOutput)
 	{
 		TLOG(TLVL_DEBUG) << ", Raw output file: " << rawOutputFile;
@@ -376,7 +376,8 @@ void DTCLib::Mu2eUtil::verify_stream()
 
 		if (timeout)
 		{
-			if (stopOnTimeout) {
+			if (stopOnTimeout)
+			{
 				TLOG(TLVL_ERROR) << "Timeout detected and stop-on-timeout mode enabled. Stopping after " << ii << " events!";
 				break;
 			}
@@ -423,12 +424,15 @@ void DTCLib::Mu2eUtil::verify_stream()
 			subEventCount = newEvt.GetSubEventCount();
 
 			if (thisDTC->GetSimMode() == DTC_SimMode_ROCEmulator ||
-				thisDTC->GetSimMode() == DTC_SimMode_Performance) {
+				thisDTC->GetSimMode() == DTC_SimMode_Performance)
+			{
 				auto roc_mask_tmp = rocMask;
 				size_t num_rocs = 0;
 
-				while (roc_mask_tmp != 0) {
-					if ((roc_mask_tmp & 0x1) == 1) {
+				while (roc_mask_tmp != 0)
+				{
+					if ((roc_mask_tmp & 0x1) == 1)
+					{
 						num_rocs++;
 					}
 					roc_mask_tmp = roc_mask_tmp >> 4;
@@ -441,7 +445,6 @@ void DTCLib::Mu2eUtil::verify_stream()
 				}
 			}
 
-
 			verified = verifier.VerifyEvent(newEvt);
 		}
 		else
@@ -449,12 +452,15 @@ void DTCLib::Mu2eUtil::verify_stream()
 			evt.SetupEvent();
 			subEventCount = evt.GetSubEventCount();
 			if (thisDTC->GetSimMode() == DTC_SimMode_ROCEmulator ||
-				thisDTC->GetSimMode() == DTC_SimMode_Performance) {
+				thisDTC->GetSimMode() == DTC_SimMode_Performance)
+			{
 				auto roc_mask_tmp = rocMask;
 				size_t num_rocs = 0;
 
-				while (roc_mask_tmp != 0) {
-					if ((roc_mask_tmp & 0x1) == 1) {
+				while (roc_mask_tmp != 0)
+				{
+					if ((roc_mask_tmp & 0x1) == 1)
+					{
 						num_rocs++;
 					}
 					roc_mask_tmp = roc_mask_tmp >> 4;
@@ -505,26 +511,26 @@ void DTCLib::Mu2eUtil::verify_stream()
 		std::chrono::duration_cast<std::chrono::duration<double, std::ratio<1>>>(doneTime - afterRequests).count();
 
 	TLOG(TLVL_INFO) << "Total Elapsed Time: " << Utilities::FormatTimeString(totalTime) << "." << std::endl
-		<< "Total Init Time: " << Utilities::FormatTimeString(totalInitTime) << "." << std::endl
-		<< "Total Readout Request Time: " << Utilities::FormatTimeString(totalRequestTime) << "." << std::endl
-		<< "Total Read Time: " << Utilities::FormatTimeString(totalReadTime) << "." << std::endl;
+					<< "Total Init Time: " << Utilities::FormatTimeString(totalInitTime) << "." << std::endl
+					<< "Total Readout Request Time: " << Utilities::FormatTimeString(totalRequestTime) << "." << std::endl
+					<< "Total Read Time: " << Utilities::FormatTimeString(totalReadTime) << "." << std::endl;
 	TLOG(TLVL_INFO) << "Device Init Time: " << Utilities::FormatTimeString(initTime) << "." << std::endl
-		<< "Device Request Time: " << Utilities::FormatTimeString(readoutRequestTime) << "." << std::endl
-		<< "Device Read Time: " << Utilities::FormatTimeString(readDevTime) << "." << std::endl;
+					<< "Device Request Time: " << Utilities::FormatTimeString(readoutRequestTime) << "." << std::endl
+					<< "Device Read Time: " << Utilities::FormatTimeString(readDevTime) << "." << std::endl;
 	TLOG(TLVL_INFO) << "Total Bytes Written: " << Utilities::FormatByteString(static_cast<double>(totalBytesWritten), "")
-		<< "." << std::endl
-		<< "Total Bytes Read: " << Utilities::FormatByteString(static_cast<double>(totalBytesRead), "") << "."
-		<< std::endl;
+					<< "." << std::endl
+					<< "Total Bytes Read: " << Utilities::FormatByteString(static_cast<double>(totalBytesRead), "") << "."
+					<< std::endl;
 	TLOG(TLVL_INFO) << "Total PCIe Rate: "
-		<< Utilities::FormatByteString((totalBytesWritten + totalBytesRead) / totalTime, "/s") << std::endl
-		<< "Read Rate: " << Utilities::FormatByteString(totalBytesRead / totalReadTime, "/s") << std::endl
-		<< "Device Read Rate: " << Utilities::FormatByteString(totalBytesRead / readDevTime, "/s") << std::endl;
+					<< Utilities::FormatByteString((totalBytesWritten + totalBytesRead) / totalTime, "/s") << std::endl
+					<< "Read Rate: " << Utilities::FormatByteString(totalBytesRead / totalReadTime, "/s") << std::endl
+					<< "Device Read Rate: " << Utilities::FormatByteString(totalBytesRead / readDevTime, "/s") << std::endl;
 }
 
 void DTCLib::Mu2eUtil::buffer_test()
 {
 	TLOG(TLVL_DEBUG) << "Operation \"buffer_test\"" << std::endl;
-	auto startTime = std::chrono::steady_clock::now();		// get the beggining of the test
+	auto startTime = std::chrono::steady_clock::now();  // get the beggining of the test
 	auto thisDTC = new DTC(DTC_SimMode_NoCFO, dtc, rocMask, expectedDesignVersion);
 	auto device = thisDTC->GetDevice();
 
@@ -533,15 +539,15 @@ void DTCLib::Mu2eUtil::buffer_test()
 	auto afterInit = std::chrono::steady_clock::now();
 
 	// Emulated CFO
-	DTCSoftwareCFO cfo(thisDTC, 
-						useCFOEmulator, 
-						packetCount, 
-						debugType, 
-						stickyDebugType, 
-						quiet, 
-						false, 
-						forceNoDebug, 
-						useCFODRP);
+	DTCSoftwareCFO cfo(thisDTC,
+					   useCFOEmulator,
+					   packetCount,
+					   debugType,
+					   stickyDebugType,
+					   quiet,
+					   false,
+					   forceNoDebug,
+					   useCFODRP);
 
 	if (useSimFile)
 	{
@@ -576,12 +582,12 @@ void DTCLib::Mu2eUtil::buffer_test()
 	}
 	else if (thisDTC->GetSimMode() != DTC_SimMode_Loopback && !syncRequests)
 	{
-		cfo.SendRequestsForRange(number, 
-									DTC_EventWindowTag(timestampOffset), 
-									incrementTimestamp, 
-									cfodelay, 
-									requestsAhead, 
-									heartbeatsAfter);
+		cfo.SendRequestsForRange(number,
+								 DTC_EventWindowTag(timestampOffset),
+								 incrementTimestamp,
+								 cfodelay,
+								 requestsAhead,
+								 heartbeatsAfter);
 	}
 	else if (thisDTC->GetSimMode() == DTC_SimMode_Loopback)
 	{
@@ -649,20 +655,20 @@ void DTCLib::Mu2eUtil::buffer_test()
 		std::chrono::duration_cast<std::chrono::duration<double, std::ratio<1>>>(doneTime - afterRequests).count();
 
 	TLOG(TLVL_INFO) << "Total Elapsed Time: " << Utilities::FormatTimeString(totalTime) << "." << std::endl
-		<< "Total Init Time: " << Utilities::FormatTimeString(totalInitTime) << "." << std::endl
-		<< "Total Readout Request Time: " << Utilities::FormatTimeString(totalRequestTime) << "." << std::endl
-		<< "Total Read Time: " << Utilities::FormatTimeString(totalReadTime) << "." << std::endl;
+					<< "Total Init Time: " << Utilities::FormatTimeString(totalInitTime) << "." << std::endl
+					<< "Total Readout Request Time: " << Utilities::FormatTimeString(totalRequestTime) << "." << std::endl
+					<< "Total Read Time: " << Utilities::FormatTimeString(totalReadTime) << "." << std::endl;
 	TLOG(TLVL_INFO) << "Device Init Time: " << Utilities::FormatTimeString(initTime) << "." << std::endl
-		<< "Device Request Time: " << Utilities::FormatTimeString(readoutRequestTime) << "." << std::endl
-		<< "Device Read Time: " << Utilities::FormatTimeString(readDevTime) << "." << std::endl;
+					<< "Device Request Time: " << Utilities::FormatTimeString(readoutRequestTime) << "." << std::endl
+					<< "Device Read Time: " << Utilities::FormatTimeString(readDevTime) << "." << std::endl;
 	TLOG(TLVL_INFO) << "Total Bytes Written: " << Utilities::FormatByteString(static_cast<double>(totalBytesWritten), "")
-		<< "." << std::endl
-		<< "Total Bytes Read: " << Utilities::FormatByteString(static_cast<double>(totalBytesRead), "") << "."
-		<< std::endl;
+					<< "." << std::endl
+					<< "Total Bytes Read: " << Utilities::FormatByteString(static_cast<double>(totalBytesRead), "") << "."
+					<< std::endl;
 	TLOG(TLVL_INFO) << "Total PCIe Rate: "
-		<< Utilities::FormatByteString((totalBytesWritten + totalBytesRead) / totalTime, "/s") << std::endl
-		<< "Read Rate: " << Utilities::FormatByteString(totalBytesRead / totalReadTime, "/s") << std::endl
-		<< "Device Read Rate: " << Utilities::FormatByteString(totalBytesRead / readDevTime, "/s") << std::endl;
+					<< Utilities::FormatByteString((totalBytesWritten + totalBytesRead) / totalTime, "/s") << std::endl
+					<< "Read Rate: " << Utilities::FormatByteString(totalBytesRead / totalReadTime, "/s") << std::endl
+					<< "Device Read Rate: " << Utilities::FormatByteString(totalBytesRead / readDevTime, "/s") << std::endl;
 }
 
 void DTCLib::Mu2eUtil::read_release()
@@ -686,7 +692,7 @@ void DTCLib::Mu2eUtil::program_clock()
 	TLOG(TLVL_DEBUG) << "Operation \"program_clock\"";
 	auto thisDTC = new DTC(DTC_SimMode_NoCFO, dtc, rocMask, expectedDesignVersion, true);
 	auto oscillator = clockToProgram == 0 ? DTC_OscillatorType_SERDES
-		: (clockToProgram == 1 ? DTC_OscillatorType_DDR : DTC_OscillatorType_Timing);
+										  : (clockToProgram == 1 ? DTC_OscillatorType_DDR : DTC_OscillatorType_Timing);
 	thisDTC->SetNewOscillatorFrequency(oscillator, targetFrequency);
 	delete thisDTC;
 }
@@ -712,7 +718,6 @@ void DTCLib::Mu2eUtil::dma_info()
 
 void DTCLib::Mu2eUtil::run()
 {
-
 	if (rawOutput) outputStream.open(rawOutputFile, std::ios::out | std::ios::app | std::ios::binary);
 
 	if (op == "read_data")
@@ -771,8 +776,8 @@ void DTCLib::Mu2eUtil::run()
 void DTCLib::Mu2eUtil::printHelpMsg()
 {
 	std::cout << "Usage: mu2eUtil [options] "
-		"[read_data,reset_ddrread,reset_detemu,toggle_serdes,loopback,verify_stream,buffer_test,read_release,program_clock,verify_simfile,dma_info]"
-		<< std::endl;
+				 "[read_data,reset_ddrread,reset_detemu,toggle_serdes,loopback,verify_stream,buffer_test,read_release,program_clock,verify_simfile,dma_info]"
+			  << std::endl;
 	std::cout
 		<< "Options are:" << std::endl
 		<< "    -h, --help: This message." << std::endl
@@ -789,7 +794,7 @@ void DTCLib::Mu2eUtil::printHelpMsg()
 		<< "    -a: Number of Readout Request/Data Requests to send before starting to read data (Default: 0)."
 		<< std::endl
 		<< "    -q: Quiet mode (Don't print requests) Additionally, for buffer_test mode, limits to N (Default 1) "
-		"packets at the beginning and end of the buffer."
+		   "packets at the beginning and end of the buffer."
 		<< std::endl
 		<< "    -Q: Really Quiet mode (Try not to print anything)" << std::endl
 		<< "    -s: Stop on SERDES Error." << std::endl
@@ -803,7 +808,7 @@ void DTCLib::Mu2eUtil::printHelpMsg()
 		<< "    -P: Send <file> to DTC and enable Detector Emulator mode (Default: \"\")" << std::endl
 		<< "    -G: Enable Detector Emulator Mode" << std::endl
 		<< "    -r: # of rocs to enable. Hexadecimal, each digit corresponds to a link. ROC_0: 1, ROC_1: 3, ROC_2: 5, "
-		"ROC_3: 7, ROC_4: 9, ROC_5: B (Default 0x1, All possible: 0xBBBBBB)"
+		   "ROC_3: 7, ROC_4: 9, ROC_5: B (Default 0x1, All possible: 0xBBBBBB)"
 		<< std::endl
 		<< "    -F: Frequency to program (in Hz, sorry...Default 166666667 Hz)" << std::endl
 		<< "    -C: Clock to program (0: SERDES, 1: DDR, 2: Timing, Default 0)" << std::endl
@@ -837,7 +842,7 @@ mu2e_databuff_t* DTCLib::Mu2eUtil::readDTCBuffer(mu2edev* device, bool& readSucc
 		uint16_t bufSize = static_cast<uint16_t>(*static_cast<uint64_t*>(readPtr));
 		readPtr = static_cast<uint8_t*>(readPtr) + 8;
 		TLOG((reallyQuiet ? TLVL_DEBUG + 4 : TLVL_INFO)) << "Buffer reports DMA size of " << std::dec << bufSize << " bytes. Device driver reports read of "
-			<< sts << " bytes," << std::endl;
+														 << sts << " bytes," << std::endl;
 
 		TLOG(TLVL_TRACE) << "util - bufSize is " << bufSize;
 		if (binaryFileOutput)
@@ -846,28 +851,30 @@ mu2e_databuff_t* DTCLib::Mu2eUtil::readDTCBuffer(mu2edev* device, bool& readSucc
 			outputStream.write(reinterpret_cast<char*>(&dmaWriteSize), sizeof(dmaWriteSize));
 			outputStream.write(reinterpret_cast<char*>(&buffer[0]), sts);
 		}
-		else if (rawOutput) {
+		else if (rawOutput)
+		{
 			outputStream.write(static_cast<char*>(readPtr), sts - 8);
 		}
 
 		timeout = false;
-		if (!continuedMode && sts > sizeof(DTC_EventHeader) + sizeof(DTC_SubEventHeader) + 8) {
+		if (!continuedMode && sts > sizeof(DTC_EventHeader) + sizeof(DTC_SubEventHeader) + 8)
+		{
 			// Check for dead or cafe in first packet
 			readPtr = static_cast<uint8_t*>(readPtr) + sizeof(DTC_EventHeader) + sizeof(DTC_SubEventHeader);
-			std::vector<size_t> wordsToCheck{ 1, 2, 3, 7, 8 };
+			std::vector<size_t> wordsToCheck{1, 2, 3, 7, 8};
 			for (auto& word : wordsToCheck)
 			{
 				auto wordPtr = static_cast<uint16_t*>(readPtr) + (word - 1);
 				TLOG(TLVL_TRACE + 1) << word << (word == 1 ? "st" : word == 2 ? "nd"
-					: word == 3 ? "rd"
-					: "th")
-					<< " word of buffer: " << *wordPtr;
+																: word == 3   ? "rd"
+																			  : "th")
+									 << " word of buffer: " << *wordPtr;
 				if (*wordPtr == 0xcafe || *wordPtr == 0xdead)
 				{
 					TLOG(TLVL_WARNING) << "Buffer Timeout detected! " << word << (word == 1 ? "st" : word == 2 ? "nd"
-						: word == 3 ? "rd"
-						: "th")
-						<< " word of buffer is 0x" << std::hex << *wordPtr;
+																								 : word == 3   ? "rd"
+																											   : "th")
+									   << " word of buffer is 0x" << std::hex << *wordPtr;
 					DTCLib::Utilities::PrintBuffer(readPtr, 16, 0, TLVL_TRACE + 3);
 					timeout = true;
 					break;
