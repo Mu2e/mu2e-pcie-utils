@@ -3125,7 +3125,7 @@ void CFOLib::CFO_Registers::VerifyRegisterWrite_(const CFOandDTC_Register& addre
 						"... read back 0x"	 	<< std::setw(8) << std::setfill('0') << std::setprecision(8) << std::hex << static_cast<uint32_t>(readbackValue) << 
 						std::endl << std::endl <<
 						"If you do not understand this error, try checking the CFO firmware version: " << ReadDesignDate() << std::endl;					
-				__SS_THROW_ONLY__;
+				__SS_ONLY_THROW__;
 			}
 			catch(const std::runtime_error& e)
 			{

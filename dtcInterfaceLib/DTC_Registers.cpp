@@ -7689,7 +7689,7 @@ void DTCLib::DTC_Registers::VerifyRegisterWrite_(const CFOandDTC_Register& addre
 					   << " to register 0x" << std::setw(4) << std::setfill('0') << std::setprecision(4) << std::hex << static_cast<uint32_t>(address) << "... read back 0x" << std::setw(8) << std::setfill('0') << std::setprecision(8) << std::hex << static_cast<uint32_t>(readbackValue) << std::endl
 					   << std::endl
 					   << "If you do not understand this error, try checking the DTC firmware version: " << ReadDesignDate() << std::endl;
-				__SS_THROW_ONLY__;
+				__SS_ONLY_THROW__;
 			}
 			catch (const std::runtime_error& e)
 			{
