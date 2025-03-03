@@ -45,7 +45,7 @@ DTCLib::CFOandDTC_Registers::CFOandDTC_Registers()
 /// </summary>
 DTCLib::CFOandDTC_Registers::~CFOandDTC_Registers()
 {
-	TLOG(TLVL_INFO) << "DESTRUCTOR";
+	TLOG(TLVL_TRACE) << "DESTRUCTOR";
 	device_.close();
 } //end destructor()
 
@@ -100,13 +100,11 @@ std::string DTCLib::CFOandDTC_Registers::ReadDesignVersion() { return //ReadDesi
 /// <returns>RegisterFormatter object containing register information</returns>
 DTCLib::RegisterFormatter DTCLib::CFOandDTC_Registers::FormatDesignVersion()
 {
-	__COUT__ << "?";
 	auto form = CreateFormatter(CFOandDTC_Register_DesignVersion);
 	form.description = "DTC Firmware Design Version";
 	form.vals.push_back(std::string("Version Number:                [") + ReadDesignVersionNumber(form.value) + "]");
 	form.vals.push_back(std::string("Link Speed CFO link/ROC links: [") + ReadDesignLinkSpeed(form.value) + "]");
 	form.vals.push_back(std::string("Design Type (C=CFO, D=DTC):    [") + ReadDesignType(form.value) + "]");
-	__COUT__ << "!";
 	return form;
 }
 

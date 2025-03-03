@@ -35,7 +35,7 @@ DTCLib::DTC_Registers::DTC_Registers(DTC_SimMode mode, int dtc, std::string simF
 									 bool skipInit, const std::string& uid)
 	: simMode_(mode), usingDetectorEmulator_(false), dmaSize_(64)
 {
-	TLOG(TLVL_INFO) << "CONSTRUCTOR";
+	TLOG(TLVL_TRACE) << "CONSTRUCTOR";
 
 	auto sim = getenv("DTCLIB_SIM_ENABLE");
 	if (sim != nullptr)
@@ -63,7 +63,7 @@ DTCLib::DTC_Registers::DTC_Registers(DTC_SimMode mode, int dtc, std::string simF
 /// </summary>
 DTCLib::DTC_Registers::~DTC_Registers()
 {
-	TLOG(TLVL_INFO) << "DESTRUCTOR";
+	TLOG(TLVL_TRACE) << "DESTRUCTOR";
 	DisableDetectorEmulator();
 	// DisableDetectorEmulatorMode();
 	// DisableCFOEmulation();

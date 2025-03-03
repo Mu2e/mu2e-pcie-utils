@@ -35,12 +35,12 @@
 DTCLib::DTC::DTC(DTC_SimMode mode, int dtc, unsigned rocMask, std::string expectedDesignVersion, bool skipInit, std::string simMemoryFile, const std::string& uid)
 	: DTC_Registers(mode, dtc, simMemoryFile, rocMask, expectedDesignVersion, skipInit, uid), daqDMAInfo_(), dcsDMAInfo_()
 {
-	__COUT_INFO__ << "CONSTRUCTOR";
+	__COUT__ << "CONSTRUCTOR";
 }
 
 DTCLib::DTC::~DTC()
 {
-	__COUT_INFO__ << "DESTRUCTOR";
+	__COUT__ << "DESTRUCTOR";
 	// TLOG_ENTEX(-6);
 	TRACE_EXIT
 	{
