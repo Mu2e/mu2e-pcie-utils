@@ -1339,4 +1339,3 @@ my_cntl write 0x9168 0x68250200
 my_cntl write 0x916c 0x00000001
 
 # End configuration postamble
-

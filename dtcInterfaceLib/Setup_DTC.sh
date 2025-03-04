@@ -83,14 +83,14 @@ DTC_TestDDR() {
      DTCLIB_SIM_ENABLE=N mu2eUtil buffer_test -a 0 -n 1 -c 10 -S -q -T 4
  }
 
-DTC_TestSRAM() { 
+DTC_TestSRAM() {
     treset;
     tonM1;
-    DTCLIB_SIM_ENABLE=N mu2eUtil buffer_test -a 0 -n 1 -c 10 -S -q -T 3 
+    DTCLIB_SIM_ENABLE=N mu2eUtil buffer_test -a 0 -n 1 -c 10 -S -q -T 3
 }
 
-DTC_Links() { 
-    DTCRegDump|grep -A1 "RX Buffer Status" 
+DTC_Links() {
+    DTCRegDump|grep -A1 "RX Buffer Status"
 }
 
 DTC_LoadData() {
