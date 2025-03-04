@@ -83,7 +83,7 @@ enum CFO_Register : uint16_t
 	CFO_Register_SERDESPRBSControlLink5 = 0x9344,
 	CFO_Register_SERDESPRBSControlLink6 = 0x9348,
 	CFO_Register_SERDESPRBSControlLink7 = 0x934C,
-	
+
 	CFO_Register_CableDelayValue_offset = 0x9360,
 	// CFO_Register_CableDelayValueROC1_offset = 0x9460,
 	// CFO_Register_CableDelayValueROC2_offset = 0x9560,
@@ -1251,10 +1251,10 @@ public:
 	RegisterFormatter FormatSERDESPRBSControlLink7();
 
 	// Cable Delays
-	uint32_t 	ReadCableDelayMeasureExponentialCount	(std::optional<uint32_t> val = std::nullopt);
-	void 		SetCableDelayMeasureExponentialCount	(const uint32_t exponent);
-	uint32_t 	ReadCableDelayMeasurement				(const CFO_Link_ID link, const uint8_t roc, bool& done);
-	
+	uint32_t ReadCableDelayMeasureExponentialCount(std::optional<uint32_t> val = std::nullopt);
+	void SetCableDelayMeasureExponentialCount(const uint32_t exponent);
+	uint32_t ReadCableDelayMeasurement(const CFO_Link_ID link, const uint8_t roc, bool& done);
+
 	// /// <summary>
 	// /// Set the cable delay value for the given link
 	// /// </summary>
@@ -1453,7 +1453,7 @@ public:
 		[this] { return this->FormatCFOControl(); },
 		[this] { return this->FormatBeamOffMode(); },
 		[this] { return this->FormatBeamOnMode(); },
-		[this] { return this->FormatJitterAttenuatorCSR(); },		
+		[this] { return this->FormatJitterAttenuatorCSR(); },
 		[this] { return this->FormatSERDESPLLLocked(); },
 		[this] { return this->FormatLinkEnable(); },
 		// [this] { return this->FormatRXCDRLockStatus(); },

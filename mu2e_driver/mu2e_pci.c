@@ -1,10 +1,10 @@
 /*  This file (mu2e_init.c) was created by Ron Rechenmacher <ron@fnal.gov> on
-        Feb  5, 2014. "TERMS AND CONDITIONS" governing this file are in the README
-        or COPYING file. If you do not have such a file, one can be obtained by
-        contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
-        $RCSfile: .emacs.gnu,v $
-        rev="$Revision: 1.23 $$Date: 2012/01/23 15:32:40 $";
-        */
+		Feb  5, 2014. "TERMS AND CONDITIONS" governing this file are in the README
+		or COPYING file. If you do not have such a file, one can be obtained by
+		contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
+		$RCSfile: .emacs.gnu,v $
+		rev="$Revision: 1.23 $$Date: 2012/01/23 15:32:40 $";
+		*/
 
 #include <linux/fs.h>  /* struct inode */
 #include <linux/pci.h> /* pci_* */
@@ -115,9 +115,9 @@ static int mu2e_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 
 	TRACE(0, "mu2e_pci_probe pdev=%p, MINOR(pdev->dev.devt)=%d", pdev, MINOR(pdev->dev.devt));
 	/* Initialize device before it is used by driver. Ask low-level
-   * code to enable I/O and memory. Wake up the device if it was
-   * suspended. Beware, this function can fail.
-   */
+	 * code to enable I/O and memory. Wake up the device if it was
+	 * suspended. Beware, this function can fail.
+	 */
 	pciRet = pci_enable_device(pdev);
 	if (pciRet < 0)
 	{
@@ -126,9 +126,9 @@ static int mu2e_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	}
 
 	/*
-   * Enable bus-mastering on device. Calls pcibios_set_master() to do
-   * the needed architecture-specific settings.
-   */
+	 * Enable bus-mastering on device. Calls pcibios_set_master() to do
+	 * the needed architecture-specific settings.
+	 */
 	pci_set_master(pdev);
 
 	pciRet = pci_request_regions(pdev, DRIVER_NAME);
@@ -153,8 +153,8 @@ static int mu2e_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	}
 
 	/* Check all BARs for memory-mapped or I/O-mapped. The driver is
-   * intended to be memory-mapped.
-   */
+	 * intended to be memory-mapped.
+	 */
 	if (!(pci_resource_flags(pdev, bar) & IORESOURCE_MEM))
 	{
 		printk(KERN_ERR "BAR %d is of wrong type, aborting.\n", bar);
@@ -186,13 +186,13 @@ static int mu2e_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 
 	TRACE(1, "mu2e_pci_probe creating device");
 	devptr = device_create(mu2e_dev_class, NULL, pdev->dev.devt, NULL, MU2E_DEV_FILE, dtc);
-	if ((void*)devptr == ERR_PTR) goto out2;
+	if ((void *)devptr == ERR_PTR) goto out2;
 
 	TRACE(1, "mu2e_pci_probe enabling events");
 	mu2e_event_up(dtc);
 
 #if MU2E_RECV_INTER_ENABLED
-	#if 1
+#if 1
 	TRACE(1, "mu2e_pci_probe calling pci_enable_msi");
 	/* Now enable interrupts using MSI mode */
 	if (!pci_enable_msi(mu2e_pci_dev[dtc]))
@@ -200,7 +200,7 @@ static int mu2e_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 		TRACE(1, "MSI enabled");
 		MSIEnabled[dtc] = 1;
 	}
-	#endif
+#endif
 
 	TRACE(1, "mu2e_pci_probe request_irq");
 	pciRet = request_irq(mu2e_pci_dev[dtc]->irq, DmaInterrupt, IRQF_SHARED, "mu2e", mu2e_pci_dev[dtc]);
@@ -229,7 +229,7 @@ static void mu2e_pci_remove(struct pci_dev *pdev)
 
 	if (mu2e_pci_dev[dtc] == 0) return;
 	printk("mu2e_pci_remove start dtc=%d\n ", dtc);
-		
+
 	printk("mu2e_pci_remove dtc=%d disabling interrupts\n", dtc);
 	Dma_mIntDisable((unsigned long)mu2e_pcie_bar_info[dtc].baseVAddr);
 

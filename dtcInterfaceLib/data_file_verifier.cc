@@ -22,7 +22,6 @@ void printHelpMsg()
 	exit(0);
 }
 
-
 int main(int argc, char* argv[])
 {
 	std::vector<std::string> binaryFiles;

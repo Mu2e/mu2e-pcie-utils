@@ -17,24 +17,24 @@ typedef unsigned long long u64;
 
 /* NWL DMA design is little-endian, so values need not be swapped.
  */
-#define XIo_In32(addr)                                  \
-	({                                                  \
-		u32 xx;                                         \
-		TRACE(TLVL_DEBUG+40, "read: Start of %p", (void *)(addr)); \
-		xx = readl((unsigned int *)(addr));             \
-		TRACE(TLVL_DEBUG+41, "read: 0x%x=%p", xx, (void *)(addr)); \
-		xx;                                             \
+#define XIo_In32(addr)                                               \
+	({                                                               \
+		u32 xx;                                                      \
+		TRACE(TLVL_DEBUG + 40, "read: Start of %p", (void *)(addr)); \
+		xx = readl((unsigned int *)(addr));                          \
+		TRACE(TLVL_DEBUG + 41, "read: 0x%x=%p", xx, (void *)(addr)); \
+		xx;                                                          \
 	})
 
-#define XIo_Out32(addr, data)                             \
-	do                                                    \
-	{                                                     \
-		TRACE(TLVL_DEBUG+42, "write %p=0x%x", (void *)(addr), data); \
-		writel((data), (unsigned int *)(addr));           \
-		TRACE(TLVL_DEBUG+43, "write done");                          \
+#define XIo_Out32(addr, data)                                          \
+	do                                                                 \
+	{                                                                  \
+		TRACE(TLVL_DEBUG + 42, "write %p=0x%x", (void *)(addr), data); \
+		writel((data), (unsigned int *)(addr));                        \
+		TRACE(TLVL_DEBUG + 43, "write done");                          \
 	} while (0)
 
-//#define MAX_DMA_ENGINES         64      /**< Maximum number of DMA engines */
+// #define MAX_DMA_ENGINES         64      /**< Maximum number of DMA engines */
 #define MAX_DMA_ENGINES 64 /* FNAL DEVEL */
 
 /** Engine bitmask is 64-bit because there are 64 engines */
@@ -121,19 +121,19 @@ static unsigned long mu2e_ch_reg_offset[2][2] = {{0x2000, 0x0}, {0x2100, 0x100}}
 	Dma_mWriteReg((unsigned long)mu2e_pcie_bar_info[dtc].baseVAddr + mu2e_ch_reg_offset[chn][dir], reg, val)
 #endif
 
-#define descDmaAdr2idx(regval, dtc, chn, dir, hnt)                                                                 \
-	(dir == C2S) ? ({                                                                                              \
-		u32 ii = hnt % MU2E_NUM_RECV_BUFFS, lc = 0;                                                                \
-		do                                                                                                         \
-		{                                                                                                          \
-			TRACE(TLVL_DEBUG+44, "descDmaAdr2idx: regval=%x buffdesc_ring_dma[%d/%d]=%x, dtc=%d, chn=%d, dir=%d", regval, ii, \
-				  MU2E_NUM_RECV_BUFFS, (u32)mu2e_pci_recver[dtc][chn].buffdesc_ring_dma[ii], dtc, chn, dir);       \
-			if (regval == mu2e_pci_recver[dtc][chn].buffdesc_ring_dma[ii]) break;                                  \
-			ii = (ii + 1) % MU2E_NUM_RECV_BUFFS;                                                                   \
-			++lc;                                                                                                  \
-		} while (lc < MU2E_NUM_RECV_BUFFS);                                                                        \
-		ii;                                                                                                        \
-	})                                                                                                             \
+#define descDmaAdr2idx(regval, dtc, chn, dir, hnt)                                                                              \
+	(dir == C2S) ? ({                                                                                                           \
+		u32 ii = hnt % MU2E_NUM_RECV_BUFFS, lc = 0;                                                                             \
+		do                                                                                                                      \
+		{                                                                                                                       \
+			TRACE(TLVL_DEBUG + 44, "descDmaAdr2idx: regval=%x buffdesc_ring_dma[%d/%d]=%x, dtc=%d, chn=%d, dir=%d", regval, ii, \
+				  MU2E_NUM_RECV_BUFFS, (u32)mu2e_pci_recver[dtc][chn].buffdesc_ring_dma[ii], dtc, chn, dir);                    \
+			if (regval == mu2e_pci_recver[dtc][chn].buffdesc_ring_dma[ii]) break;                                               \
+			ii = (ii + 1) % MU2E_NUM_RECV_BUFFS;                                                                                \
+			++lc;                                                                                                               \
+		} while (lc < MU2E_NUM_RECV_BUFFS);                                                                                     \
+		ii;                                                                                                                     \
+	})                                                                                                                          \
 				 : ((u32)(regval - mu2e_pci_sender[dtc][chn].buffdesc_ring_dma) / (u32)sizeof(mu2e_buffdesc_S2C_t))
 
 #define idx2descDmaAdr(idx, dtc, chn, dir)                                 \
@@ -307,13 +307,13 @@ static unsigned long mu2e_ch_reg_offset[2][2] = {{0x2000, 0x0}, {0x2100, 0x100}}
  *    void Dma_mIntEnable(u32 BaseAddress)
  *
  *****************************************************************************/
-#define Dma_mIntEnable(BaseAddress)                               \
-	{                                                             \
-		u32 Reg = Dma_mReadReg(BaseAddress, REG_DMA_CTRL_STATUS); \
-		Reg |= (DMA_INT_ENABLE | DMA_USER_INT_ENABLE);            \
-		TRACE(TLVL_DEBUG+46,"xdma.h macro Dma_mIntEnable(Base=%p): OR'd in 0x%x, writing REG_DMA_CTRL_STATUS 0x%08x",\
-		      (void*)BaseAddress, (DMA_INT_ENABLE | DMA_USER_INT_ENABLE), Reg); \
-		Dma_mWriteReg(BaseAddress, REG_DMA_CTRL_STATUS, Reg);     \
+#define Dma_mIntEnable(BaseAddress)                                                                                      \
+	{                                                                                                                    \
+		u32 Reg = Dma_mReadReg(BaseAddress, REG_DMA_CTRL_STATUS);                                                        \
+		Reg |= (DMA_INT_ENABLE | DMA_USER_INT_ENABLE);                                                                   \
+		TRACE(TLVL_DEBUG + 46, "xdma.h macro Dma_mIntEnable(Base=%p): OR'd in 0x%x, writing REG_DMA_CTRL_STATUS 0x%08x", \
+			  (void *)BaseAddress, (DMA_INT_ENABLE | DMA_USER_INT_ENABLE), Reg);                                         \
+		Dma_mWriteReg(BaseAddress, REG_DMA_CTRL_STATUS, Reg);                                                            \
 	}
 
 /****************************************************************************
@@ -326,14 +326,14 @@ static unsigned long mu2e_ch_reg_offset[2][2] = {{0x2000, 0x0}, {0x2100, 0x100}}
  * C-style signature:
  *    void Dma_mIntDisable(u32 BaseAddress)
  *****************************************************************************/
-#define Dma_mIntDisable(BaseAddress)                              \
-	do                                                            \
-	{                                                             \
-		u32 Reg = Dma_mReadReg(BaseAddress, REG_DMA_CTRL_STATUS); \
-		Reg &= ~(DMA_INT_ENABLE | DMA_USER_INT_ENABLE);           \
-		TRACE(TLVL_DEBUG+47,"xdma.h macro Dma_mIntDisable(Base=%p): masked off 0x%x, writing REG_DMA_CTRL_STATUS 0x%08x",\
-		      (void*)BaseAddress, (DMA_INT_ENABLE | DMA_USER_INT_ENABLE), Reg); \
-		Dma_mWriteReg(BaseAddress, REG_DMA_CTRL_STATUS, Reg);     \
+#define Dma_mIntDisable(BaseAddress)                                                                                         \
+	do                                                                                                                       \
+	{                                                                                                                        \
+		u32 Reg = Dma_mReadReg(BaseAddress, REG_DMA_CTRL_STATUS);                                                            \
+		Reg &= ~(DMA_INT_ENABLE | DMA_USER_INT_ENABLE);                                                                      \
+		TRACE(TLVL_DEBUG + 47, "xdma.h macro Dma_mIntDisable(Base=%p): masked off 0x%x, writing REG_DMA_CTRL_STATUS 0x%08x", \
+			  (void *)BaseAddress, (DMA_INT_ENABLE | DMA_USER_INT_ENABLE), Reg);                                             \
+		Dma_mWriteReg(BaseAddress, REG_DMA_CTRL_STATUS, Reg);                                                                \
 	} while (0)
 
 /****************************************************************************
@@ -350,13 +350,13 @@ static unsigned long mu2e_ch_reg_offset[2][2] = {{0x2000, 0x0}, {0x2100, 0x100}}
 /* Currently implemented like this. May have a performance hit. In
  * that case, will re-implement to avoid the extra read. !!!!
  */
-#define Dma_mIntAck(BaseAddress, Mask)                            \
-	{                                                             \
-		u32 Reg0 = Dma_mReadReg(BaseAddress, REG_DMA_CTRL_STATUS); \
-		u32 Reg1 = Reg0 | Mask;                                              \
-		TRACE(TLVL_DEBUG+45,"xdma.h macro Dma_mIntAck(Base=%p,Mask=0x%08x): writing REG_DMA_CTRL_STATUS 0x%08x",\
-		      (void*)BaseAddress, Mask, Reg1);			\
-		Dma_mWriteReg(BaseAddress, REG_DMA_CTRL_STATUS, Reg1);     \
+#define Dma_mIntAck(BaseAddress, Mask)                                                                              \
+	{                                                                                                               \
+		u32 Reg0 = Dma_mReadReg(BaseAddress, REG_DMA_CTRL_STATUS);                                                  \
+		u32 Reg1 = Reg0 | Mask;                                                                                     \
+		TRACE(TLVL_DEBUG + 45, "xdma.h macro Dma_mIntAck(Base=%p,Mask=0x%08x): writing REG_DMA_CTRL_STATUS 0x%08x", \
+			  (void *)BaseAddress, Mask, Reg1);                                                                     \
+		Dma_mWriteReg(BaseAddress, REG_DMA_CTRL_STATUS, Reg1);                                                      \
 	}
 
 /****************************************************************************/
