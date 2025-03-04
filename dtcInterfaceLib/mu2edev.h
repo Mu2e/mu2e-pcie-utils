@@ -184,6 +184,7 @@ private:
 	mu2esim* simulator_;
 	int activeDeviceIndex_;
 	static std::atomic<std::thread::id> dcs_lock_held_;
+	static std::atomic<int> dcs_lock_count_;
 
 	std::atomic<long long> deviceTime_;
 	std::atomic<size_t> writeSize_;

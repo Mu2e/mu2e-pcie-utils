@@ -121,7 +121,9 @@ std::string DTCLib::CFOandDTC_Registers::ReadDesignDate(std::optional<uint32_t> 
 		__SS_THROW__;
 		// throw std::runtime_error("Invalid register read for firmware design date: " + std::to_string(mon));
 	}
-	if (((readData >> 28) & 0xF) == 0xC)
+	if (((readData >> 28) & 0xF) == 0xA)
+		o << "SIM-";
+	else if (((readData >> 28) & 0xF) == 0xC)
 		o << "CFO-";
 	else if (((readData >> 28) & 0xF) == 0xD)
 		o << "DTC-";
@@ -878,7 +880,7 @@ DTCLib::RegisterFormatter DTCLib::CFOandDTC_Registers::FormatJitterAttenuatorCSR
 	form.description = "Jitter Attenuator CSR";
 	form.vals.push_back("<field> : [<value>]");  // first value describes format
 	form.vals.push_back(std::string("JA Source Clock Select: [") +
-						(JAinputSelect.to_ulong() == 0 ? "from emulated CFO"
+						(JAinputSelect.to_ulong() == 0 ? "from internal CFO"
 													   : (JAinputSelect.to_ulong() == 1 ? "from RJ45"
 																						: "Timing Card Selectable (SFP+ or FPGA) Input Clock")) +
 						"]");

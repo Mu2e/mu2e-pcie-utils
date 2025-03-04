@@ -138,7 +138,7 @@ private:
 	DTCLib::DTC_EventMode getEventMode_();
 	void CFOEmulator_();
 	void packetSimulator_(DTCLib::DTC_EventWindowTag ts, DTCLib::DTC_Link_ID link, uint16_t packetCount);
-	void dcsPacketSimulator_(DTCLib::DTC_DCSRequestPacket in);
+	void dcsPacketSimulator_(DTCLib::DTC_DCSRequestPacket in, DTCLib::DTC_Link_ID rocLink);
 
 	void eventSimulator_(DTCLib::DTC_EventWindowTag ts);
 	void trackerBlockSimulator_(DTCLib::DTC_EventWindowTag ts, DTCLib::DTC_Link_ID link, int DTCID);
@@ -147,10 +147,14 @@ private:
 
 	void reopenDDRFile_();
 
-	std::unordered_map<uint16_t, uint32_t> registers_;
+	std::unordered_map<uint16_t /* DTC address */, uint32_t /* DTC data */> registers_;
+	std::unordered_map<DTCLib::DTC_Link_ID,
+					   std::unordered_map<uint16_t /* ROC address*/, uint16_t /* ROC data*/>>
+		rocRegisters_;
 	unsigned swIdx_[MU2E_MAX_CHANNELS];
 	unsigned hwIdx_[MU2E_MAX_CHANNELS];
 	// uint32_t detSimLoopCount_;
+	uint32_t simDataEWT_ = 0;
 	mu2e_databuff_t* dmaData_[MU2E_MAX_CHANNELS][SIM_BUFFCOUNT];
 	std::string ddrFileName_;
 	std::unique_ptr<std::fstream> ddrFile_;

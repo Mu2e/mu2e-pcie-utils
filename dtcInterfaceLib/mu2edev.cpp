@@ -26,6 +26,7 @@ typedef unsigned long dma_addr_t;
 
 static const std::thread::id NULL_TID = std::thread::id();
 std::atomic<std::thread::id> mu2edev::dcs_lock_held_ = NULL_TID;
+std::atomic<int> mu2edev::dcs_lock_count_ = 0;
 
 mu2edev::mu2edev()
 	: devfd_(0), buffers_held_(0), simulator_(nullptr), activeDeviceIndex_(0), deviceTime_(0LL), writeSize_(0), readSize_(0), UID_("")
@@ -624,6 +625,7 @@ void mu2edev::begin_dcs_transaction()
 	{
 		TRACE(TLVL_DEBUG + 13, UID_ + " begin_dcs_transaction: sim mode, taking library thread lock and returning");
 		dcs_lock_held_ = std::this_thread::get_id();
+		dcs_lock_count_++;
 		return;
 	}
 
@@ -642,12 +644,14 @@ void mu2edev::begin_dcs_transaction()
 		{
 			TRACE(TLVL_DEBUG + 13, UID_ + " begin_dcs_transaction: Method not supported by driver, taking library lock and returning. ioctl returned %d, errno %d", retsts, errno);
 			dcs_lock_held_ = std::this_thread::get_id();
+			dcs_lock_count_++;
 			return;
 		}
 		else
 		{
 			TRACE(TLVL_DEBUG + 13, UID_ + " begin_dcs_transaction: have driver lock, setting library lock and retunring true");
 			dcs_lock_held_ = std::this_thread::get_id();
+			dcs_lock_count_++;
 			return;
 		}
 	}
@@ -667,18 +671,24 @@ void mu2edev::end_dcs_transaction(bool force)
 	TRACE(TLVL_DEBUG + 14, UID_ + " end_dcs_transaction: checking for ability to release lock force=%d", force);
 	if (force || dcs_lock_held_.load() == std::this_thread::get_id())
 	{
-		if (simulator_ == nullptr)
+		dcs_lock_count_--;
+		TRACE(TLVL_DEBUG + 14, UID_ + " end_dcs_transaction: after decrement lock counter, force=%d, counter=%d", force, dcs_lock_count_.load());
+		if (dcs_lock_count_.load() == 0 || force)
 		{
-			TRACE(TLVL_DEBUG + 14, UID_ + " end_dcs_transaction: releasing driver lock");
-			int retsts = ioctl(devfd_, M_IOC_DCS_RELEASE);
-			if (retsts != 0)
+			dcs_lock_count_ = 0;
+			if (simulator_ == nullptr)
 			{
-				TRACE(TLVL_DEBUG + 14, UID_ + " end_dcs_transaction: IOCTL returned %d!", retsts);
-				perror("M_IOC_DCS_RELEASE");
+				TRACE(TLVL_DEBUG + 14, UID_ + " end_dcs_transaction: releasing driver lock");
+				int retsts = ioctl(devfd_, M_IOC_DCS_RELEASE);
+				if (retsts != 0)
+				{
+					TRACE(TLVL_DEBUG + 14, UID_ + " end_dcs_transaction: IOCTL returned %d!", retsts);
+					perror("M_IOC_DCS_RELEASE");
+				}
 			}
+			TRACE(TLVL_DEBUG + 14, UID_ + " end_dcs_transaction: releasing library lock");
+			dcs_lock_held_ = NULL_TID;
 		}
-		TRACE(TLVL_DEBUG + 14, UID_ + " end_dcs_transaction: releasing library lock");
-		dcs_lock_held_ = NULL_TID;
 	}
 
 }  // end end_dcs_transaction()
