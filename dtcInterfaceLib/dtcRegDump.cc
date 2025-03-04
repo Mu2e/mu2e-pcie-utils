@@ -108,7 +108,7 @@ int main(int argc, char* argv[])
 	{
 		std::cout << std::endl
 				  << std::endl;
-		std::cout << thisDTC->FormattedRegDump(cols, thisDTC->formattedSERDESCounterFunctions_) << std::endl;
+		std::cout << "NOT IMPLEMENTED" << std::endl;  // thisDTC->FormattedRegDump(cols, thisDTC->formattedSERDESCounterFunctions_) << std::endl;
 	}
 
 	if (printPerformanceCounters)
