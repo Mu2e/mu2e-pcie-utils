@@ -209,7 +209,7 @@ my_cntl write 0x919c 0x00000000
     my_cntl write 0x9154 `calcf "0x%08x" $opt_bytes*65536+$opt_bytes`
     #set packet sizes for 3rd 2 ports
     my_cntl write 0x9158 `calcf "0x%08x" $opt_bytes*65536+$opt_bytes`
-    
+
     #set number of packets to tx
     my_cntl write 0x9168 $opt_pkts
     echo total test time: `calcf "%f" $opt_pkts \* $interval \* 4 / 1000.0` us
@@ -243,7 +243,7 @@ my_cntl write 0x919c 0x00000000
 
   stop|S)
     my_cntl write 0x9100 0x00000000 >/dev/null
-   ;;  
+   ;;
 
   read_counters|read)
     chreg=$(( $opt_channel * 4 ))
