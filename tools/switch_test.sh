@@ -317,4 +317,3 @@ my_cntl write 0x919c 0x00000000
   *) echo "I'm sorry, Dave, but I can't do that";;
   esac
 done
-
