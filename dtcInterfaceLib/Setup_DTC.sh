@@ -34,7 +34,7 @@ DTC_Test2()
 }
 DTC_Test3()
 {
-    treset;tmodeM 1;DTCLIB_SIM_ENABLE=N mu2eUtil buffer_test -a 0 -n 1 -c 200 -S -Q -T 2 
+    treset;tmodeM 1;DTCLIB_SIM_ENABLE=N mu2eUtil buffer_test -a 0 -n 1 -c 200 -S -Q -T 2
 }
 DTC_ReadFile()
 {
@@ -57,8 +57,8 @@ DTC_Reset()
 #    my_cntl write 0x9118 0x0000003f >/dev/null;: Reset all links;\
 #    my_cntl write 0x9118 0x00000000 >/dev/null;: Clear Link Resets
 
-  my_cntl -d $dtc write 0x9100 0x80000000  >/dev/null # soft reset DTC  
-  my_cntl -d $dtc write 0x9100 0x00000000  >/dev/null # unreset DTC 
+  my_cntl -d $dtc write 0x9100 0x80000000  >/dev/null # soft reset DTC
+  my_cntl -d $dtc write 0x9100 0x00000000  >/dev/null # unreset DTC
 #   my_cntl -d $dtc write 0x9100 0x00008000 > /dev/null # Turn on CFO Emulation Mode for Serdes Reset
 #   my_cntl -d $dtc write 0x9118 0xffff00ff  >/dev/null  # SERDES resets
 #   my_cntl -d $dtc write 0x9118 0x00000000  >/dev/null  # clear SERDES reset on link 0
@@ -77,7 +77,7 @@ ROC_Reset()
     rocUtil write_register -a 14 -w 0x010
 }
 
-DTC_TestDDR() { 
+DTC_TestDDR() {
      treset;
      tonM1;
      DTCLIB_SIM_ENABLE=N mu2eUtil buffer_test -a 0 -n 1 -c 10 -S -q -T 4

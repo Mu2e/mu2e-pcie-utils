@@ -1,5 +1,5 @@
 # Si538x/4x Registers Script
-# 
+#
 # Part: Si5342
 # Project File: Z:\mu2e\Mu2e Fanout Card\Ver2\DataSheets\JitterCleanerWithXtal\Si5342-RevD-Rev1-Project.slabtimeproj
 # Design ID: Rev1
@@ -8,7 +8,7 @@
 # Creator: ClockBuilder Pro v2.26.0.1 [2018-06-28]
 # Created On: 2018-08-07 14:25:29 GMT-05:00
 # Address,Data
-# 
+#
 # Start configuration preamble
 #set page B
 my_cntl write 0x9168 0x68010B00
@@ -31,12 +31,12 @@ my_cntl write 0x916c 0x00000001
 
 
 # End configuration preamble
-# 
+#
 # Delay 300 msec
 #    Delay is worst case time for device to complete any calibration
 #    that is running due to device state change previous to this script
 #    being processed.
-# 
+#
 # Start configuration registers
 #set page 0
 my_cntl write 0x9168 0x68010000
@@ -1301,7 +1301,7 @@ my_cntl write 0x916c 0x00000001
 
 
 # End configuration registers
-# 
+#
 # Start configuration postamble
 #set page 5
 my_cntl write 0x9168 0x68010500
@@ -1339,5 +1339,4 @@ my_cntl write 0x9168 0x68250200
 my_cntl write 0x916c 0x00000001
 
 # End configuration postamble
-
 
