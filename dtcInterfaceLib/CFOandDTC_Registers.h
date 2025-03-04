@@ -131,6 +131,22 @@ struct RegisterFormatter
 		}
 
 		return stream;
+	}  // end << operator
+
+	// Overloaded operator+ for RegisterFormatter + std::string
+	std::string operator+(const std::string& rhs) const
+	{
+		std::stringstream ss;
+		ss << *this;
+		return ss.str() + rhs;
+	}
+
+	// Friend function operator+  for std::string + RegisterFormatter
+	friend std::string operator+(const std::string& lhs, const RegisterFormatter& reg)
+	{
+		std::stringstream ss;
+		ss << reg;
+		return lhs + ss.str();
 	}
 };  // end RegisterFormatter class
 

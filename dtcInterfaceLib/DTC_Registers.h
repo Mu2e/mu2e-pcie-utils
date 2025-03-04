@@ -63,37 +63,37 @@ enum DTC_Register : uint16_t
 	DTC_Register_CFOEmulation_40MHzClockMarkerInterval = 0x91F4,
 	DTC_Register_CFOMarkerEnables = 0x91F8,
 	DTC_Register_ROCFinishThreshold = 0x91FC,
-	DTC_Register_ReceiveByteCount_Link0 = 0x9200,
-	DTC_Register_ReceiveByteCount_Link1 = 0x9204,
-	DTC_Register_ReceiveByteCount_Link2 = 0x9208,
-	DTC_Register_ReceiveByteCount_Link3 = 0x920C,
-	DTC_Register_ReceiveByteCount_Link4 = 0x9210,
-	DTC_Register_ReceiveByteCount_Link5 = 0x9214,
-	DTC_Register_ReceiveByteCount_CFOLink = 0x9218,
+	// Reserved - formerly... DTC_Register_ReceiveByteCount_Link0 = 0x9200,
+	// Reserved - formerly... DTC_Register_ReceiveByteCount_Link1 = 0x9204,
+	// Reserved - formerly... DTC_Register_ReceiveByteCount_Link2 = 0x9208,
+	// Reserved - formerly... DTC_Register_ReceiveByteCount_Link3 = 0x920C,
+	// Reserved - formerly... DTC_Register_ReceiveByteCount_Link4 = 0x9210,
+	// Reserved - formerly... DTC_Register_ReceiveByteCount_Link5 = 0x9214,
+	// Reserved - formerly... DTC_Register_ReceiveByteCount_CFOLink = 0x9218,
 	// 0x921C Reserved
-	DTC_Register_ReceivePacketCount_Link0 = 0x9220,
-	DTC_Register_ReceivePacketCount_Link1 = 0x9224,
-	DTC_Register_ReceivePacketCount_Link2 = 0x9228,
-	DTC_Register_ReceivePacketCount_Link3 = 0x922C,
-	DTC_Register_ReceivePacketCount_Link4 = 0x9230,
-	DTC_Register_ReceivePacketCount_Link5 = 0x9234,
-	DTC_Register_ReceivePacketCount_CFOLink = 0x9238,
+	// Reserved - formerly... DTC_Register_ReceivePacketCount_Link0 = 0x9220,
+	// Reserved - formerly... DTC_Register_ReceivePacketCount_Link1 = 0x9224,
+	// Reserved - formerly... DTC_Register_ReceivePacketCount_Link2 = 0x9228,
+	// Reserved - formerly... DTC_Register_ReceivePacketCount_Link3 = 0x922C,
+	// Reserved - formerly... DTC_Register_ReceivePacketCount_Link4 = 0x9230,
+	// Reserved - formerly... DTC_Register_ReceivePacketCount_Link5 = 0x9234,
+	// Reserved - formerly... DTC_Register_ReceivePacketCount_CFOLink = 0x9238,
 	// 0x923C Reserved
-	DTC_Register_TransmitByteCount_Link0 = 0x9240,
-	DTC_Register_TransmitByteCount_Link1 = 0x9244,
-	DTC_Register_TransmitByteCount_Link2 = 0x9248,
-	DTC_Register_TransmitByteCount_Link3 = 0x924C,
-	DTC_Register_TransmitByteCount_Link4 = 0x9250,
-	DTC_Register_TransmitByteCount_Link5 = 0x9254,
-	DTC_Register_TransmitByteCount_CFOLink = 0x9258,
+	// Reserved - formerly... DTC_Register_TransmitByteCount_Link0 = 0x9240,
+	// Reserved - formerly... DTC_Register_TransmitByteCount_Link1 = 0x9244,
+	// Reserved - formerly... DTC_Register_TransmitByteCount_Link2 = 0x9248,
+	// Reserved - formerly... DTC_Register_TransmitByteCount_Link3 = 0x924C,
+	// Reserved - formerly... DTC_Register_TransmitByteCount_Link4 = 0x9250,
+	// Reserved - formerly... DTC_Register_TransmitByteCount_Link5 = 0x9254,
+	// Reserved - formerly... DTC_Register_TransmitByteCount_CFOLink = 0x9258,
 	// 0x925C Reserved
-	DTC_Register_TransmitPacketCount_Link0 = 0x9260,
-	DTC_Register_TransmitPacketCount_Link1 = 0x9264,
-	DTC_Register_TransmitPacketCount_Link2 = 0x9268,
-	DTC_Register_TransmitPacketCount_Link3 = 0x926C,
-	DTC_Register_TransmitPacketCount_Link4 = 0x9270,
-	DTC_Register_TransmitPacketCount_Link5 = 0x9274,
-	DTC_Register_TransmitPacketCount_CFOLink = 0x9278,
+	// Reserved - formerly... DTC_Register_TransmitPacketCount_Link0 = 0x9260,
+	// Reserved - formerly... DTC_Register_TransmitPacketCount_Link1 = 0x9264,
+	// Reserved - formerly... DTC_Register_TransmitPacketCount_Link2 = 0x9268,
+	// Reserved - formerly... DTC_Register_TransmitPacketCount_Link3 = 0x926C,
+	// Reserved - formerly... DTC_Register_TransmitPacketCount_Link4 = 0x9270,
+	// Reserved - formerly... DTC_Register_TransmitPacketCount_Link5 = 0x9274,
+	// Reserved - formerly... DTC_Register_TransmitPacketCount_CFOLink = 0x9278,
 	// 0x927C Reserved
 	// 0x9280 Reserved
 	// 0x9290 Reserved
@@ -178,30 +178,30 @@ enum DTC_Register : uint16_t
 	DTC_Register_DiagSERDESPacket3 = 0x9424,
 	DTC_Register_DiagSERDESPacket4 = 0x9428,
 	DTC_Register_DiagSERDESPacket5 = 0x942C,
-	DTC_Register_DDR3LinkBufferEmptyFlags0 = 0x9430,
-	DTC_Register_DDR3LinkBufferEmptyFlags1 = 0x9434,
-	DTC_Register_DDR3LinkBufferEmptyFlags2 = 0x9438,
-	DTC_Register_DDR3LinkBufferEmptyFlags3 = 0x943C,
-	DTC_Register_DDR3LinkBufferHalfFullFlags0 = 0x9440,
-	DTC_Register_DDR3LinkBufferHalfFullFlags1 = 0x9444,
-	DTC_Register_DDR3LinkBufferHalfFullFlags2 = 0x9448,
-	DTC_Register_DDR3LinkBufferHalfFullFlags3 = 0x944C,
-	DTC_Register_DDR3LinkBufferFullFlags0 = 0x9450,
-	DTC_Register_DDR3LinkBufferFullFlags1 = 0x9454,
-	DTC_Register_DDR3LinkBufferFullFlags2 = 0x9458,
-	DTC_Register_DDR3LinkBufferFullFlags3 = 0x945C,
-	DTC_Register_DDR3EVBBufferEmptyFlags0 = 0x9460,
-	DTC_Register_DDR3EVBBufferEmptyFlags1 = 0x9464,
-	DTC_Register_DDR3EVBBufferEmptyFlags2 = 0x9468,
-	DTC_Register_DDR3EVBBufferEmptyFlags3 = 0x946C,
-	DTC_Register_DDR3EVBBufferHalfFullFlags0 = 0x9470,
-	DTC_Register_DDR3EVBBufferHalfFullFlags1 = 0x9474,
-	DTC_Register_DDR3EVBBufferHalfFullFlags2 = 0x9478,
-	DTC_Register_DDR3EVBBufferHalfFullFlags3 = 0x947C,
-	DTC_Register_DDR3EVBBufferFullFlags0 = 0x9480,
-	DTC_Register_DDR3EVBBufferFullFlags1 = 0x9484,
-	DTC_Register_DDR3EVBBufferFullFlags2 = 0x9488,
-	DTC_Register_DDR3EVBBufferFullFlags3 = 0x948C,
+	// Reserved - formerly... DTC_Register_DDR3LinkBufferEmptyFlags0 = 0x9430,
+	// Reserved - formerly... DTC_Register_DDR3LinkBufferEmptyFlags1 = 0x9434,
+	// Reserved - formerly... DTC_Register_DDR3LinkBufferEmptyFlags2 = 0x9438,
+	// Reserved - formerly... DTC_Register_DDR3LinkBufferEmptyFlags3 = 0x943C,
+	// Reserved - formerly... DTC_Register_DDR3LinkBufferHalfFullFlags0 = 0x9440,
+	// Reserved - formerly... DTC_Register_DDR3LinkBufferHalfFullFlags1 = 0x9444,
+	// Reserved - formerly... DTC_Register_DDR3LinkBufferHalfFullFlags2 = 0x9448,
+	// Reserved - formerly... DTC_Register_DDR3LinkBufferHalfFullFlags3 = 0x944C,
+	// Reserved - formerly... DTC_Register_DDR3LinkBufferFullFlags0 = 0x9450,
+	// Reserved - formerly... DTC_Register_DDR3LinkBufferFullFlags1 = 0x9454,
+	// Reserved - formerly... DTC_Register_DDR3LinkBufferFullFlags2 = 0x9458,
+	// Reserved - formerly... DTC_Register_DDR3LinkBufferFullFlags3 = 0x945C,
+	// Reserved - formerly... DTC_Register_DDR3EVBBufferEmptyFlags0 = 0x9460,
+	// Reserved - formerly... DTC_Register_DDR3EVBBufferEmptyFlags1 = 0x9464,
+	// Reserved - formerly... DTC_Register_DDR3EVBBufferEmptyFlags2 = 0x9468,
+	// Reserved - formerly... DTC_Register_DDR3EVBBufferEmptyFlags3 = 0x946C,
+	// Reserved - formerly... DTC_Register_DDR3EVBBufferHalfFullFlags0 = 0x9470,
+	// Reserved - formerly... DTC_Register_DDR3EVBBufferHalfFullFlags1 = 0x9474,
+	// Reserved - formerly... DTC_Register_DDR3EVBBufferHalfFullFlags2 = 0x9478,
+	// Reserved - formerly... DTC_Register_DDR3EVBBufferHalfFullFlags3 = 0x947C,
+	// Reserved - formerly... DTC_Register_DDR3EVBBufferFullFlags0 = 0x9480,
+	// Reserved - formerly... DTC_Register_DDR3EVBBufferFullFlags1 = 0x9484,
+	// Reserved - formerly... DTC_Register_DDR3EVBBufferFullFlags2 = 0x9488,
+	// Reserved - formerly... DTC_Register_DDR3EVBBufferFullFlags3 = 0x948C,
 	DTC_Register_DataPendingDiagTimer_Link0 = 0x9490,
 	DTC_Register_DataPendingDiagTimer_Link1 = 0x9494,
 	DTC_Register_DataPendingDiagTimer_Link2 = 0x9498,
@@ -210,20 +210,20 @@ enum DTC_Register : uint16_t
 	DTC_Register_DataPendingDiagTimer_Link5 = 0x94A4,
 	// 0x94A8 Reserved
 	// 0x94AC Reserved
-	DTC_Register_ROCEmulator_InduceTimeoutError_Link0 = 0x94B0,
-	DTC_Register_ROCEmulator_InduceTimeoutError_Link1 = 0x94B4,
-	DTC_Register_ROCEmulator_InduceTimeoutError_Link2 = 0x94B8,
-	DTC_Register_ROCEmulator_InduceTimeoutError_Link3 = 0x94BC,
-	DTC_Register_ROCEmulator_InduceTimeoutError_Link4 = 0x94C0,
-	DTC_Register_ROCEmulator_InduceTimeoutError_Link5 = 0x94C4,
+	// Reserved - formerly... DTC_Register_ROCEmulator_InduceTimeoutError_Link0 = 0x94B0,
+	// Reserved - formerly... DTC_Register_ROCEmulator_InduceTimeoutError_Link1 = 0x94B4,
+	// Reserved - formerly... DTC_Register_ROCEmulator_InduceTimeoutError_Link2 = 0x94B8,
+	// Reserved - formerly... DTC_Register_ROCEmulator_InduceTimeoutError_Link3 = 0x94BC,
+	// Reserved - formerly... DTC_Register_ROCEmulator_InduceTimeoutError_Link4 = 0x94C0,
+	// Reserved - formerly... DTC_Register_ROCEmulator_InduceTimeoutError_Link5 = 0x94C4,
 	// 0x94C8 Reserved
 	// 0x94CC Reserved
-	DTC_Register_ROCEmulator_InduceExtraWordError_Link0 = 0x94D0,
-	DTC_Register_ROCEmulator_InduceExtraWordError_Link1 = 0x94D4,
-	DTC_Register_ROCEmulator_InduceExtraWordError_Link2 = 0x94D8,
-	DTC_Register_ROCEmulator_InduceExtraWordError_Link3 = 0x94DC,
-	DTC_Register_ROCEmulator_InduceExtraWordError_Link4 = 0x94E0,
-	DTC_Register_ROCEmulator_InduceExtraWordError_Link5 = 0x94E4,
+	// Reserved - formerly... DTC_Register_ROCEmulator_InduceExtraWordError_Link0 = 0x94D0,
+	// Reserved - formerly... DTC_Register_ROCEmulator_InduceExtraWordError_Link1 = 0x94D4,
+	// Reserved - formerly... DTC_Register_ROCEmulator_InduceExtraWordError_Link2 = 0x94D8,
+	// Reserved - formerly... DTC_Register_ROCEmulator_InduceExtraWordError_Link3 = 0x94DC,
+	// Reserved - formerly... DTC_Register_ROCEmulator_InduceExtraWordError_Link4 = 0x94E0,
+	// Reserved - formerly... DTC_Register_ROCEmulator_InduceExtraWordError_Link5 = 0x94E4,
 	// 0x94E8 - 0x94FC Reserved
 	DTC_Register_SERDES_CharacterNotInTableErrorCount_Link0 = 0x9500,
 	DTC_Register_SERDES_CharacterNotInTableErrorCount_Link1 = 0x9504,
@@ -264,11 +264,11 @@ enum DTC_Register : uint16_t
 	DTC_Register_JitterAttenuator_SERDES_RXExternalClockLOSCount = 0x95A4,
 	// 0x9598 - 0x960C Reserved
 	DTC_Register_ROCEmulator_InterpacketDelay_Link0 = 0x9610,
-	DTC_Register_ROCEmulator_InterpacketDelay_Link1 = 0x9614,
-	DTC_Register_ROCEmulator_InterpacketDelay_Link2 = 0x9618,
-	DTC_Register_ROCEmulator_InterpacketDelay_Link3 = 0x961C,
-	DTC_Register_ROCEmulator_InterpacketDelay_Link4 = 0x9620,
-	DTC_Register_ROCEmulator_InterpacketDelay_Link5 = 0x9624,
+	// Reserved - formerly... DTC_Register_ROCEmulator_InterpacketDelay_Link1 = 0x9614,
+	// Reserved - formerly... DTC_Register_ROCEmulator_InterpacketDelay_Link2 = 0x9618,
+	// Reserved - formerly... DTC_Register_ROCEmulator_InterpacketDelay_Link3 = 0x961C,
+	// Reserved - formerly... DTC_Register_ROCEmulator_InterpacketDelay_Link4 = 0x9620,
+	// Reserved - formerly... DTC_Register_ROCEmulator_InterpacketDelay_Link5 = 0x9624,
 	// 0x9628 Reserved
 	// 0x962C Reserved
 	DTC_Register_TXDataRequestPacketCount_Link0 = 0x9630,
@@ -566,9 +566,10 @@ public:
 	RegisterFormatter FormatEVBLocalParitionIDMACIndex();
 
 	// EVB Buffer Config
-	void SetEVBBufferInfo(uint8_t bufferCount, uint8_t startNode, uint8_t numOfNodes);
-	void SetEVBNumberInputBuffers(uint8_t count);
-	uint8_t ReadEVBNumberInputBuffers(std::optional<uint32_t> val = std::nullopt);
+	void SetEVBClusterInfo(  // uint8_t bufferCount,
+		uint8_t baseDTCAddress, uint8_t numOfDTCs);
+	// void SetEVBNumberInputBuffers(uint8_t count);
+	// uint8_t ReadEVBNumberInputBuffers(std::optional<uint32_t> val = std::nullopt);
 	void SetEVBStartNode(uint8_t node);
 	uint8_t ReadEVBStartNode(std::optional<uint32_t> val = std::nullopt);
 	void SetEVBNumberOfDestinationNodes(uint8_t number);
@@ -1042,38 +1043,38 @@ public:
 	RegisterFormatter FormatSERDESInduceErrorSequenceNumberLink4();
 	RegisterFormatter FormatSERDESInduceErrorSequenceNumberLink5();
 
-	// DDR Memory Flags Registers
-	DTC_DDRFlags ReadDDRFlags(uint8_t buffer_id);
-	std::bitset<128> ReadDDRLinkBufferFullFlags();
-	std::bitset<128> ReadDDRLinkBufferEmptyFlags();
-	std::bitset<128> ReadDDRLinkBufferHalfFullFlags();
-	std::bitset<128> ReadDDREventBuilderBufferFullFlags();
-	std::bitset<128> ReadDDREventBuilderBufferEmptyFlags();
-	std::bitset<128> ReadDDREventBuilderBufferHalfFullFlags();
-	RegisterFormatter FormatDDRLinkBufferEmptyFlags0();
-	RegisterFormatter FormatDDRLinkBufferEmptyFlags1();
-	RegisterFormatter FormatDDRLinkBufferEmptyFlags2();
-	RegisterFormatter FormatDDRLinkBufferEmptyFlags3();
-	RegisterFormatter FormatDDRLinkBufferHalfFullFlags0();
-	RegisterFormatter FormatDDRLinkBufferHalfFullFlags1();
-	RegisterFormatter FormatDDRLinkBufferHalfFullFlags2();
-	RegisterFormatter FormatDDRLinkBufferHalfFullFlags3();
-	RegisterFormatter FormatDDRLinkBufferFullFlags0();
-	RegisterFormatter FormatDDRLinkBufferFullFlags1();
-	RegisterFormatter FormatDDRLinkBufferFullFlags2();
-	RegisterFormatter FormatDDRLinkBufferFullFlags3();
-	RegisterFormatter FormatDDREventBuilderBufferEmptyFlags0();
-	RegisterFormatter FormatDDREventBuilderBufferEmptyFlags1();
-	RegisterFormatter FormatDDREventBuilderBufferEmptyFlags2();
-	RegisterFormatter FormatDDREventBuilderBufferEmptyFlags3();
-	RegisterFormatter FormatDDREventBuilderBufferHalfFullFlags0();
-	RegisterFormatter FormatDDREventBuilderBufferHalfFullFlags1();
-	RegisterFormatter FormatDDREventBuilderBufferHalfFullFlags2();
-	RegisterFormatter FormatDDREventBuilderBufferHalfFullFlags3();
-	RegisterFormatter FormatDDREventBuilderBufferFullFlags0();
-	RegisterFormatter FormatDDREventBuilderBufferFullFlags1();
-	RegisterFormatter FormatDDREventBuilderBufferFullFlags2();
-	RegisterFormatter FormatDDREventBuilderBufferFullFlags3();
+	// // DDR Memory Flags Registers
+	// DTC_DDRFlags ReadDDRFlags(uint8_t buffer_id);
+	// std::bitset<128> ReadDDRLinkBufferFullFlags();
+	// std::bitset<128> ReadDDRLinkBufferEmptyFlags();
+	// std::bitset<128> ReadDDRLinkBufferHalfFullFlags();
+	// std::bitset<128> ReadDDREventBuilderBufferFullFlags();
+	// std::bitset<128> ReadDDREventBuilderBufferEmptyFlags();
+	// std::bitset<128> ReadDDREventBuilderBufferHalfFullFlags();
+	// RegisterFormatter FormatDDRLinkBufferEmptyFlags0();
+	// RegisterFormatter FormatDDRLinkBufferEmptyFlags1();
+	// RegisterFormatter FormatDDRLinkBufferEmptyFlags2();
+	// RegisterFormatter FormatDDRLinkBufferEmptyFlags3();
+	// RegisterFormatter FormatDDRLinkBufferHalfFullFlags0();
+	// RegisterFormatter FormatDDRLinkBufferHalfFullFlags1();
+	// RegisterFormatter FormatDDRLinkBufferHalfFullFlags2();
+	// RegisterFormatter FormatDDRLinkBufferHalfFullFlags3();
+	// RegisterFormatter FormatDDRLinkBufferFullFlags0();
+	// RegisterFormatter FormatDDRLinkBufferFullFlags1();
+	// RegisterFormatter FormatDDRLinkBufferFullFlags2();
+	// RegisterFormatter FormatDDRLinkBufferFullFlags3();
+	// RegisterFormatter FormatDDREventBuilderBufferEmptyFlags0();
+	// RegisterFormatter FormatDDREventBuilderBufferEmptyFlags1();
+	// RegisterFormatter FormatDDREventBuilderBufferEmptyFlags2();
+	// RegisterFormatter FormatDDREventBuilderBufferEmptyFlags3();
+	// RegisterFormatter FormatDDREventBuilderBufferHalfFullFlags0();
+	// RegisterFormatter FormatDDREventBuilderBufferHalfFullFlags1();
+	// RegisterFormatter FormatDDREventBuilderBufferHalfFullFlags2();
+	// RegisterFormatter FormatDDREventBuilderBufferHalfFullFlags3();
+	// RegisterFormatter FormatDDREventBuilderBufferFullFlags0();
+	// RegisterFormatter FormatDDREventBuilderBufferFullFlags1();
+	// RegisterFormatter FormatDDREventBuilderBufferFullFlags2();
+	// RegisterFormatter FormatDDREventBuilderBufferFullFlags3();
 
 	// Data Pending Diagnostic Timer Registers
 	uint32_t ReadDataPendingDiagnosticTimer(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
@@ -1084,35 +1085,6 @@ public:
 	RegisterFormatter FormatDataPendingDiagnosticTimerLink3();
 	RegisterFormatter FormatDataPendingDiagnosticTimerLink4();
 	RegisterFormatter FormatDataPendingDiagnosticTimerLink5();
-
-	// ROC Emulator Induce Timeout Error Control
-	bool ReadEnableROCEmulatorPeriodicTimeoutError(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
-	void EnableROCEmulatorPeriodicTimeoutError(DTC_Link_ID const& link);
-	void DisableROCEmulatorPeriodicTimeoutError(DTC_Link_ID const& link);
-	bool ReadEnableROCEmulatorTimeoutErrorOutputPartialData(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
-	void EnableROCEmulatorTimeoutErrorOutputPartialData(DTC_Link_ID const& link);
-	void DisableROCEmulatorTimeoutErrorOutputPartialData(DTC_Link_ID const& link);
-	uint32_t ReadROCEmulatorTimeoutErrorTimestamp(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
-	void SetROCEmulatorTimeoutErrorTimestamp(DTC_Link_ID const& link, uint32_t timestamp);
-	RegisterFormatter FormatROCEmulatorInduceTimeoutErrorLink0();
-	RegisterFormatter FormatROCEmulatorInduceTimeoutErrorLink1();
-	RegisterFormatter FormatROCEmulatorInduceTimeoutErrorLink2();
-	RegisterFormatter FormatROCEmulatorInduceTimeoutErrorLink3();
-	RegisterFormatter FormatROCEmulatorInduceTimeoutErrorLink4();
-	RegisterFormatter FormatROCEmulatorInduceTimeoutErrorLink5();
-
-	// ROC Emulator Induce Extra Word Error
-	bool ReadEnableROCEmulatorExtraWordError(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
-	void EnableROCEmulatorExtraWordError(DTC_Link_ID const& link);
-	void DisableROCEmulatorExtraWordError(DTC_Link_ID const& link);
-	uint32_t ReadROCEmulatorExtraWordErrorTimestamp(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
-	void SetROCEmulatorExtraWordErrorTimestamp(DTC_Link_ID const& link, uint32_t timestamp);
-	RegisterFormatter FormatROCEmulatorExtraWordErrorLink0();
-	RegisterFormatter FormatROCEmulatorExtraWordErrorLink1();
-	RegisterFormatter FormatROCEmulatorExtraWordErrorLink2();
-	RegisterFormatter FormatROCEmulatorExtraWordErrorLink3();
-	RegisterFormatter FormatROCEmulatorExtraWordErrorLink4();
-	RegisterFormatter FormatROCEmulatorExtraWordErrorLink5();
 
 	// SERDES CNIT Error Count
 	uint32_t ReadSERDESCharacterNotInTableErrorCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
@@ -1190,13 +1162,9 @@ public:
 
 	// TX Data Request Packet Count
 	uint32_t ReadTXDataRequestPacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
-	void ClearTXDataRequetsPacketCount(DTC_Link_ID const& link);
-	RegisterFormatter FormatTXDataRequestPacketCountLink0();
-	RegisterFormatter FormatTXDataRequestPacketCountLink1();
-	RegisterFormatter FormatTXDataRequestPacketCountLink2();
-	RegisterFormatter FormatTXDataRequestPacketCountLink3();
-	RegisterFormatter FormatTXDataRequestPacketCountLink4();
-	RegisterFormatter FormatTXDataRequestPacketCountLink5();
+	RegisterFormatter FormatTXDataRequestPacketCountLink(DTC_Link_ID const& link);
+	DTC_Register GetTXDataRequestPacketCountLinkRegister(DTC_Link_ID const& link);
+
 	RegisterFormatter FormatCFOTXClockMarkerCountLink6();
 	uint32_t ReadCFOTXClockMarkerCountLink6(std::optional<uint32_t> val = std::nullopt);
 
@@ -1206,29 +1174,19 @@ public:
 	DTC_Register GetTXHeartbeatPacketCountLinkRegister(DTC_Link_ID const& link);
 
 	// TX Data Request Packet Count
-	uint32_t ReadTXEventWindowMarkerCountLinkRegister(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
+	uint32_t ReadTXEventWindowMarkerCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
 	RegisterFormatter FormatTXEventWindowMarkerCountLink(DTC_Link_ID const& link);
 	DTC_Register GetTXEventWindowMarkerCountLinkRegister(DTC_Link_ID const& link);
 
 	// RX Data Header Packet Count
 	uint32_t ReadRXDataHeaderPacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
-	void ClearRXDataHeaderPacketCount(DTC_Link_ID const& link);
-	RegisterFormatter FormatRXDataHeaderPacketCountLink0();
-	RegisterFormatter FormatRXDataHeaderPacketCountLink1();
-	RegisterFormatter FormatRXDataHeaderPacketCountLink2();
-	RegisterFormatter FormatRXDataHeaderPacketCountLink3();
-	RegisterFormatter FormatRXDataHeaderPacketCountLink4();
-	RegisterFormatter FormatRXDataHeaderPacketCountLink5();
+	RegisterFormatter FormatRXDataHeaderPacketCountLink(DTC_Link_ID const& link);
+	DTC_Register GetRXDataHeaderPacketCountLinkRegister(DTC_Link_ID const& link);
 
 	// RX Data Packet Count
 	uint32_t ReadRXDataPacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
-	void ClearRXDataPacketCount(DTC_Link_ID const& link);
-	RegisterFormatter FormatRXDataPacketCountLink0();
-	RegisterFormatter FormatRXDataPacketCountLink1();
-	RegisterFormatter FormatRXDataPacketCountLink2();
-	RegisterFormatter FormatRXDataPacketCountLink3();
-	RegisterFormatter FormatRXDataPacketCountLink4();
-	RegisterFormatter FormatRXDataPacketCountLink5();
+	RegisterFormatter FormatRXDataPacketCountLink(DTC_Link_ID const& link);
+	DTC_Register GetRXDataPacketCountLinkRegister(DTC_Link_ID const& link);
 
 	// EVB Diagnostic RX Packet FIFO
 	uint64_t ReadEVBDiagnosticFIFO(std::optional<uint32_t> val = std::nullopt);
@@ -1405,94 +1363,34 @@ public:
 		[this] { return this->FormatFPGAPROMProgramStatus(); },
 		[this] { return this->FormatFPGACoreAccess(); },
 		[this] { return this->FormatSlowOpticalLinkControlStatus(); },
-		[this] { return this->FormatSERDESInduceErrorEnable(); },
-		[this] { return this->FormatSERDESInduceErrorSequenceNumberLink0(); },
-		[this] { return this->FormatSERDESInduceErrorSequenceNumberLink1(); },
-		[this] { return this->FormatSERDESInduceErrorSequenceNumberLink2(); },
-		[this] { return this->FormatSERDESInduceErrorSequenceNumberLink3(); },
-		[this] { return this->FormatSERDESInduceErrorSequenceNumberLink4(); },
-		[this] { return this->FormatSERDESInduceErrorSequenceNumberLink5(); },
-		[this] { return this->FormatROCEmulatorInduceTimeoutErrorLink0(); },
-		[this] { return this->FormatROCEmulatorInduceTimeoutErrorLink1(); },
-		[this] { return this->FormatROCEmulatorInduceTimeoutErrorLink2(); },
-		[this] { return this->FormatROCEmulatorInduceTimeoutErrorLink3(); },
-		[this] { return this->FormatROCEmulatorInduceTimeoutErrorLink4(); },
-		[this] { return this->FormatROCEmulatorInduceTimeoutErrorLink5(); },
-		[this] { return this->FormatROCEmulatorExtraWordErrorLink0(); },
-		[this] { return this->FormatROCEmulatorExtraWordErrorLink1(); },
-		[this] { return this->FormatROCEmulatorExtraWordErrorLink2(); },
-		[this] { return this->FormatROCEmulatorExtraWordErrorLink3(); },
-		[this] { return this->FormatROCEmulatorExtraWordErrorLink4(); },
-		[this] { return this->FormatROCEmulatorExtraWordErrorLink5(); },
 		[this] { return this->FormatSERDESRXCRCErrorControl(); },
-		[this] { return this->FormatROCEmulatorInterpacketDelayLink0(); },
-		[this] { return this->FormatROCEmulatorInterpacketDelayLink1(); },
-		[this] { return this->FormatROCEmulatorInterpacketDelayLink2(); },
-		[this] { return this->FormatROCEmulatorInterpacketDelayLink3(); },
-		[this] { return this->FormatROCEmulatorInterpacketDelayLink4(); },
-		[this] { return this->FormatROCEmulatorInterpacketDelayLink5(); },
-	};
-
-	/// <summary>
-	/// Dump Byte/Packet Counter Registers
-	/// </summary>
-	const std::vector<std::function<RegisterFormatter()>> formattedSERDESCounterFunctions_{
-		[this] { return this->FormatReceiveByteCountLink0(); },
-		[this] { return this->FormatReceiveByteCountLink1(); },
-		[this] { return this->FormatReceiveByteCountLink2(); },
-		[this] { return this->FormatReceiveByteCountLink3(); },
-		[this] { return this->FormatReceiveByteCountLink4(); },
-		[this] { return this->FormatReceiveByteCountLink5(); },
-		[this] { return this->FormatReceiveByteCountCFO(); },
-		[this] { return this->FormatReceivePacketCountLink0(); },
-		[this] { return this->FormatReceivePacketCountLink1(); },
-		[this] { return this->FormatReceivePacketCountLink2(); },
-		[this] { return this->FormatReceivePacketCountLink3(); },
-		[this] { return this->FormatReceivePacketCountLink4(); },
-		[this] { return this->FormatReceivePacketCountLink5(); },
-		[this] { return this->FormatReceivePacketCountCFO(); },
-		[this] { return this->FormatTramsitByteCountLink0(); },
-		[this] { return this->FormatTramsitByteCountLink1(); },
-		[this] { return this->FormatTramsitByteCountLink2(); },
-		[this] { return this->FormatTramsitByteCountLink3(); },
-		[this] { return this->FormatTramsitByteCountLink4(); },
-		[this] { return this->FormatTramsitByteCountLink5(); },
-		[this] { return this->FormatTramsitByteCountCFO(); },
-		[this] { return this->FormatTransmitPacketCountLink0(); },
-		[this] { return this->FormatTransmitPacketCountLink1(); },
-		[this] { return this->FormatTransmitPacketCountLink2(); },
-		[this] { return this->FormatTransmitPacketCountLink3(); },
-		[this] { return this->FormatTransmitPacketCountLink4(); },
-		[this] { return this->FormatTransmitPacketCountLink5(); },
-		[this] { return this->FormatTransmitPacketCountCFO(); }
-
 	};
 
 	const std::vector<std::function<RegisterFormatter()>> formattedPerformanceCounterFunctions_{
-		[this] { return this->FormatDDRLinkBufferEmptyFlags0(); },
-		[this] { return this->FormatDDRLinkBufferEmptyFlags1(); },
-		[this] { return this->FormatDDRLinkBufferEmptyFlags2(); },
-		[this] { return this->FormatDDRLinkBufferEmptyFlags3(); },
-		[this] { return this->FormatDDRLinkBufferHalfFullFlags0(); },
-		[this] { return this->FormatDDRLinkBufferHalfFullFlags1(); },
-		[this] { return this->FormatDDRLinkBufferHalfFullFlags2(); },
-		[this] { return this->FormatDDRLinkBufferHalfFullFlags3(); },
-		[this] { return this->FormatDDRLinkBufferFullFlags0(); },
-		[this] { return this->FormatDDRLinkBufferFullFlags1(); },
-		[this] { return this->FormatDDRLinkBufferFullFlags2(); },
-		[this] { return this->FormatDDRLinkBufferFullFlags3(); },
-		[this] { return this->FormatDDREventBuilderBufferEmptyFlags0(); },
-		[this] { return this->FormatDDREventBuilderBufferEmptyFlags1(); },
-		[this] { return this->FormatDDREventBuilderBufferEmptyFlags2(); },
-		[this] { return this->FormatDDREventBuilderBufferEmptyFlags3(); },
-		[this] { return this->FormatDDREventBuilderBufferHalfFullFlags0(); },
-		[this] { return this->FormatDDREventBuilderBufferHalfFullFlags1(); },
-		[this] { return this->FormatDDREventBuilderBufferHalfFullFlags2(); },
-		[this] { return this->FormatDDREventBuilderBufferHalfFullFlags3(); },
-		[this] { return this->FormatDDREventBuilderBufferFullFlags0(); },
-		[this] { return this->FormatDDREventBuilderBufferFullFlags1(); },
-		[this] { return this->FormatDDREventBuilderBufferFullFlags2(); },
-		[this] { return this->FormatDDREventBuilderBufferFullFlags3(); },
+		// [this] { return this->FormatDDRLinkBufferEmptyFlags0(); },
+		// [this] { return this->FormatDDRLinkBufferEmptyFlags1(); },
+		// [this] { return this->FormatDDRLinkBufferEmptyFlags2(); },
+		// [this] { return this->FormatDDRLinkBufferEmptyFlags3(); },
+		// [this] { return this->FormatDDRLinkBufferHalfFullFlags0(); },
+		// [this] { return this->FormatDDRLinkBufferHalfFullFlags1(); },
+		// [this] { return this->FormatDDRLinkBufferHalfFullFlags2(); },
+		// [this] { return this->FormatDDRLinkBufferHalfFullFlags3(); },
+		// [this] { return this->FormatDDRLinkBufferFullFlags0(); },
+		// [this] { return this->FormatDDRLinkBufferFullFlags1(); },
+		// [this] { return this->FormatDDRLinkBufferFullFlags2(); },
+		// [this] { return this->FormatDDRLinkBufferFullFlags3(); },
+		// [this] { return this->FormatDDREventBuilderBufferEmptyFlags0(); },
+		// [this] { return this->FormatDDREventBuilderBufferEmptyFlags1(); },
+		// [this] { return this->FormatDDREventBuilderBufferEmptyFlags2(); },
+		// [this] { return this->FormatDDREventBuilderBufferEmptyFlags3(); },
+		// [this] { return this->FormatDDREventBuilderBufferHalfFullFlags0(); },
+		// [this] { return this->FormatDDREventBuilderBufferHalfFullFlags1(); },
+		// [this] { return this->FormatDDREventBuilderBufferHalfFullFlags2(); },
+		// [this] { return this->FormatDDREventBuilderBufferHalfFullFlags3(); },
+		// [this] { return this->FormatDDREventBuilderBufferFullFlags0(); },
+		// [this] { return this->FormatDDREventBuilderBufferFullFlags1(); },
+		// [this] { return this->FormatDDREventBuilderBufferFullFlags2(); },
+		// [this] { return this->FormatDDREventBuilderBufferFullFlags3(); },
 		[this] { return this->FormatRetransmitRequestCountLink0(); },
 		[this] { return this->FormatRetransmitRequestCountLink1(); },
 		[this] { return this->FormatRetransmitRequestCountLink2(); },
@@ -1553,22 +1451,25 @@ public:
 		// [this] { return this->FormatMissedCFOPacketCountLink5(); },
 		// [this] { return this->FormatLocalFragmentDropCount(); },
 		// [this] { return this->FormatOutputBufferFragmentDumpCount(); },
+
+		[this] { return this->FormatCFOTXClockMarkerCountLink6(); },
+		[this] { return this->FormatTXEventWindowMarkerCountLink(DTC_Link_CFO); },
+		[this] { return this->FormatTXHeartbeatPacketCountLink(DTC_Link_CFO); },
+		[this] { return this->FormatCFOLinkError(); },
+
 		[this] { return this->FormatTXEventWindowMarkerCountLink(DTC_Link_0); },
 		[this] { return this->FormatTXEventWindowMarkerCountLink(DTC_Link_1); },
 		[this] { return this->FormatTXEventWindowMarkerCountLink(DTC_Link_2); },
 		[this] { return this->FormatTXEventWindowMarkerCountLink(DTC_Link_3); },
 		[this] { return this->FormatTXEventWindowMarkerCountLink(DTC_Link_4); },
 		[this] { return this->FormatTXEventWindowMarkerCountLink(DTC_Link_5); },
-		[this] { return this->FormatTXEventWindowMarkerCountLink(DTC_Link_CFO); },
 
-		[this] { return this->FormatTXDataRequestPacketCountLink0(); },
-		[this] { return this->FormatTXDataRequestPacketCountLink1(); },
-		[this] { return this->FormatTXDataRequestPacketCountLink2(); },
-		[this] { return this->FormatTXDataRequestPacketCountLink3(); },
-		[this] { return this->FormatTXDataRequestPacketCountLink4(); },
-		[this] { return this->FormatTXDataRequestPacketCountLink5(); },
-		[this] { return this->FormatCFOTXClockMarkerCountLink6(); },
-		[this] { return this->FormatCFOLinkError(); },
+		[this] { return this->FormatTXDataRequestPacketCountLink(DTC_Link_0); },
+		[this] { return this->FormatTXDataRequestPacketCountLink(DTC_Link_1); },
+		[this] { return this->FormatTXDataRequestPacketCountLink(DTC_Link_2); },
+		[this] { return this->FormatTXDataRequestPacketCountLink(DTC_Link_3); },
+		[this] { return this->FormatTXDataRequestPacketCountLink(DTC_Link_4); },
+		[this] { return this->FormatTXDataRequestPacketCountLink(DTC_Link_5); },
 
 		[this] { return this->FormatTXHeartbeatPacketCountLink(DTC_Link_0); },
 		[this] { return this->FormatTXHeartbeatPacketCountLink(DTC_Link_1); },
@@ -1576,21 +1477,20 @@ public:
 		[this] { return this->FormatTXHeartbeatPacketCountLink(DTC_Link_3); },
 		[this] { return this->FormatTXHeartbeatPacketCountLink(DTC_Link_4); },
 		[this] { return this->FormatTXHeartbeatPacketCountLink(DTC_Link_5); },
-		[this] { return this->FormatTXHeartbeatPacketCountLink(DTC_Link_CFO); },
 
-		[this] { return this->FormatRXDataHeaderPacketCountLink0(); },
-		[this] { return this->FormatRXDataHeaderPacketCountLink1(); },
-		[this] { return this->FormatRXDataHeaderPacketCountLink2(); },
-		[this] { return this->FormatRXDataHeaderPacketCountLink3(); },
-		[this] { return this->FormatRXDataHeaderPacketCountLink4(); },
-		[this] { return this->FormatRXDataHeaderPacketCountLink5(); },
+		[this] { return this->FormatRXDataHeaderPacketCountLink(DTC_Link_0); },
+		[this] { return this->FormatRXDataHeaderPacketCountLink(DTC_Link_1); },
+		[this] { return this->FormatRXDataHeaderPacketCountLink(DTC_Link_2); },
+		[this] { return this->FormatRXDataHeaderPacketCountLink(DTC_Link_3); },
+		[this] { return this->FormatRXDataHeaderPacketCountLink(DTC_Link_4); },
+		[this] { return this->FormatRXDataHeaderPacketCountLink(DTC_Link_5); },
 
-		[this] { return this->FormatRXDataPacketCountLink0(); },
-		[this] { return this->FormatRXDataPacketCountLink1(); },
-		[this] { return this->FormatRXDataPacketCountLink2(); },
-		[this] { return this->FormatRXDataPacketCountLink3(); },
-		[this] { return this->FormatRXDataPacketCountLink4(); },
-		[this] { return this->FormatRXDataPacketCountLink5(); }
+		[this] { return this->FormatRXDataPacketCountLink(DTC_Link_0); },
+		[this] { return this->FormatRXDataPacketCountLink(DTC_Link_1); },
+		[this] { return this->FormatRXDataPacketCountLink(DTC_Link_2); },
+		[this] { return this->FormatRXDataPacketCountLink(DTC_Link_3); },
+		[this] { return this->FormatRXDataPacketCountLink(DTC_Link_4); },
+		[this] { return this->FormatRXDataPacketCountLink(DTC_Link_5); }
 
 	};
 };

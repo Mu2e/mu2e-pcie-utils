@@ -42,7 +42,7 @@ DTCLib::CFOandDTC_Registers::CFOandDTC_Registers()
 /// </summary>
 DTCLib::CFOandDTC_Registers::~CFOandDTC_Registers()
 {
-	TLOG(TLVL_INFO) << "DESTRUCTOR";
+	TLOG(TLVL_TRACE) << "DESTRUCTOR";
 	device_.close();
 }  // end destructor()
 
@@ -54,12 +54,12 @@ DTCLib::CFOandDTC_Registers::~CFOandDTC_Registers()
 std::string DTCLib::CFOandDTC_Registers::FormattedRegDump(int width,
 														  const std::vector<std::function<RegisterFormatter()>>& regVec)
 {
-	std::string divider(width, '=');
 	formatterWidth_ = width - 27 - 65;
 	if (formatterWidth_ < 28)
-	{
 		formatterWidth_ = 28;
-	}
+
+	std::string divider(formatterWidth_ + 27, '=');
+
 	std::string spaces(formatterWidth_ - 4 - 9, ' ');
 	std::ostringstream o;
 	o << "Register Dump: " << std::endl;
@@ -70,7 +70,7 @@ std::string DTCLib::CFOandDTC_Registers::FormattedRegDump(int width,
 		o << placeholder;
 	}
 	o << "Address | Hex Value  |\nRegister Name " << spaces << "| (Translation)" << std::endl;
-	{  // move address to right-align with values
+	{  // move RegisterFormatter to right-align with values
 		std::string placeholder = "";
 		placeholder.resize(formatterWidth_, ' ');
 		o << placeholder << " | Decorated Values" << std::endl;
@@ -97,13 +97,11 @@ std::string DTCLib::CFOandDTC_Registers::ReadDesignVersion() { return  // ReadDe
 /// <returns>RegisterFormatter object containing register information</returns>
 DTCLib::RegisterFormatter DTCLib::CFOandDTC_Registers::FormatDesignVersion()
 {
-	__COUT__ << "?";
 	auto form = CreateFormatter(CFOandDTC_Register_DesignVersion);
 	form.description = "DTC Firmware Design Version";
 	form.vals.push_back(std::string("Version Number:                [") + ReadDesignVersionNumber(form.value) + "]");
 	form.vals.push_back(std::string("Link Speed CFO link/ROC links: [") + ReadDesignLinkSpeed(form.value) + "]");
 	form.vals.push_back(std::string("Design Type (C=CFO, D=DTC):    [") + ReadDesignType(form.value) + "]");
-	__COUT__ << "!";
 	return form;
 }
 
@@ -699,7 +697,7 @@ bool DTCLib::CFOandDTC_Registers::CFOandDTCVerifyRegisterWrite_(const CFOandDTC_
 					   << " to register 0x" << std::setw(4) << std::setfill('0') << std::setprecision(4) << std::hex << static_cast<uint32_t>(address) << "... read back 0x" << std::setw(8) << std::setfill('0') << std::setprecision(8) << std::hex << static_cast<uint32_t>(readbackValue) << std::endl
 					   << std::endl
 					   << "If you do not understand this error, try checking the DTC firmware version: " << ReadDesignDate() << std::endl;
-				__SS_THROW_ONLY__;
+				__SS_ONLY_THROW__;
 			}
 			catch (const std::runtime_error& e)
 			{
@@ -882,7 +880,7 @@ DTCLib::RegisterFormatter DTCLib::CFOandDTC_Registers::FormatJitterAttenuatorCSR
 	form.description = "Jitter Attenuator CSR";
 	form.vals.push_back("<field> : [<value>]");  // first value describes format
 	form.vals.push_back(std::string("JA Source Clock Select: [") +
-						(JAinputSelect.to_ulong() == 0 ? "from CFO"
+						(JAinputSelect.to_ulong() == 0 ? "from internal CFO"
 													   : (JAinputSelect.to_ulong() == 1 ? "from RJ45"
 																						: "Timing Card Selectable (SFP+ or FPGA) Input Clock")) +
 						"]");

@@ -86,6 +86,30 @@ int mu2edev::init(DTCLib::DTC_SimMode simMode, int deviceIndex, std::string simM
 	return simMode;
 }
 
+//==============================================================================
+// exec
+//	run linux command and get result back in string
+std::string exec(const char* cmd)
+{
+	__COUTV__(cmd);
+
+	std::array<char, 128> buffer;
+	std::string result;
+	std::shared_ptr<FILE> pipe(popen(cmd, "r"), pclose);
+	if (!pipe)
+	{
+		__COUT_ERR__ << "popen() failed!" << __E__;
+		return "popen() failed!";
+	}
+	while (!feof(pipe.get()))
+	{
+		if (fgets(buffer.data(), 128, pipe.get()) != nullptr)
+			result += buffer.data();
+	}
+	//__COUTV__(result);
+	return result;
+}  // end exec()
+
 /*****************************
    initDMAEngine
    set up DMA engines
@@ -108,6 +132,9 @@ void mu2edev::initDMAEngine()
 	{
 		__SS__ << "mu2e Device file not found (or DTCLIB_SIM_ENABLE not set)! Exiting.\n"
 			   << "Attempt to open '" << devfile << "' and received error: " << errno << " - " << strerror(errno) << __E__;
+
+		ss << "Who owns it?\n"
+		   << exec("ls -l /dev/mu2e*") << __E__;
 		perror(ss.str().c_str());
 		__SS_THROW__;
 		// exit(1);
