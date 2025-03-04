@@ -35,7 +35,6 @@
 #include "artdaq-core-mu2e/Overlays/DTC_Types/Exceptions.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/Utilities.h"
 
-
 #include <atomic>
 #include <set>
 #include <thread>

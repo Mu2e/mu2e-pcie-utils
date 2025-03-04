@@ -1,8 +1,8 @@
 
 #include "TRACE/tracemf.h"
 
-//#define TRACE_NAME "DTCSoftwareCFO"
-//#define TRACE_NAME (strstr(&__FILE__[0], "/srcs/") ? strstr(&__FILE__[0], "/srcs/") + 6 : __FILE__)  /* TOO LONG */
+// #define TRACE_NAME "DTCSoftwareCFO"
+// #define TRACE_NAME (strstr(&__FILE__[0], "/srcs/") ? strstr(&__FILE__[0], "/srcs/") + 6 : __FILE__)  /* TOO LONG */
 #define TRACE_NAME &std::string(__FILE__).substr(std::string(__FILE__).rfind('/', std::string(__FILE__).rfind('/') - 1) + 1)[0]
 #include <iostream>
 #include "DTCSoftwareCFO.h"
@@ -11,18 +11,16 @@
 #define QUOTE(X) Q(X)
 #define VAL(X) QUOTE(X) << " = " << X
 
-#define TLVL_SendRequestsForTimestamp  TLVL_DEBUG + 5
+#define TLVL_SendRequestsForTimestamp TLVL_DEBUG + 5
 #define TLVL_SendRequestsForTimestamp2 TLVL_DEBUG + 6
-#define TLVL_SendRequestsForRange      TLVL_DEBUG + 7
-#define TLVL_SendRequestsForRange2     TLVL_DEBUG + 8
-#define TLVL_SendRequestsForRangeImpl  TLVL_DEBUG + 9
+#define TLVL_SendRequestsForRange TLVL_DEBUG + 7
+#define TLVL_SendRequestsForRange2 TLVL_DEBUG + 8
+#define TLVL_SendRequestsForRangeImpl TLVL_DEBUG + 9
 
 DTCLib::DTCSoftwareCFO::DTCSoftwareCFO(DTC* dtc, bool useCFOEmulator, uint16_t debugPacketCount,
 									   DTC_DebugType debugType, bool stickyDebugType, bool quiet, bool asyncRR,
 									   bool forceNoDebug, bool useCFODRP)
-	: useCFOEmulator_(useCFOEmulator), debugPacketCount_(debugPacketCount), debugType_(debugType),
-		 stickyDebugType_(stickyDebugType), quiet_(quiet), asyncRR_(asyncRR), forceNoDebug_(forceNoDebug), 
-		 theThread_(nullptr), requestsSent_(false), abort_(false)
+	: useCFOEmulator_(useCFOEmulator), debugPacketCount_(debugPacketCount), debugType_(debugType), stickyDebugType_(stickyDebugType), quiet_(quiet), asyncRR_(asyncRR), forceNoDebug_(forceNoDebug), theThread_(nullptr), requestsSent_(false), abort_(false)
 {
 	theDTC_ = dtc;
 	for (auto link : DTC_ROC_Links)
@@ -80,7 +78,7 @@ void DTCLib::DTCSoftwareCFO::SendRequestForTimestamp(DTC_EventWindowTag ts, uint
 		{
 			if (linkMode_[link].TransmitEnable)
 			{
-				if(sendHeartbeats)
+				if (sendHeartbeats)
 				{
 					TLOG(TLVL_SendRequestsForTimestamp2) << "SendRequestForTimestamp before SendHeartbeatPacket";
 					theDTC_->SendHeartbeatPacket(link, ts, quiet_);
@@ -108,7 +106,7 @@ void DTCLib::DTCSoftwareCFO::SendRequestForTimestamp(DTC_EventWindowTag ts, uint
 	}
 	else
 	{
-		TLOG(TLVL_SendRequestsForTimestamp2) << "SendRequestForTimestamp setting up DTC CFO Emulator";		
+		TLOG(TLVL_SendRequestsForTimestamp2) << "SendRequestForTimestamp setting up DTC CFO Emulator";
 		theDTC_->SetCFOEmulationMode();
 		theDTC_->DisableCFOEmulation();
 		theDTC_->SetCFOEmulationTimestamp(ts);
@@ -153,7 +151,6 @@ void DTCLib::DTCSoftwareCFO::SendRequestsForRange(int count, DTC_EventWindowTag 
 	// the minimal heartbeat interval is 0x20, or 800 ns
 	if (delayBetweenDataRequests < 0x20)
 		delayBetweenDataRequests = 0x20;
-	
 
 	TLOG(TLVL_SendRequestsForRange2) << VAL(count);
 	TLOG(TLVL_SendRequestsForRange2) << VAL(delayBetweenDataRequests);
@@ -229,11 +226,12 @@ void DTCLib::DTCSoftwareCFO::SendRequestsForListImplAsync(std::set<DTC_EventWind
 														  uint32_t delayBetweenDataRequests,
 														  uint32_t heartbeatsAfter)
 {
-//-----------------------------------------------------------------------------
-// P.Murat: according to Ryan , who referred to Rick K., the minimal heartbeat 
-// interval is 0x20, or 800 ns
-//-----------------------------------------------------------------------------
-	if (delayBetweenDataRequests < 0x20) {
+	//-----------------------------------------------------------------------------
+	// P.Murat: according to Ryan , who referred to Rick K., the minimal heartbeat
+	// interval is 0x20, or 800 ns
+	//-----------------------------------------------------------------------------
+	if (delayBetweenDataRequests < 0x20)
+	{
 		delayBetweenDataRequests = 0x20;
 	}
 
@@ -275,7 +273,7 @@ void DTCLib::DTCSoftwareCFO::SendRequestsForListImplAsync(std::set<DTC_EventWind
 }
 
 void DTCLib::DTCSoftwareCFO::SendRequestsForRangeImplSync(DTC_EventWindowTag start, int count, bool increment,
-														  uint32_t delayBetweenDataRequests, int requestsAhead, 
+														  uint32_t delayBetweenDataRequests, int requestsAhead,
 														  uint32_t heartbeatsAfter, bool sendHeartbeats /* = true */)
 {
 	try
@@ -295,7 +293,7 @@ void DTCLib::DTCSoftwareCFO::SendRequestsForRangeImplSync(DTC_EventWindowTag sta
 			if (abort_) return;
 		}
 	}
-	catch(const std::exception& e)
+	catch (const std::exception& e)
 	{
 		TLOG(TLVL_ERROR) << e.what() << '\n';
 	}
@@ -307,8 +305,6 @@ void DTCLib::DTCSoftwareCFO::SendRequestsForRangeImplAsync(DTC_EventWindowTag st
 {
 	try
 	{
-		
-
 		TLOG(TLVL_SendRequestsForRangeImpl) << "SendRequestsForRangeImplAsync Start";
 
 		// Send Readout Requests first
@@ -367,7 +363,7 @@ void DTCLib::DTCSoftwareCFO::SendRequestsForRangeImplAsync(DTC_EventWindowTag st
 			}
 		}
 	}
-	catch(const std::exception& e)
+	catch (const std::exception& e)
 	{
 		TLOG(TLVL_ERROR) << e.what() << '\n';
 	}

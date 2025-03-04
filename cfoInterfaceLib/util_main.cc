@@ -236,7 +236,6 @@ int main(int argc, char* argv[])
 
 	if (op == "write_program")
 	{
-
 		if (compileInputFile)
 		{
 			std::cout << "Raw output file: " << rawOutputFile << std::endl;

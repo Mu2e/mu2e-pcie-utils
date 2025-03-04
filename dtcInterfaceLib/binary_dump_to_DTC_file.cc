@@ -16,14 +16,13 @@ void printHelpMsg()
 {
 	std::cout << "Converts binary data dump file(s) to DTC binary file(s)" << std::endl;
 	std::cout << "Usage: binary_dump_to_DTC_file [options] file.."
-		<< std::endl;
+			  << std::endl;
 	std::cout
 		<< "Options are:" << std::endl
 		<< "    -h, --help: This message." << std::endl
 		<< std::endl;
 	exit(0);
 }
-
 
 int main(int argc, char* argv[])
 {
@@ -34,22 +33,22 @@ int main(int argc, char* argv[])
 		{
 			switch (argv[optind][1])
 			{
-			case '-':  // Long option
-			{
-				auto option = DTCLib::Utilities::getLongOptionOption(&optind, &argv);
-				if (option == "--help")
+				case '-':  // Long option
 				{
-					printHelpMsg();
+					auto option = DTCLib::Utilities::getLongOptionOption(&optind, &argv);
+					if (option == "--help")
+					{
+						printHelpMsg();
+					}
+					break;
 				}
-				break;
-			}
-			default:
-				TLOG(TLVL_ERROR) << "Unknown option: " << argv[optind] << std::endl;
-				printHelpMsg();
-				break;
-			case 'h':
-				printHelpMsg();
-				break;
+				default:
+					TLOG(TLVL_ERROR) << "Unknown option: " << argv[optind] << std::endl;
+					printHelpMsg();
+					break;
+				case 'h':
+					printHelpMsg();
+					break;
 			}
 		}
 		else
@@ -62,7 +61,7 @@ int main(int argc, char* argv[])
 	{
 		std::ifstream is(file);
 		std::filesystem::path p(file);
-		std::string ofilename = p.parent_path().string()+"/DTC_packets_"+p.filename().string();
+		std::string ofilename = p.parent_path().string() + "/DTC_packets_" + p.filename().string();
 		std::ofstream of(ofilename, std::ios::trunc | std::ios::binary);
 		DTCLib::DTC_Data_Verifier verifier;
 
@@ -91,7 +90,8 @@ int main(int argc, char* argv[])
 			auto thisEvent = std::make_unique<DTCLib::DTC_Event>(buf);
 
 			auto eventByteCount = thisEvent->GetEventByteCount();
-			if (eventByteCount == 0) {
+			if (eventByteCount == 0)
+			{
 				TLOG(TLVL_ERROR) << "Event byte count cannot be 0! Aborting file read at " << std::hex << total_size_read;
 				break;
 			}
@@ -106,7 +106,7 @@ int main(int argc, char* argv[])
 
 				while (bytes_read < eventByteCount)
 				{
-					total_size_read += dmaReadSize; // Add here before we read the next DMA size
+					total_size_read += dmaReadSize;  // Add here before we read the next DMA size
 					TLOG(TLVL_DEBUG) << "Obtaining next DMA, bytes_read=" << bytes_read << ", eventByteCount=" << eventByteCount;
 
 					is.read((char*)&dmaSize, sizeof(dmaSize));
@@ -126,13 +126,14 @@ int main(int argc, char* argv[])
 			}
 			thisEvent->SetupEvent();
 
-
 			success = verifier.VerifyEvent(*thisEvent);
 
-			if (success) {
+			if (success)
+			{
 				thisEvent->WriteEvent(of, true);
 			}
-			else {
+			else
+			{
 				TLOG(TLVL_ERROR) << "Error verifying event data. Aborting file read at " << std::hex << total_size_read;
 				break;
 			}
@@ -141,9 +142,9 @@ int main(int argc, char* argv[])
 		}
 		of.flush();
 		of.close();
-		if (success) {
+		if (success)
+		{
 			TLOG(TLVL_INFO) << "File " << file << " successfully written to " << ofilename;
 		}
-
 	}
 }

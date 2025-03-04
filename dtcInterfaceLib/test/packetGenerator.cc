@@ -799,8 +799,7 @@ int main(int argc, char** argv)
 
 				switch (packetType)
 				{
-					case PacketType_TRK:
-					{
+					case PacketType_TRK: {
 						// Generate TRK data packets
 
 						for (double curTime = minTime; curTime < maxTime && !exitWindow; curTime += stepSize)
@@ -866,8 +865,7 @@ int main(int argc, char** argv)
 						}
 					}
 					break;
-					case PacketType_CAL:
-					{
+					case PacketType_CAL: {
 						{
 							// Approximate CAL waveforms on the fly instead of reading them in from a file
 							for (double curTime = minTime; curTime < maxTime && !exitWindow; curTime += stepSize)

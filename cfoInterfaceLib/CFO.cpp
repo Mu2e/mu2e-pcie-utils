@@ -13,7 +13,7 @@
 
 #define CFO_TLOG(lvl) TLOG(lvl) << "CFO " << device_.getDeviceUID() << ": "
 #undef __COUT_HDR__
-#define __COUT_HDR__  "CFO " <<  device_.getDeviceUID() << ": "
+#define __COUT_HDR__ "CFO " << device_.getDeviceUID() << ": "
 
 #include <unistd.h>
 #include <fstream>
@@ -21,7 +21,7 @@
 #include <sstream>  // Convert uint to hex string
 
 CFOLib::CFO::CFO(DTC_SimMode mode, int cfo, std::string expectedDesignVersion, bool skipInit, const std::string& uid)
-	: CFO_Registers(mode, cfo, expectedDesignVersion, skipInit, uid), daqDMAInfo_()//, dcsDMAInfo_()
+	: CFO_Registers(mode, cfo, expectedDesignVersion, skipInit, uid), daqDMAInfo_()  //, dcsDMAInfo_()
 {
 	__COUT_INFO__ << "CONSTRUCTOR";
 }
@@ -43,11 +43,11 @@ CFOLib::CFO::~CFO()
 // DMA Functions
 //
 bool CFOLib::CFO::GetData(std::vector<std::unique_ptr<CFOLib::CFO_Event>>& output,
-	DTC_EventWindowTag when, bool matchEventWindowTag)
+						  DTC_EventWindowTag when, bool matchEventWindowTag)
 {
 	CFO_TLOG(TLVL_GetData) << "GetCFOEventData begin EventWindowTag=" << when.GetEventWindowTag(true) << ", matching=" << (matchEventWindowTag ? "true" : "false");
 	// std::vector<std::unique_ptr<CFO_Event>> output;
-	output.clear(); //start out with vector empty
+	output.clear();  // start out with vector empty
 	bool result = false;
 
 	// Release read buffers here "I am done with everything I read before" (because the return may be pointers to the raw data, not copies)
@@ -64,16 +64,16 @@ bool CFOLib::CFO::GetData(std::vector<std::unique_ptr<CFOLib::CFO_Event>>& outpu
 			if (result)
 			{
 				if (output.size() == 0)  // check that output vector is not empty
-					
+
 				{
 					__SS__ << "Impossible empty ouput vector after returned success!" << __E__;
 					__SS_THROW__;
 				}
 
-				CFO_TLOG(TLVL_GetData) << "GetCFOEventData after ReadNextCFORecordDMA, found tag = " 
-					<< output.back()->GetEventWindowTag().GetEventWindowTag(true) << " (0x" 
-					<< std::hex << output.back()->GetEventWindowTag().GetEventWindowTag(true) << "), expected tag = " 
-					<< std::dec << when.GetEventWindowTag(true) << " (0x" << std::hex << when.GetEventWindowTag(true) << ")";
+				CFO_TLOG(TLVL_GetData) << "GetCFOEventData after ReadNextCFORecordDMA, found tag = "
+									   << output.back()->GetEventWindowTag().GetEventWindowTag(true) << " (0x"
+									   << std::hex << output.back()->GetEventWindowTag().GetEventWindowTag(true) << "), expected tag = "
+									   << std::dec << when.GetEventWindowTag(true) << " (0x" << std::hex << when.GetEventWindowTag(true) << ")";
 			}
 			else
 				CFO_TLOG(TLVL_GetData) << "GetCFOEventData after ReadNextCFORecordDMA, no data";
@@ -92,7 +92,7 @@ bool CFOLib::CFO::GetData(std::vector<std::unique_ptr<CFOLib::CFO_Event>>& outpu
 		if (matchEventWindowTag && output[0]->GetEventWindowTag() != when)
 		{
 			CFO_TLOG(TLVL_ERROR) << "GetData: Error: CFO_Event has wrong Event Window Tag! 0x" << std::hex << when.GetEventWindowTag(true)
-									<< "(expected) != 0x" << std::hex << output[0]->GetEventWindowTag().GetEventWindowTag(true);
+								 << "(expected) != 0x" << std::hex << output[0]->GetEventWindowTag().GetEventWindowTag(true);
 			// packet.reset(nullptr);
 			daqDMAInfo_.currentReadPtr = daqDMAInfo_.lastReadPtr;
 			return output.size();
@@ -126,9 +126,9 @@ bool CFOLib::CFO::GetData(std::vector<std::unique_ptr<CFOLib::CFO_Event>>& outpu
 		throw;
 	}
 
-	CFO_TLOG(TLVL_GetData) << "GetCFOEventData RETURN output.size()=" << output.size() 
-		<< " first tag=" << output[0]->GetEventWindowTag().GetEventWindowTag(true)
-		<< " last tag=" << output.back()->GetEventWindowTag().GetEventWindowTag(true);
+	CFO_TLOG(TLVL_GetData) << "GetCFOEventData RETURN output.size()=" << output.size()
+						   << " first tag=" << output[0]->GetEventWindowTag().GetEventWindowTag(true)
+						   << " last tag=" << output.back()->GetEventWindowTag().GetEventWindowTag(true);
 	return output.size();
 }  // GetData
 
@@ -178,8 +178,8 @@ bool CFOLib::CFO::ReadNextCFORecordDMA(std::vector<std::unique_ptr<CFO_Event>>& 
 		daqDMAInfo_.currentReadPtr = &daqDMAInfo_.buffer.back()[0];
 		CFO_TLOG(TLVL_ReadNextDAQPacket) << "ReadNextCFORecordDMA daqDMAInfo_.currentReadPtr=" << (void*)daqDMAInfo_.currentReadPtr
 										 << " currentBufferTransferSize=0x" << std::hex << *(unsigned*)daqDMAInfo_.currentReadPtr
-										 << " lastReadPtr=0x" << (void*)daqDMAInfo_.lastReadPtr 
-										 << " metaBufferSize=0x" << metaBufferSize ;
+										 << " lastReadPtr=0x" << (void*)daqDMAInfo_.lastReadPtr
+										 << " metaBufferSize=0x" << metaBufferSize;
 		void* bufferIndexPointer = static_cast<uint8_t*>(daqDMAInfo_.currentReadPtr) + 4;
 		if (daqDMAInfo_.currentReadPtr == oldBufferPtr && daqDMAInfo_.bufferIndex == *static_cast<uint32_t*>(bufferIndexPointer))
 		{
@@ -218,10 +218,8 @@ bool CFOLib::CFO::ReadNextCFORecordDMA(std::vector<std::unique_ptr<CFO_Event>>& 
 	}
 
 	// Utilities::PrintBuffer(daqDMAInfo_.currentReadPtr, 128, TLVL_ReadNextDAQPacket);
-	// auto res = std::make_unique<CFO_Event>(daqDMAInfo_.currentReadPtr);  
+	// auto res = std::make_unique<CFO_Event>(daqDMAInfo_.currentReadPtr);
 	// complete data was copied into CFO Event Record
-
-
 
 	// auto subEventByteCount = res->GetSubEventByteCount();
 	// if (subEventByteCount < sizeof(CFO_EventRecord))
@@ -230,19 +228,17 @@ bool CFOLib::CFO::ReadNextCFORecordDMA(std::vector<std::unique_ptr<CFO_Event>>& 
 	// 	__SS_THROW__;
 	// }
 	size_t remainingBufferSize = CFOandDTC_DMAs::GetBufferByteCount(&daqDMAInfo_, index);
-	CFO_TLOG(TLVL_ReadNextDAQPacket) << "sizeof(CFO_EventRecord) = " << sizeof(CFO_EventRecord) 
-		<< " GetBufferByteCount=" << remainingBufferSize
-		<< " metaBufferSize=" << metaBufferSize;
+	CFO_TLOG(TLVL_ReadNextDAQPacket) << "sizeof(CFO_EventRecord) = " << sizeof(CFO_EventRecord)
+									 << " GetBufferByteCount=" << remainingBufferSize
+									 << " metaBufferSize=" << metaBufferSize;
 
-	if(metaBufferSize == 65536) //how was this happening? from 16 bits
+	if (metaBufferSize == 65536)  // how was this happening? from 16 bits
 	{
 		__SS__ << "Impossible metaBufferSize of " << metaBufferSize << __E__;
 		__SS_THROW__;
 	}
 
-	remainingBufferSize = metaBufferSize-1; //reset to the meta data value (dont use the DMA transfer size count because the CFO stacks transfers!) minus one (for +1 tlast)
-	
-
+	remainingBufferSize = metaBufferSize - 1;  // reset to the meta data value (dont use the DMA transfer size count because the CFO stacks transfers!) minus one (for +1 tlast)
 
 	// 	if (0)  // for deubbging
 	// 	{
@@ -252,19 +248,18 @@ bool CFOLib::CFO::ReadNextCFORecordDMA(std::vector<std::unique_ptr<CFO_Event>>& 
 	// 			std::cout << std::dec << "res#" << i << "/" << remainingBufferSize << "(" << i / 16 << "/" << remainingBufferSize / 16 << ")" << std::hex << std::setw(8) << std::setfill('0') << *((uint32_t*)(&(ptr[i]))) << std::endl;
 	// 	}
 
-
-	uint64_t lastTag = -1;	
-	while(remainingBufferSize >= sizeof(CFO_EventRecord))
+	uint64_t lastTag = -1;
+	while (remainingBufferSize >= sizeof(CFO_EventRecord))
 	{
-		remainingBufferSize -= sizeof(uint64_t); //remove DMA transfer size from remaining byte count
+		remainingBufferSize -= sizeof(uint64_t);  // remove DMA transfer size from remaining byte count
 
-		auto res = std::make_unique<CFO_Event>(daqDMAInfo_.currentReadPtr); 
-		
+		auto res = std::make_unique<CFO_Event>(daqDMAInfo_.currentReadPtr);
+
 		CFO_TLOG(TLVL_ReadNextDAQPacket) << "subevent tag=" << res->GetEventWindowTag().GetEventWindowTag(true) << std::hex << "(0x" << res->GetEventWindowTag().GetEventWindowTag(true) << ")"
-									 << " inclusive byte count: 0x" << std::hex << sizeof(CFO_EventRecord) << " (" << std::dec << sizeof(CFO_EventRecord) << ")"
-									 << ", remaining buffer size: 0x" << std::hex << remainingBufferSize << " (" << std::dec << remainingBufferSize << ")";
-								
-		if(res->GetEventWindowTag().GetEventWindowTag(true) == lastTag)
+										 << " inclusive byte count: 0x" << std::hex << sizeof(CFO_EventRecord) << " (" << std::dec << sizeof(CFO_EventRecord) << ")"
+										 << ", remaining buffer size: 0x" << std::hex << remainingBufferSize << " (" << std::dec << remainingBufferSize << ")";
+
+		if (res->GetEventWindowTag().GetEventWindowTag(true) == lastTag)
 		{
 			__SS__ << "Impossible repeating tag " << lastTag << __E__;
 			__SS_THROW__;
@@ -278,15 +273,14 @@ bool CFOLib::CFO::ReadNextCFORecordDMA(std::vector<std::unique_ptr<CFO_Event>>& 
 		output.push_back(std::move(res));
 
 		CFO_TLOG(TLVL_ReadNextDAQPacket) << "CFO subevent record JSON=" << output.back()->GetEventRecord().toJson();
-	} //end primary CFO Event Record extraction loop
+	}  // end primary CFO Event Record extraction loop
 
- 	// check that size is multiple of CFO Event Record side sanity
+	// check that size is multiple of CFO Event Record side sanity
 	if (remainingBufferSize != 0)
 	{
 		__SS__ << "Impossible remainingBufferSize of " << remainingBufferSize << __E__;
 		__SS_THROW__;
 	}
-
 
 	// // Check if there are more than one CFO_EventRecords
 	// if (subEventByteCount > remainingBufferSize)
@@ -297,7 +291,6 @@ bool CFOLib::CFO::ReadNextCFORecordDMA(std::vector<std::unique_ptr<CFO_Event>>& 
 	// 	daqDMAInfo_.lastReadPtr = static_cast<uint8_t*>(daqDMAInfo_.currentReadPtr);
 
 	// 	auto inmem = std::make_unique<CFO_EventRecord>(subEventByteCount);
-
 
 	// 	memcpy(const_cast<void*>(inmem->GetRawBufferPointer()), res->GetRawBufferPointer(), remainingBufferSize);
 
@@ -414,7 +407,7 @@ bool CFOLib::CFO::ReadNextCFORecordDMA(std::vector<std::unique_ptr<CFO_Event>>& 
 	CFO_TLOG(TLVL_ReadNextDAQPacket) << "ReadNextCFORecordDMA: RETURN vector of " << output.size() << " CFO Event Records";
 	// return res;
 	return true;
-} //end ReadNextCFORecordDMA()
+}  // end ReadNextCFORecordDMA()
 
 std::unique_ptr<CFOLib::CFO_DataPacket> CFOLib::CFO::ReadNextPacket(const DTC_DMA_Engine& engine, int tmo_ms)
 {
@@ -433,8 +426,8 @@ std::unique_ptr<CFOLib::CFO_DataPacket> CFOLib::CFO::ReadNextPacket(const DTC_DM
 	if (info->currentReadPtr != nullptr)
 	{
 		CFO_TLOG(TLVL_ReadNextDAQPacket) << "ReadNextPacket BEFORE BUFFER CHECK info->currentReadPtr="
-									 << (void*)info->currentReadPtr << " *nextReadPtr_=0x" << std::hex
-									 << *(uint16_t*)info->currentReadPtr;
+										 << (void*)info->currentReadPtr << " *nextReadPtr_=0x" << std::hex
+										 << *(uint16_t*)info->currentReadPtr;
 	}
 	else
 	{
@@ -447,7 +440,7 @@ std::unique_ptr<CFOLib::CFO_DataPacket> CFOLib::CFO::ReadNextPacket(const DTC_DM
 	if (index < 0)
 	{
 		CFO_TLOG(TLVL_ReadNextDAQPacket) << "ReadNextPacket Obtaining new " << (engine == DTC_DMA_Engine_DAQ ? "DAQ" : "DCS")
-									 << " Buffer";
+										 << " Buffer";
 
 		void* oldBufferPtr = nullptr;
 		if (info->buffer.size() > 0) oldBufferPtr = &info->buffer.back()[0];
@@ -460,8 +453,8 @@ std::unique_ptr<CFOLib::CFO_DataPacket> CFOLib::CFO::ReadNextPacket(const DTC_DM
 		// MUST BE ABLE TO HANDLE daqbuffer_==nullptr OR retry forever?
 		info->currentReadPtr = &info->buffer.back()[0];
 		CFO_TLOG(TLVL_ReadNextDAQPacket) << "ReadNextPacket info->currentReadPtr=" << (void*)info->currentReadPtr
-									 << " *info->currentReadPtr=0x" << std::hex << *(unsigned*)info->currentReadPtr
-									 << " lastReadPtr_=" << (void*)info->lastReadPtr;
+										 << " *info->currentReadPtr=0x" << std::hex << *(unsigned*)info->currentReadPtr
+										 << " lastReadPtr_=" << (void*)info->lastReadPtr;
 		void* bufferIndexPointer = static_cast<uint8_t*>(info->currentReadPtr) + 2;
 		if (info->currentReadPtr == oldBufferPtr && info->bufferIndex == *static_cast<uint32_t*>(bufferIndexPointer))
 		{
@@ -484,12 +477,12 @@ std::unique_ptr<CFOLib::CFO_DataPacket> CFOLib::CFO::ReadNextPacket(const DTC_DM
 
 	// Read the next packet
 	CFO_TLOG(TLVL_ReadNextDAQPacket) << "ReadNextPacket reading next packet from buffer: info->currentReadPtr="
-								 << (void*)info->currentReadPtr;
+									 << (void*)info->currentReadPtr;
 
 	auto blockByteCount = *reinterpret_cast<uint16_t*>(info->currentReadPtr);
 	CFO_TLOG(TLVL_ReadNextDAQPacket) << "ReadNextPacket: blockByteCount=" << blockByteCount
-								 << ", info->currentReadPtr=" << (void*)info->currentReadPtr
-								 << ", *nextReadPtr=" << (int)*((uint16_t*)info->currentReadPtr);
+									 << ", info->currentReadPtr=" << (void*)info->currentReadPtr
+									 << ", *nextReadPtr=" << (int)*((uint16_t*)info->currentReadPtr);
 	if (blockByteCount == 0 || blockByteCount == 0xcafe)
 	{
 		if (static_cast<size_t>(index) < info->buffer.size() - 1)
@@ -513,10 +506,10 @@ std::unique_ptr<CFOLib::CFO_DataPacket> CFOLib::CFO::ReadNextPacket(const DTC_DM
 
 	auto test = std::make_unique<CFO_DataPacket>(info->currentReadPtr);
 	CFO_TLOG(TLVL_ReadNextDAQPacket) << "ReadNextPacket: current+blockByteCount="
-								 << (void*)(reinterpret_cast<uint8_t*>(info->currentReadPtr) + blockByteCount)
-								 << ", end of dma buffer="
-								 << (void*)(info->buffer[index][0] + CFOandDTC_DMAs::GetBufferByteCount(info, index) +
-											8);  // +8 because first 8 bytes are not included in byte count
+									 << (void*)(reinterpret_cast<uint8_t*>(info->currentReadPtr) + blockByteCount)
+									 << ", end of dma buffer="
+									 << (void*)(info->buffer[index][0] + CFOandDTC_DMAs::GetBufferByteCount(info, index) +
+												8);  // +8 because first 8 bytes are not included in byte count
 	if (reinterpret_cast<uint8_t*>(info->currentReadPtr) + blockByteCount >
 		info->buffer[index][0] + CFOandDTC_DMAs::GetBufferByteCount(info, index) + 8)
 	{
@@ -524,7 +517,7 @@ std::unique_ptr<CFOLib::CFO_DataPacket> CFOLib::CFO::ReadNextPacket(const DTC_DM
 			info->buffer[index][0] + CFOandDTC_DMAs::GetBufferByteCount(info, index) + 8 -
 			reinterpret_cast<uint8_t*>(info->currentReadPtr));  // +8 because first 8 bytes are not included in byte count
 		CFO_TLOG(TLVL_ReadNextDAQPacket) << "ReadNextPacket: Adjusting blockByteCount to " << blockByteCount
-									 << " due to end-of-DMA condition";
+										 << " due to end-of-DMA condition";
 		test->SetByte(0, blockByteCount & 0xFF);
 		test->SetByte(1, (blockByteCount >> 8));
 	}
@@ -566,7 +559,7 @@ int CFOLib::CFO::ReadBuffer(const DTC_DMA_Engine& channel, int tmo_ms)
 		errorCode = device_.read_data(channel, reinterpret_cast<void**>(&buffer), 1 /* tmo_ms */);
 		// if (errorCode == 0) usleep(1000);
 
-	} while (retry-- > 0 && errorCode == 0);  //error code of 0 is timeout
+	} while (retry-- > 0 && errorCode == 0);  // error code of 0 is timeout
 
 	if (errorCode == 0)
 	{
@@ -580,12 +573,12 @@ int CFOLib::CFO::ReadBuffer(const DTC_DMA_Engine& channel, int tmo_ms)
 	else
 	{
 		CFO_TLOG(TLVL_ReadBuffer) << "ReadBuffer buffer_=" << (void*)buffer << " errorCode=" << errorCode << " *buffer_=0x"
-							  << std::hex << *(unsigned*)buffer;
+								  << std::hex << *(unsigned*)buffer;
 		if (channel == DTC_DMA_Engine_DAQ)
 		{
 			daqDMAInfo_.buffer.push_back(buffer);
 			CFO_TLOG(TLVL_ReadBuffer) << "ReadBuffer: There are now " << daqDMAInfo_.buffer.size()
-								  << " DAQ buffers held in the DTC Library";
+									  << " DAQ buffers held in the DTC Library";
 		}
 		// else if (channel == DTC_DMA_Engine_DCS)
 		// {
@@ -611,7 +604,7 @@ void CFOLib::CFO::ReleaseAllBuffers(const DTC_DMA_Engine& channel)
 	// 	dcsDMAInfo_.buffer.clear();
 	// 	device_.release_all(channel);
 	// }
-	else 
+	else
 	{
 		CFO_TLOG(TLVL_ERROR) << "ReadNextPacket: Invalid DMA Engine specified!";
 		throw new DTC_DataCorruptionException();
@@ -628,7 +621,8 @@ void CFOLib::CFO::ReleaseBuffers(const DTC_DMA_Engine& channel)
 	// 	info = &dcsDMAInfo_;
 	else
 	{
-		CFO_TLOG(TLVL_ERROR) << "ReadNextPacket: Invalid DMA Engine specified!\n\n" << otsStyleStackTrace();
+		CFO_TLOG(TLVL_ERROR) << "ReadNextPacket: Invalid DMA Engine specified!\n\n"
+							 << otsStyleStackTrace();
 		throw new DTC_DataCorruptionException();
 	}
 
@@ -636,7 +630,7 @@ void CFOLib::CFO::ReleaseBuffers(const DTC_DMA_Engine& channel)
 	if (releaseBufferCount > 0)
 	{
 		CFO_TLOG(TLVL_ReleaseBuffers) << "ReleaseBuffers releasing " << releaseBufferCount << " "
-								  << (channel == DTC_DMA_Engine_DAQ ? "DAQ" : "DCS") << " buffers.";
+									  << (channel == DTC_DMA_Engine_DAQ ? "DAQ" : "DCS") << " buffers.";
 
 		// if (channel == CFO_DMA_Engine_DCS)
 		// 	device_.begin_dcs_transaction();
@@ -689,4 +683,3 @@ void CFOLib::CFO::ReleaseBuffers(const DTC_DMA_Engine& channel)
 // 	uint16_t bufferSize = *reinterpret_cast<uint16_t*>(bufferptr);
 // 	return bufferSize;
 // }
-

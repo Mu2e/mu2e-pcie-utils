@@ -16,7 +16,7 @@ int mu2e_mmap(struct file *file, struct vm_area_struct *vma)
 	int dtc = iminor(file->f_path.dentry->d_inode);
 
 	page2chDirMap(vma->vm_pgoff, ch, dir, map);
-	TRACE(TLVL_DEBUG+4, "mu2e_mmap: vm_pgoff:%lu dtc:%d ch:%d dir:%d map:%d: %p", vma->vm_pgoff, dtc, ch, dir, map,
+	TRACE(TLVL_DEBUG + 4, "mu2e_mmap: vm_pgoff:%lu dtc:%d ch:%d dir:%d map:%d: %p", vma->vm_pgoff, dtc, ch, dir, map,
 		  mu2e_mmap_ptrs[dtc][ch][dir][map]);
 	if (map == MU2E_MAP_META) vma->vm_flags &= ~VM_WRITE;
 
@@ -55,7 +55,7 @@ int alloc_mem(int dtc)
 	/* Use "Dma_" routines to init FPGA "user" application ("DTC") registers.
   NOTE: a few more after dma engine setup (below).
   */
-	Dma_mWriteReg((unsigned long)mu2e_pcie_bar_info[dtc].baseVAddr, 0x9100, 1); // Hard reset
+	Dma_mWriteReg((unsigned long)mu2e_pcie_bar_info[dtc].baseVAddr, 0x9100, 1);  // Hard reset
 	TRACE(TLVL_INFO, "alloc_mem reset done bits: 0x%08x MU2E_NUM_RECV_CHANNELS=%d MU2E_NUM_RECV_BUFFS=%d MU2E_NUM_SEND_BUFFS=%d",
 		  Dma_mReadReg((unsigned long)mu2e_pcie_bar_info[dtc].baseVAddr, 0x9138), MU2E_NUM_RECV_CHANNELS,
 		  MU2E_NUM_RECV_BUFFS, MU2E_NUM_SEND_BUFFS);
@@ -203,8 +203,8 @@ int alloc_mem(int dtc)
 
 	TRACE(TLVL_LOG, "alloc_mem setting DTC DMA registers");
 	/* Now, finish up with some more mu2e fpga user application stuff... */
-	Dma_mWriteReg((unsigned long)mu2e_pcie_bar_info[dtc].baseVAddr, 0x9104, (SET_DTC_MAX_DMA_SIZE<<16)|0x0040);  // write max and min DMA xfer sizes
-	Dma_mWriteReg((unsigned long)mu2e_pcie_bar_info[dtc].baseVAddr, 0x9150, 0x00000010);  // set ring packet size
+	Dma_mWriteReg((unsigned long)mu2e_pcie_bar_info[dtc].baseVAddr, 0x9104, (SET_DTC_MAX_DMA_SIZE << 16) | 0x0040);  // write max and min DMA xfer sizes
+	Dma_mWriteReg((unsigned long)mu2e_pcie_bar_info[dtc].baseVAddr, 0x9150, 0x00000010);                             // set ring packet size
 
 	TRACE(TLVL_LOG, "alloc_mem complete");
 	return ret;

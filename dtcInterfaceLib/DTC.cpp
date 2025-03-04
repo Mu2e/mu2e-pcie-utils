@@ -1324,10 +1324,10 @@ std::unique_ptr<DTCLib::DTC_DCSReplyPacket> DTCLib::DTC::ReadNextDCSPacket(int t
 			if ((lastDTCErrorBitsValue_ >> 3) & 0x1)
 				ss << "\t* bit-3 is set: Error in DTC handling of this ROC’s DCS requests has occurred (check the DTC error bit details)." << __E__;
 
-			if(lastDTCErrorBitsValue_) //throw exception if error
+			if (lastDTCErrorBitsValue_)  // throw exception if error
 			{
 				ss << "\n\nIf interpreting as a DTC_DataPacket, here is the data: \n"
-					<< test->toJSON();
+				   << test->toJSON();
 				__SS_THROW__;
 			}
 		}

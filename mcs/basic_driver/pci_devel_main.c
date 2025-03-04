@@ -1,10 +1,10 @@
 /*  This file (pci_devel_main.c) was created by Ron Rechenmacher <ron@fnal.gov> on
-        Apr 23, 2014. "TERMS AND CONDITIONS" governing this file are in the README
-        or COPYING file. If you do not have such a file, one can be obtained by
-        contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
-        $RCSfile: .emacs.gnu,v $
-        rev="$Revision: 1.23 $$Date: 2012/01/23 15:32:40 $";
-        */
+		Apr 23, 2014. "TERMS AND CONDITIONS" governing this file are in the README
+		or COPYING file. If you do not have such a file, one can be obtained by
+		contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
+		$RCSfile: .emacs.gnu,v $
+		rev="$Revision: 1.23 $$Date: 2012/01/23 15:32:40 $";
+		*/
 #include <linux/uaccess.h> /* access_ok, copy_to_user */
 #include <linux/cdev.h>    /* cdev_add */
 #include <linux/delay.h>   /* msleep */
@@ -36,7 +36,7 @@
 #define IOCTL_RET_TYPE long
 #endif
 
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(4,0,0)
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(4, 0, 0)
 #define ACCESS_OK_READ(addr, size) access_ok(VERIFY_READ, addr, size)
 #define ACCESS_OK_WRITE(addr, size) access_ok(VERIFY_WRITE, addr, size)
 #else
@@ -73,7 +73,7 @@ static struct file_operations devl_file_ops = {
 	.poll = NULL,                        /* poll         */
 	.IOCTL_FILE_OPS_MEMBER = devl_ioctl, /* ioctl  */
 	.mmap = NULL,                        /* mmap         */
-	.open = NULL                                    /* open         */
+	.open = NULL                         /* open         */
 										 /* flush        */
 										 /* release (close?)*/
 										 /* fsync        */
@@ -99,11 +99,11 @@ int devl_fs_up(void)
 		return (sts);
 	}
 
-#   if RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION( 9, 4 )
+#if RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(9, 4)
 	devl_dev_class = class_create(THIS_MODULE, "devl_dev");
-#   else
+#else
 	devl_dev_class = class_create("devl_dev");
-#   endif	
+#endif
 
 	cdev_init(&devl_cdev, &devl_file_ops);
 
@@ -129,9 +129,9 @@ static int devl_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 
 	TRACE(6, "devl_pci_probe pdev=%p", pdev);
 	/* Initialize device before it is used by driver. Ask low-level
-   * code to enable I/O and memory. Wake up the device if it was
-   * suspended. Beware, this function can fail.
-   */
+	 * code to enable I/O and memory. Wake up the device if it was
+	 * suspended. Beware, this function can fail.
+	 */
 	pciRet = pci_enable_device(pdev);
 	if (pciRet < 0)
 	{
@@ -140,9 +140,9 @@ static int devl_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	}
 
 	/*
-   * Enable bus-mastering on device. Calls pcibios_set_master() to do
-   * the needed architecture-specific settings.
-   */
+	 * Enable bus-mastering on device. Calls pcibios_set_master() to do
+	 * the needed architecture-specific settings.
+	 */
 	pci_set_master(pdev);
 
 	pciRet = pci_request_regions(pdev, DRIVER_NAME);
@@ -251,9 +251,9 @@ IOCTL_RET_TYPE devl_ioctl(IOCTL_ARGS(struct inode *inode, struct file *filp, uns
 	TRACE(6, "Checking for correct access for command");
 	/* Check read/write and corresponding argument */
 	if (_IOC_DIR(cmd) & _IOC_READ)
-	  if (!ACCESS_OK_WRITE( (void *)arg, _IOC_SIZE(cmd))) return -EFAULT;
+		if (!ACCESS_OK_WRITE((void *)arg, _IOC_SIZE(cmd))) return -EFAULT;
 	if (_IOC_DIR(cmd) & _IOC_WRITE)
-	  if (!ACCESS_OK_READ( (void *)arg, _IOC_SIZE(cmd))) return -EFAULT;
+		if (!ACCESS_OK_READ((void *)arg, _IOC_SIZE(cmd))) return -EFAULT;
 
 	switch (cmd)
 	{

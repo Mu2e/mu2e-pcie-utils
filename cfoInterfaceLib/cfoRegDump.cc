@@ -102,14 +102,14 @@ int main(int argc, char* argv[])
 
 	if (printRegisterDump)
 	{
-		std::cout << thisCFO->FormattedRegDump(cols,thisCFO->formattedDumpFunctions_) << std::endl;
+		std::cout << thisCFO->FormattedRegDump(cols, thisCFO->formattedDumpFunctions_) << std::endl;
 	}
 
 	if (printSERDESCounters)
 	{
 		std::cout << std::endl
 				  << std::endl;
-		std::cout << thisCFO->FormattedRegDump(cols,thisCFO->formattedCounterFunctions_) << std::endl;
+		std::cout << thisCFO->FormattedRegDump(cols, thisCFO->formattedCounterFunctions_) << std::endl;
 	}
 
 	delete thisCFO;

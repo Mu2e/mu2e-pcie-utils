@@ -119,19 +119,19 @@ int mu2esim::init(DTCLib::DTC_SimMode mode)
 
 	TLOG(TLVL_Init) << "Initializing registers";
 	// Set initial register values...
-	registers_[DTCLib::CFOandDTC_Register_DesignVersion] = 0x00006363;           // v99.99
-	registers_[DTCLib::CFOandDTC_Register_DesignDate] = 0x53494D44;              // SIMD in ASCII
-	registers_[DTCLib::CFOandDTC_Register_Control] = 0x00000003;              // System Clock, Timing Enable
-	registers_[DTCLib::CFOandDTC_Register_DMATransferLength] = 0x80000010;       // Default value from HWUG
-	registers_[DTCLib::CFOandDTC_Register_SERDES_LoopbackEnable] = 0x00000000;    // SERDES Loopback Disabled
-	registers_[DTCLib::CFOandDTC_Register_ClockOscillatorStatus] = 0x20002;       // Initialization Complete, no IIC Error
-	registers_[DTCLib::DTC_Register_ROCEmulationEnable] = 0x3F;            // ROC Emulators enabled (of course!)
-	registers_[DTCLib::CFOandDTC_Register_LinkEnable] = 0x3F3F;                  // All links Tx/Rx enabled, CFO and timing disabled
-	registers_[DTCLib::CFOandDTC_Register_SERDES_PLLLocked] = 0x7F;              // SERDES PLL Locked
-	registers_[DTCLib::CFOandDTC_Register_SERDES_ResetDone] = 0xFFFFFFFF;        // SERDES Resets Done
-	registers_[DTCLib::DTC_Register_SERDES_RXCDRLockStatus] = 0x7F00007F;  // RX CDR Locked
-	registers_[DTCLib::DTC_Register_DMATimeoutPreset] = 0x800;             // DMA Timeout Preset
-	registers_[DTCLib::DTC_Register_ROCReplyTimeout] = 0x200000;           // ROC Timeout Preset
+	registers_[DTCLib::CFOandDTC_Register_DesignVersion] = 0x00006363;          // v99.99
+	registers_[DTCLib::CFOandDTC_Register_DesignDate] = 0x53494D44;             // SIMD in ASCII
+	registers_[DTCLib::CFOandDTC_Register_Control] = 0x00000003;                // System Clock, Timing Enable
+	registers_[DTCLib::CFOandDTC_Register_DMATransferLength] = 0x80000010;      // Default value from HWUG
+	registers_[DTCLib::CFOandDTC_Register_SERDES_LoopbackEnable] = 0x00000000;  // SERDES Loopback Disabled
+	registers_[DTCLib::CFOandDTC_Register_ClockOscillatorStatus] = 0x20002;     // Initialization Complete, no IIC Error
+	registers_[DTCLib::DTC_Register_ROCEmulationEnable] = 0x3F;                 // ROC Emulators enabled (of course!)
+	registers_[DTCLib::CFOandDTC_Register_LinkEnable] = 0x3F3F;                 // All links Tx/Rx enabled, CFO and timing disabled
+	registers_[DTCLib::CFOandDTC_Register_SERDES_PLLLocked] = 0x7F;             // SERDES PLL Locked
+	registers_[DTCLib::CFOandDTC_Register_SERDES_ResetDone] = 0xFFFFFFFF;       // SERDES Resets Done
+	registers_[DTCLib::DTC_Register_SERDES_RXCDRLockStatus] = 0x7F00007F;       // RX CDR Locked
+	registers_[DTCLib::DTC_Register_DMATimeoutPreset] = 0x800;                  // DMA Timeout Preset
+	registers_[DTCLib::DTC_Register_ROCReplyTimeout] = 0x200000;                // ROC Timeout Preset
 	registers_[DTCLib::CFOandDTC_Register_SERDESClock_IICBusLow] = 0xFFFFFFFF;
 	registers_[DTCLib::CFOandDTC_Register_SERDESClock_IICBusHigh] = 0x77f3f;
 	registers_[DTCLib::DTC_Register_DDRReferenceClockFrequency] = 0xbebc200;
@@ -630,7 +630,7 @@ void mu2esim::eventSimulator_(DTCLib::DTC_EventWindowTag ts)
 	for (auto ii = 0; ii < num_trk_dtcs; ++ii, ++DTCID)
 	{
 		TLOG(TLVL_EventSimulator) << "Generating Tracker data, DTCID " << DTCID << ", TRK DTC " << ii + 1 << "/" << num_trk_dtcs;
-		sub_event_->SetDTCMAC( DTCID);
+		sub_event_->SetDTCMAC(DTCID);
 		sub_event_->SetSourceDTC(DTCID, DTCLib::DTC_Subsystem_Tracker);
 
 		for (auto link : DTCLib::DTC_ROC_Links)
@@ -644,7 +644,7 @@ void mu2esim::eventSimulator_(DTCLib::DTC_EventWindowTag ts)
 	for (auto ii = 0; ii < num_calo_dtcs; ++ii, ++DTCID)
 	{
 		TLOG(TLVL_EventSimulator) << "Generating Calorimeter data, DTCID " << DTCID << ", Calo DTC " << ii + 1 << "/" << num_calo_dtcs;
-		sub_event_->SetDTCMAC( DTCID);
+		sub_event_->SetDTCMAC(DTCID);
 		sub_event_->SetSourceDTC(DTCID, DTCLib::DTC_Subsystem_Calorimeter);
 
 		for (auto link : DTCLib::DTC_ROC_Links)
@@ -658,7 +658,7 @@ void mu2esim::eventSimulator_(DTCLib::DTC_EventWindowTag ts)
 	for (auto ii = 0; ii < num_crv_dtcs; ++ii, ++DTCID)
 	{
 		TLOG(TLVL_EventSimulator) << "Generating CRV data, DTCID " << DTCID << ", CRV DTC " << ii + 1 << "/" << num_crv_dtcs;
-		sub_event_->SetDTCMAC( DTCID);
+		sub_event_->SetDTCMAC(DTCID);
 		sub_event_->SetSourceDTC(DTCID, DTCLib::DTC_Subsystem_CRV);
 
 		for (auto link : DTCLib::DTC_ROC_Links)
@@ -723,7 +723,7 @@ void mu2esim::calorimeterBlockSimulator_(DTCLib::DTC_EventWindowTag ts, DTCLib::
 
 	// Board ID
 	uint16_t roc_id = static_cast<uint8_t>(link) + (DTCID * 6);
-	uint8_t board_number = (roc_id)&0x3F;  // 6 bits
+	uint8_t board_number = (roc_id) & 0x3F;  // 6 bits
 	buffer.push_back(0xFC00 + (board_number << 3));
 	buffer.push_back(0x3FFF);
 
@@ -735,9 +735,9 @@ void mu2esim::calorimeterBlockSimulator_(DTCLib::DTC_EventWindowTag ts, DTCLib::
 		buffer.push_back(board_number);
 		buffer.push_back(10 * roc_id);  // DIRAC B...do we need to put something here?
 
-		buffer.push_back(0);                           // No error flags
+		buffer.push_back(0);                        // No error flags
 		buffer.push_back((idx * t0Step) & 0xFFFF);  // Time
-		buffer.push_back(0x0607);                      // Max sample/num samples
+		buffer.push_back(0x0607);                   // Max sample/num samples
 
 		// Digitizer samples
 		buffer.push_back(0x1111);
@@ -749,7 +749,8 @@ void mu2esim::calorimeterBlockSimulator_(DTCLib::DTC_EventWindowTag ts, DTCLib::
 		buffer.push_back(0x7777);
 	}
 
-	while (buffer.size() % 8 != 0) {
+	while (buffer.size() % 8 != 0)
+	{
 		buffer.push_back(0);
 	}
 

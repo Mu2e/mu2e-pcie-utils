@@ -43,7 +43,6 @@
 #include "artdaq-core-mu2e/Overlays/DTC_Types/Exceptions.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/Utilities.h"
 
-
 using namespace DTCLib;
 
 namespace CFOLib {
@@ -77,8 +76,8 @@ public:
 	 * @brief Read the next DMA from the DAQ channel. If no data is present, will return nullptr
 	 * @param tmo_ms Timeout
 	 * @return A CFO_Event representing the data in a single DMA, or nullptr if no data/timeout
-	*/
-	bool ReadNextCFORecordDMA(std::vector<std::unique_ptr<CFO_Event>>& output, int tmo_ms );
+	 */
+	bool ReadNextCFORecordDMA(std::vector<std::unique_ptr<CFO_Event>>& output, int tmo_ms);
 
 	/// <summary>
 	/// Release all buffers to the hardware on the given channel
@@ -119,5 +118,5 @@ private:
 
 	// uint8_t lastDTCErrorBitsValue_ = 0;
 };
-}  // namespace DTCLib
+}  // namespace CFOLib
 #endif

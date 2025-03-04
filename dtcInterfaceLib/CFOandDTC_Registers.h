@@ -1,57 +1,55 @@
 #ifndef CFO_AND_DTC_REGISTERS_H
 #define CFO_AND_DTC_REGISTERS_H
 
-//#include <bitset> // std::bitset
-//#include <cstdint> // uint8_t, uint16_t
+// #include <bitset> // std::bitset
+// #include <cstdint> // uint8_t, uint16_t
 #include <functional>  // std::bind, std::function
 #include <vector>      // std::vector
 #include <optional>
 
 #include "mu2edev.h"
 
-#define DTCLIB_COMMON_REGISTERS \
-	CFOandDTC_Register_DesignVersion = 0x9000, \
-	CFOandDTC_Register_DesignDate = 0x9004, \
-	CFOandDTC_Register_DesignStatus = 0x9008, \
-	CFOandDTC_Register_VivadoVersion = 0x900C, \
-	CFOandDTC_Register_FPGA_Temperature = 0x9010, \
-	CFOandDTC_Register_FPGA_VCCINT = 0x9014, \
-	CFOandDTC_Register_FPGA_VCCAUX = 0x9018, \
-	CFOandDTC_Register_FPGA_VCCBRAM = 0x901C, \
-	CFOandDTC_Register_FPGA_MonitorAlarm = 0x9020, \
-	CFOandDTC_Register_Scratch = 0x9030,  \
-	CFOandDTC_Register_Control = 0x9100,  \
-	CFOandDTC_Register_DMATransferLength = 0x9104,  \
-	CFOandDTC_Register_SERDES_LoopbackEnable = 0x9108, \
-	CFOandDTC_Register_ClockOscillatorStatus = 0x910C, \
-	CFOandDTC_Register_LinkEnable = 0x9114, \
-	CFOandDTC_Register_SERDES_Reset = 0x9118, \
-	CFOandDTC_Register_SERDES_RXDisparityError = 0x911C, \
-	CFOandDTC_Register_SERDES_RXCharacterNotInTableError = 0x9120, \
-	CFOandDTC_Register_SERDES_UnlockError = 0x9124, \
-	CFOandDTC_Register_SERDES_PLLLocked = 0x9128, /* not in CFO (?) */ \
-	CFOandDTC_Register_SERDES_PLLPowerDown = 0x912C, /* not in CFO (?) */ \
-	CFOandDTC_Register_SERDES_CDRLockCommaCount = 0x9130,	 \
-	CFOandDTC_Register_SERDES_RXStatus = 0x9134, \
-	CFOandDTC_Register_SERDES_ResetDone = 0x9138, \
-	CFOandDTC_Register_SERDESClock_IICBusLow = 0x9168, \
-	CFOandDTC_Register_SERDESClock_IICBusHigh = 0x916C, \
-	CFOandDTC_Register_FireflyTX_IICBusControl = 0x9284, \
-	CFOandDTC_Register_FireflyTX_IICBusConfigLow = 0x9288, \
-	CFOandDTC_Register_FireflyTX_IICBusConfigHigh = 0x928C, \
-	CFOandDTC_Register_FireflyRX_IICBusControl = 0x9294, \
-	CFOandDTC_Register_FireflyRX_IICBusConfigLow = 0x9298, \
-	CFOandDTC_Register_FireflyRX_IICBusConfigHigh = 0x929C, \
-	CFOandDTC_Register_FireflyTXRX_IICBusControl = 0x92A4, \
-	CFOandDTC_Register_FireflyTXRX_IICBusConfigLow = 0x92A8, \
-	CFOandDTC_Register_FireflyTXRX_IICBusConfigHigh = 0x92AC, \
+#define DTCLIB_COMMON_REGISTERS                                               \
+	CFOandDTC_Register_DesignVersion = 0x9000,                                \
+	CFOandDTC_Register_DesignDate = 0x9004,                                   \
+	CFOandDTC_Register_DesignStatus = 0x9008,                                 \
+	CFOandDTC_Register_VivadoVersion = 0x900C,                                \
+	CFOandDTC_Register_FPGA_Temperature = 0x9010,                             \
+	CFOandDTC_Register_FPGA_VCCINT = 0x9014,                                  \
+	CFOandDTC_Register_FPGA_VCCAUX = 0x9018,                                  \
+	CFOandDTC_Register_FPGA_VCCBRAM = 0x901C,                                 \
+	CFOandDTC_Register_FPGA_MonitorAlarm = 0x9020,                            \
+	CFOandDTC_Register_Scratch = 0x9030,                                      \
+	CFOandDTC_Register_Control = 0x9100,                                      \
+	CFOandDTC_Register_DMATransferLength = 0x9104,                            \
+	CFOandDTC_Register_SERDES_LoopbackEnable = 0x9108,                        \
+	CFOandDTC_Register_ClockOscillatorStatus = 0x910C,                        \
+	CFOandDTC_Register_LinkEnable = 0x9114,                                   \
+	CFOandDTC_Register_SERDES_Reset = 0x9118,                                 \
+	CFOandDTC_Register_SERDES_RXDisparityError = 0x911C,                      \
+	CFOandDTC_Register_SERDES_RXCharacterNotInTableError = 0x9120,            \
+	CFOandDTC_Register_SERDES_UnlockError = 0x9124,                           \
+	CFOandDTC_Register_SERDES_PLLLocked = 0x9128,        /* not in CFO (?) */ \
+		CFOandDTC_Register_SERDES_PLLPowerDown = 0x912C, /* not in CFO (?) */ \
+		CFOandDTC_Register_SERDES_CDRLockCommaCount = 0x9130,                 \
+	CFOandDTC_Register_SERDES_RXStatus = 0x9134,                              \
+	CFOandDTC_Register_SERDES_ResetDone = 0x9138,                             \
+	CFOandDTC_Register_SERDESClock_IICBusLow = 0x9168,                        \
+	CFOandDTC_Register_SERDESClock_IICBusHigh = 0x916C,                       \
+	CFOandDTC_Register_FireflyTX_IICBusControl = 0x9284,                      \
+	CFOandDTC_Register_FireflyTX_IICBusConfigLow = 0x9288,                    \
+	CFOandDTC_Register_FireflyTX_IICBusConfigHigh = 0x928C,                   \
+	CFOandDTC_Register_FireflyRX_IICBusControl = 0x9294,                      \
+	CFOandDTC_Register_FireflyRX_IICBusConfigLow = 0x9298,                    \
+	CFOandDTC_Register_FireflyRX_IICBusConfigHigh = 0x929C,                   \
+	CFOandDTC_Register_FireflyTXRX_IICBusControl = 0x92A4,                    \
+	CFOandDTC_Register_FireflyTXRX_IICBusConfigLow = 0x92A8,                  \
+	CFOandDTC_Register_FireflyTXRX_IICBusConfigHigh = 0x92AC,                 \
 	CFOandDTC_Register_FireFlyControlStatus = 0x93A0
-
 
 namespace DTCLib {
 
-	typedef uint16_t CFOandDTC_Register; //defined enum in CFOandDTC_Registers.cpp
-
+typedef uint16_t CFOandDTC_Register;  // defined enum in CFOandDTC_Registers.cpp
 
 /// <summary>
 /// The RegisterFormatter class is used to print a DTC register in a human-readable format
@@ -99,7 +97,7 @@ struct RegisterFormatter
 	friend std::ostream& operator<<(std::ostream& stream, const RegisterFormatter& reg)
 	{
 		stream << std::hex << std::setfill('0');
-		{ //move address to right-align with values
+		{  // move address to right-align with values
 			std::string placeholder = "";
 			placeholder.resize(reg.descWidth - 6, ' ');
 			stream << placeholder;
@@ -108,22 +106,24 @@ struct RegisterFormatter
 			   << static_cast<int>(reg.value) << " | ";
 		auto tmp = reg.description;
 		tmp.resize(reg.descWidth, ' ');
-		stream << '\n' << tmp << " | ";
+		stream << '\n'
+			   << tmp << " | ";
 
-		if (!reg.vals.empty()) {
-		auto first = true;
-		for (auto i : reg.vals)
+		if (!reg.vals.empty())
 		{
-			if (!first)
+			auto first = true;
+			for (auto i : reg.vals)
 			{
-				std::string placeholder = "";
-				placeholder.resize(reg.descWidth, ' ');
-				stream << //"                           " << 
-					placeholder << " | ";
+				if (!first)
+				{
+					std::string placeholder = "";
+					placeholder.resize(reg.descWidth, ' ');
+					stream <<  //"                           " <<
+						placeholder << " | ";
+				}
+				stream << i << std::endl;
+				first = false;
 			}
-			stream << i << std::endl;
-			first = false;
-		}
 		}
 		else
 		{
@@ -131,24 +131,24 @@ struct RegisterFormatter
 		}
 
 		return stream;
-	} //end << operator
+	}  // end << operator
 
-    // Overloaded operator+ for RegisterFormatter + std::string
-    std::string operator+(const std::string& rhs) const 
+	// Overloaded operator+ for RegisterFormatter + std::string
+	std::string operator+(const std::string& rhs) const
 	{
 		std::stringstream ss;
 		ss << *this;
-        return ss.str() + rhs;
-    }
+		return ss.str() + rhs;
+	}
 
-    // Friend function operator+  for std::string + RegisterFormatter
-    friend std::string operator+(const std::string& lhs, const RegisterFormatter& reg) 
+	// Friend function operator+  for std::string + RegisterFormatter
+	friend std::string operator+(const std::string& lhs, const RegisterFormatter& reg)
 	{
 		std::stringstream ss;
 		ss << reg;
-        return lhs + ss.str();
-    }
-}; // end RegisterFormatter class
+		return lhs + ss.str();
+	}
+};  // end RegisterFormatter class
 
 /// <summary>
 /// The CFOandDTC_Registers class represents the common CFO-and-DTC Register space, and all the methods necessary to read and write those
@@ -175,22 +175,21 @@ public:
 	std::string getDeviceUID() { return GetDevice()->getDeviceUID(); }
 
 	std::string FormattedRegDump(int width, const std::vector<std::function<RegisterFormatter()>>& regVec);
-	virtual const std::vector<std::function<RegisterFormatter()>>& getFormattedDumpFunctions() = 0; //pure virtual
-	virtual const std::vector<std::function<RegisterFormatter()>>& getFormattedSimpleDumpFunctions() = 0; //pure virtual
-
+	virtual const std::vector<std::function<RegisterFormatter()>>& getFormattedDumpFunctions() = 0;        // pure virtual
+	virtual const std::vector<std::function<RegisterFormatter()>>& getFormattedSimpleDumpFunctions() = 0;  // pure virtual
 
 	//
 	// Register IO Functions ----------------
 	//
 
-	virtual void ResetPCIe() = 0; //pure virtual
-	virtual void FlashLEDs() = 0; //pure virtual
+	virtual void ResetPCIe() = 0;  // pure virtual
+	virtual void FlashLEDs() = 0;  // pure virtual
 
 	// Desgin Version/Date Registers
 	std::string ReadDesignVersion();
 	RegisterFormatter FormatDesignVersion();
 	std::string ReadDesignDate(std::optional<uint32_t> val = std::nullopt);
-    bool isCRVDTCDesignFlavour(std::optional<uint32_t> val = std::nullopt);
+	bool isCRVDTCDesignFlavour(std::optional<uint32_t> val = std::nullopt);
 	bool isNonCRVDTCDesignFlavour(std::optional<uint32_t> val = std::nullopt);
 	bool isCFODesignFlavour(std::optional<uint32_t> val = std::nullopt);
 	RegisterFormatter FormatDesignDate();
@@ -234,22 +233,22 @@ public:
 	RegisterFormatter FormatFPGAAlarms();
 
 	// CFO and DTC Control Register B31 is Soft Reset
-	void SoftReset();             // B31
-	bool ReadSoftReset(std::optional<uint32_t> val = std::nullopt);         // B31
-	void ResetSERDES();                       // B8
-	bool ReadResetSERDES(std::optional<uint32_t> val = std::nullopt);                   // B8
-	void RunCableDelayLoopbackTest();   // B3
-	void HardReset();             // B0
-	bool ReadHardReset(std::optional<uint32_t> val = std::nullopt);         // B0	
-	void ClearControlRegister();   // 32-bit clear
+	void SoftReset();                                                  // B31
+	bool ReadSoftReset(std::optional<uint32_t> val = std::nullopt);    // B31
+	void ResetSERDES();                                                // B8
+	bool ReadResetSERDES(std::optional<uint32_t> val = std::nullopt);  // B8
+	void RunCableDelayLoopbackTest();                                  // B3
+	void HardReset();                                                  // B0
+	bool ReadHardReset(std::optional<uint32_t> val = std::nullopt);    // B0
+	void ClearControlRegister();                                       // 32-bit clear
 
 	// Jitter Attenuator CSR Register
-	virtual std::bitset<2> ReadJitterAttenuatorSelect(std::optional<uint32_t> val = std::nullopt) = 0; //pure virtual
-	virtual void SetJitterAttenuatorSelect(std::bitset<2> data, bool alsoResetJA = false) = 0; //pure virtual
-	virtual bool ReadJitterAttenuatorReset(std::optional<uint32_t> val = std::nullopt) = 0; //pure virtual
-	virtual bool ReadJitterAttenuatorLocked(std::optional<uint32_t> val = std::nullopt) = 0; //pure virtual
-	virtual void ResetJitterAttenuator() = 0; //pure virtual
-	virtual RegisterFormatter FormatJitterAttenuatorCSR() = 0; //pure virtual
+	virtual std::bitset<2> ReadJitterAttenuatorSelect(std::optional<uint32_t> val = std::nullopt) = 0;  // pure virtual
+	virtual void SetJitterAttenuatorSelect(std::bitset<2> data, bool alsoResetJA = false) = 0;          // pure virtual
+	virtual bool ReadJitterAttenuatorReset(std::optional<uint32_t> val = std::nullopt) = 0;             // pure virtual
+	virtual bool ReadJitterAttenuatorLocked(std::optional<uint32_t> val = std::nullopt) = 0;            // pure virtual
+	virtual void ResetJitterAttenuator() = 0;                                                           // pure virtual
+	virtual RegisterFormatter FormatJitterAttenuatorCSR() = 0;                                          // pure virtual
 
 	std::bitset<2> ReadJitterAttenuatorSelect(CFOandDTC_Register JAreg, std::optional<uint32_t> val = std::nullopt);
 	void SetJitterAttenuatorSelect(CFOandDTC_Register JAreg, std::bitset<2> data, bool alsoResetJA);
@@ -313,8 +312,6 @@ public:
 	void ResetRXFirefly();
 	RegisterFormatter FormatFireflyCSR();
 
-	
-
 protected:
 	uint32_t WriteRegister_(uint32_t data, const CFOandDTC_Register& address);
 	uint32_t ReadRegister_(const CFOandDTC_Register& address);
@@ -336,7 +333,6 @@ protected:
 		return form;
 	}
 
-	
 	bool GetBit_(const CFOandDTC_Register& address, size_t bit);
 	void SetBit_(const CFOandDTC_Register& address, size_t bit, bool value);
 	bool ToggleBit_(const CFOandDTC_Register& address, size_t bit)
@@ -346,11 +342,10 @@ protected:
 		return !val;
 	}
 
-	mu2edev device_;                     ///< Device handle
-	int formatterWidth_ = 28;            ///< Description field width, in characters (must be initialized or RegisterFormatter can resize to crazy large values!)
+	mu2edev device_;           ///< Device handle
+	int formatterWidth_ = 28;  ///< Description field width, in characters (must be initialized or RegisterFormatter can resize to crazy large values!)
 
-
-}; // end CFOandDTC_Registers class
+};  // end CFOandDTC_Registers class
 }  // namespace DTCLib
 
 #endif  // CFO_AND_DTC_REGISTERS_H
