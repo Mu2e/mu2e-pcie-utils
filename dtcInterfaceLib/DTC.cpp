@@ -575,8 +575,15 @@ uint16_t DTCLib::DTC::ReadROCRegister(const DTC_Link_ID& link, const uint16_t ad
 	// throw exception for no data after retries
 	__SS__ << "A timeout occurred attempting to read a ROC register at link " << static_cast<int>(link) << " address 0x" << std::hex << static_cast<int>(address) << ". No DCS reply packet received after " << std::dec << tmo_ms << " ms! "
 		   << "Restarting the DTC software instance may fix the problem and realign DMA pointers." << std::endl;
+	
+	if(TTEST(20))
+	{
+		__COUT_ERR__ << "\n" << ss.str(); 
+		device_.spy(DTC_DMA_Engine_DCS, 3 /* for once */ | 8 /* for wide view */);
+		__COUT_ERR__ << otsStyleStackTrace();
+	}
+	
 	__SS_THROW__;
-
 }  // end ReadROCRegister()
 
 bool DTCLib::DTC::WriteROCRegister(const DTC_Link_ID& link, const uint16_t address, const uint16_t data, bool requestAck, int ack_tmo_ms)
