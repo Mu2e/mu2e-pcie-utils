@@ -185,10 +185,11 @@ private:
 	unsigned buffers_held_;
 	mu2esim* simulator_;
 	int activeDeviceIndex_;
-    struct DCSLock {
+	struct DCSLock
+	{
 		std::atomic<std::thread::id> thread_id{std::thread::id()};
 		std::atomic<int> lock_count{0};
-    };
+	};
 	static std::array<DCSLock, MU2E_MAX_NUM_DTCS> dcs_locks_;
 
 	std::atomic<long long> deviceTime_;

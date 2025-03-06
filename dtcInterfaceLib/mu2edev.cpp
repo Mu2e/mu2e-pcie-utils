@@ -698,6 +698,10 @@ bool mu2edev::thread_owns_dcs_lock()
 {
 	return dcs_locks_[activeDeviceIndex_].thread_id.load() == std::this_thread::get_id();
 }
+bool mu2edev::dcs_lock_free()
+{
+	return dcs_locks_[activeDeviceIndex_].thread_id.load() == NULL_TID;
+}
 
 std::string mu2edev::get_driver_version()
 {
