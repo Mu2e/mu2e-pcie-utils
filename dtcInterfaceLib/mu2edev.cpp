@@ -677,7 +677,7 @@ void mu2edev::end_dcs_transaction(bool force)
 	{
 		dcs_locks_[activeDeviceIndex_].lock_count--;
 		TRACE(TLVL_DEBUG + 14, UID_ + " end_dcs_transaction: after decrement lock counter, force=%d, counter=%d", force, dcs_locks_[activeDeviceIndex_].lock_count.load());
-		if (dcs_locks_[activeDeviceIndex_].lock_count.load() == 0 || force)
+		if (dcs_locks_[activeDeviceIndex_].lock_count.load() <= 0 || force)
 		{
 			dcs_locks_[activeDeviceIndex_].lock_count = 0;
 			if (simulator_ == nullptr)
