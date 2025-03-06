@@ -14,6 +14,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <thread>
 
 /// <summary>
 /// This class handles the raw interaction with the mu2e device driver
@@ -159,6 +160,7 @@ public:
 	void begin_dcs_transaction();
 	void end_dcs_transaction(bool force = false);
 	bool thread_owns_dcs_lock();
+	bool dcs_lock_free();
 	std::string get_driver_version();
 
 	/// <summary>
@@ -183,8 +185,11 @@ private:
 	unsigned buffers_held_;
 	mu2esim* simulator_;
 	int activeDeviceIndex_;
-	static std::atomic<std::thread::id> dcs_lock_held_;
-	static std::atomic<int> dcs_lock_count_;
+    struct DCSLock {
+		std::atomic<std::thread::id> thread_id{std::thread::id()};
+		std::atomic<int> lock_count{0};
+    };
+	static std::array<DCSLock, MU2E_MAX_NUM_DTCS> dcs_locks_;
 
 	std::atomic<long long> deviceTime_;
 	std::atomic<size_t> writeSize_;

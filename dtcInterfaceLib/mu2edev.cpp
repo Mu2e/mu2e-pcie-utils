@@ -25,8 +25,8 @@ typedef unsigned long dma_addr_t;
 #define DEV_TLOG(lvl) TLOG(lvl) << "DEVICE " << this->getDeviceUID() << ": "
 
 static const std::thread::id NULL_TID = std::thread::id();
-std::atomic<std::thread::id> mu2edev::dcs_lock_held_ = NULL_TID;
-std::atomic<int> mu2edev::dcs_lock_count_ = 0;
+
+std::array<mu2edev::DCSLock, MU2E_MAX_NUM_DTCS> mu2edev::dcs_locks_{};
 
 mu2edev::mu2edev()
 	: devfd_(0), buffers_held_(0), simulator_(nullptr), activeDeviceIndex_(0), deviceTime_(0LL), writeSize_(0), readSize_(0), UID_("")
@@ -215,7 +215,7 @@ int mu2edev::read_data(DTC_DMA_Engine const& chn, void** buffer, int tmo_ms)
 	int retsts;
 	TRACE_EXIT { TRACE(TLVL_DEBUG + 11, UID_ + " - mu2edev::read_data returning retsts(bytes)=%d", retsts); };
 
-	if (chn == DTC_DMA_Engine_DCS && dcs_lock_held_.load() != std::this_thread::get_id())
+	if (chn == DTC_DMA_Engine_DCS && !thread_owns_dcs_lock())
 	{
 		TRACE(TLVL_ERROR, UID_ + " - read_data dcs lock not held!");
 		return retsts = -2;
@@ -288,7 +288,7 @@ int mu2edev::read_data(DTC_DMA_Engine const& chn, void** buffer, int tmo_ms)
    */
 int mu2edev::read_release(DTC_DMA_Engine const& chn, unsigned num)
 {
-	if (chn == DTC_DMA_Engine_DCS && dcs_lock_held_.load() != std::this_thread::get_id())
+	if (chn == DTC_DMA_Engine_DCS && !thread_owns_dcs_lock())
 	{
 		TRACE(TLVL_ERROR, UID_ + " - read_release dcs lock not held!");
 		return -2;
@@ -439,7 +439,7 @@ void mu2edev::meta_dump()
 
 int mu2edev::write_data(DTC_DMA_Engine const& chn, void* buffer, size_t bytes)
 {
-	if (chn == DTC_DMA_Engine_DCS && dcs_lock_held_.load() != std::this_thread::get_id())
+	if (chn == DTC_DMA_Engine_DCS && !thread_owns_dcs_lock())
 	{
 		__SS__ << "write_data failed - dcs lock not held!" << __E__;
 		__SS_THROW__;
@@ -523,7 +523,7 @@ int mu2edev::release_all(DTC_DMA_Engine const& chn)
 				   << otsStyleStackTrace();  // param to ENTEX is a DEBUG lvl
 	auto retsts = 0;
 	TRACE_EXIT { TLOG_DEBUG(26) << "Exit - retsts=" << retsts; };
-	if (chn == DTC_DMA_Engine_DCS && dcs_lock_held_.load() != std::this_thread::get_id())
+	if (chn == DTC_DMA_Engine_DCS && !thread_owns_dcs_lock())
 	{
 		TRACE(TLVL_WARN, UID_ + " - release_all dcs lock not held!");
 		retsts = -2;
@@ -593,12 +593,13 @@ void mu2edev::close()
 
 void mu2edev::begin_dcs_transaction()
 {
-	if (dcs_lock_held_.load() == std::this_thread::get_id())
+	if (thread_owns_dcs_lock())
 	{
 		TRACE(TLVL_DEBUG + 13, UID_ + " begin_dcs_transation: device lock already held by this thread");
+		dcs_locks_[activeDeviceIndex_].lock_count++;
 		return;
 	}
-	if (dcs_lock_held_.load() != NULL_TID)
+	if (!dcs_lock_free())
 		TRACE(TLVL_DEBUG + 13, UID_ + " begin_dcs_transaction: device lock for this instance held by another thread! Waiting...");
 	else
 		TRACE(TLVL_DEBUG + 13, UID_ + " begin_dcs_transaction: device lock not currently held by instance.");
@@ -606,7 +607,7 @@ void mu2edev::begin_dcs_transaction()
 	int tmo_ms = 1000;  // 1s timeout
 	auto start = std::chrono::steady_clock::now();
 	TRACE(TLVL_DEBUG + 13, UID_ + " begin_dcs_transaction: waiting for library thread lock");
-	while (dcs_lock_held_.load() != NULL_TID && dcs_lock_held_.load() != std::this_thread::get_id() && (tmo_ms <= 0 || std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count() < tmo_ms))
+	while (!dcs_lock_free() && !thread_owns_dcs_lock() && (tmo_ms <= 0 || std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count() < tmo_ms))
 	{
 		std::this_thread::sleep_for(std::chrono::microseconds(100));
 	}
@@ -624,8 +625,8 @@ void mu2edev::begin_dcs_transaction()
 	if (simulator_ != nullptr)
 	{
 		TRACE(TLVL_DEBUG + 13, UID_ + " begin_dcs_transaction: sim mode, taking library thread lock and returning");
-		dcs_lock_held_ = std::this_thread::get_id();
-		dcs_lock_count_++;
+		dcs_locks_[activeDeviceIndex_].thread_id = std::this_thread::get_id();
+		dcs_locks_[activeDeviceIndex_].lock_count++;
 		return;
 	}
 
@@ -643,15 +644,15 @@ void mu2edev::begin_dcs_transaction()
 		else if (retsts != 0)
 		{
 			TRACE(TLVL_DEBUG + 13, UID_ + " begin_dcs_transaction: Method not supported by driver, taking library lock and returning. ioctl returned %d, errno %d", retsts, errno);
-			dcs_lock_held_ = std::this_thread::get_id();
-			dcs_lock_count_++;
+			dcs_locks_[activeDeviceIndex_].thread_id = std::this_thread::get_id();
+			dcs_locks_[activeDeviceIndex_].lock_count++;
 			return;
 		}
 		else
 		{
 			TRACE(TLVL_DEBUG + 13, UID_ + " begin_dcs_transaction: have driver lock, setting library lock and retunring true");
-			dcs_lock_held_ = std::this_thread::get_id();
-			dcs_lock_count_++;
+			dcs_locks_[activeDeviceIndex_].thread_id = std::this_thread::get_id();
+			dcs_locks_[activeDeviceIndex_].lock_count++;
 			return;
 		}
 	}
@@ -669,13 +670,13 @@ void mu2edev::begin_dcs_transaction()
 void mu2edev::end_dcs_transaction(bool force)
 {
 	TRACE(TLVL_DEBUG + 14, UID_ + " end_dcs_transaction: checking for ability to release lock force=%d", force);
-	if (force || dcs_lock_held_.load() == std::this_thread::get_id())
+	if (force || thread_owns_dcs_lock())
 	{
-		dcs_lock_count_--;
-		TRACE(TLVL_DEBUG + 14, UID_ + " end_dcs_transaction: after decrement lock counter, force=%d, counter=%d", force, dcs_lock_count_.load());
-		if (dcs_lock_count_.load() == 0 || force)
+		dcs_locks_[activeDeviceIndex_].lock_count--;
+		TRACE(TLVL_DEBUG + 14, UID_ + " end_dcs_transaction: after decrement lock counter, force=%d, counter=%d", force, dcs_locks_[activeDeviceIndex_].lock_count.load());
+		if (dcs_locks_[activeDeviceIndex_].lock_count.load() == 0 || force)
 		{
-			dcs_lock_count_ = 0;
+			dcs_locks_[activeDeviceIndex_].lock_count = 0;
 			if (simulator_ == nullptr)
 			{
 				TRACE(TLVL_DEBUG + 14, UID_ + " end_dcs_transaction: releasing driver lock");
@@ -687,7 +688,7 @@ void mu2edev::end_dcs_transaction(bool force)
 				}
 			}
 			TRACE(TLVL_DEBUG + 14, UID_ + " end_dcs_transaction: releasing library lock");
-			dcs_lock_held_ = NULL_TID;
+			dcs_locks_[activeDeviceIndex_].thread_id = NULL_TID;
 		}
 	}
 
@@ -695,7 +696,7 @@ void mu2edev::end_dcs_transaction(bool force)
 
 bool mu2edev::thread_owns_dcs_lock()
 {
-	return dcs_lock_held_.load() == std::this_thread::get_id();
+	return dcs_locks_[activeDeviceIndex_].thread_id.load() == std::this_thread::get_id();
 }
 
 std::string mu2edev::get_driver_version()
