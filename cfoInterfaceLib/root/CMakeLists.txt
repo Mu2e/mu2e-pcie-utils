@@ -3,8 +3,8 @@ include(ArtDictionary)
 
 art_dictionary(
   DICTIONARY_LIBRARIES
-  artdaq_core_mu2e::artdaq-core-mu2e_Overlays
-  mu2e_pcie_utils::CFOInterface
+  artdaq-core-mu2e::Overlays
+  mu2e-pcie-utils::CFOInterface
 )
 
 get_target_property(DictCompileOptions cfoInterfaceLib_root_dict COMPILE_OPTIONS)
