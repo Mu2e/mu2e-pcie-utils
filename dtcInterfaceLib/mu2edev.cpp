@@ -24,6 +24,22 @@ typedef unsigned long dma_addr_t;
 
 #define DEV_TLOG(lvl) TLOG(lvl) << "DEVICE " << this->getDeviceUID() << ": "
 
+static constexpr int TLVL_INIT_DMA_ENGINE = TLVL_DEBUG + 15;
+static constexpr int TLVL_READ_DATA = TLVL_DEBUG + 16;
+static constexpr int TLVL_READ_DATA_2 = TLVL_DEBUG + 17;
+static constexpr int TLVL_READ_DATA_3 = TLVL_DEBUG + 18;
+static constexpr int TLVL_READ_RELEASE = TLVL_DEBUG + 19;
+static constexpr int TLVL_READ_REGISTER = TLVL_DEBUG + 20;
+static constexpr int TLVL_WRITE_REGISTER = TLVL_DEBUG + 21;
+static constexpr int TLVL_WRITE_REGISTER_CHECKED = TLVL_DEBUG + 22;
+static constexpr int TLVL_META_DUMP = TLVL_DEBUG + 23;
+static constexpr int TLVL_WRITE_DATA = TLVL_DEBUG + 24;
+static constexpr int TLVL_RELEASE_ALL = TLVL_DEBUG + 25;
+static constexpr int TLVL_BEGIN_DCS_TRANSACTION = TLVL_DEBUG + 26;
+static constexpr int TLVL_BEGIN_DCS_TRANSACTION_VERBOSE = TLVL_DEBUG + 27;
+static constexpr int TLVL_END_DCS_TRANSACTION = TLVL_DEBUG + 28;
+static constexpr int TLVL_GET_DRIVER_VERSION = TLVL_DEBUG + 29;
+
 static const std::thread::id NULL_TID = std::thread::id();
 
 std::array<mu2edev::DCSLock, MU2E_MAX_NUM_DTCS> mu2edev::dcs_locks_{};
@@ -146,7 +162,7 @@ void mu2edev::initDMAEngine()
 			get_info.chn = chn;
 			get_info.dir = dir;
 			get_info.tmo_ms = 1000;
-			TRACE(TLVL_DEBUG + 10, UID_ + " - mu2edev::init before ioctl( devfd_, M_IOC_GET_INFO, &get_info ) chn=%u dir=%u", chn, dir);
+			TRACE(TLVL_INIT_DMA_ENGINE, UID_ + " - mu2edev::init before ioctl( devfd_, M_IOC_GET_INFO, &get_info ) chn=%u dir=%u", chn, dir);
 			sts = ioctl(devfd_, M_IOC_GET_INFO, &get_info);
 			if (sts != 0)
 			{
@@ -156,7 +172,7 @@ void mu2edev::initDMAEngine()
 				// exit(1);
 			}
 			mu2e_channel_info_[activeDeviceIndex_][chn][dir] = get_info;
-			TRACE(TLVL_DEBUG, UID_ + " - mu2edev::init %d %u:%u - num=%u size=%u hwIdx=%u, swIdx=%u delta=%u", activeDeviceIndex_, chn, dir,
+			TRACE(TLVL_INIT_DMA_ENGINE, UID_ + " - mu2edev::init %d %u:%u - num=%u size=%u hwIdx=%u, swIdx=%u delta=%u", activeDeviceIndex_, chn, dir,
 				  get_info.num_buffs, get_info.buff_size, get_info.hwIdx, get_info.swIdx,
 				  mu2e_chn_info_delta_(activeDeviceIndex_, chn, dir, &mu2e_channel_info_));
 			for (unsigned map = 0; map < 2; ++map)
@@ -175,7 +191,7 @@ void mu2edev::initDMAEngine()
 					__SS_THROW__;
 					// exit(1);
 				}
-				TRACE(TLVL_DEBUG, UID_ + " - mu2edev::init chnDirMap2offset=%lu mu2e_mmap_ptrs_[%d][%d][%d][%d]=%p p=%c l=%lu", offset, activeDeviceIndex_, chn,
+				TRACE(TLVL_INIT_DMA_ENGINE, UID_ + " - mu2edev::init chnDirMap2offset=%lu mu2e_mmap_ptrs_[%d][%d][%d][%d]=%p p=%c l=%lu", offset, activeDeviceIndex_, chn,
 					  dir, map, mu2e_mmap_ptrs_[activeDeviceIndex_][chn][dir][map], prot == PROT_READ ? 'R' : 'W', length);
 			}
 
@@ -199,7 +215,7 @@ void mu2edev::initDMAEngine()
 			// Enable DMA Engines
 			{
 				// uint16_t addr = DTC_Register_Engine_Control(chn, dir);
-				// TRACE(17, UID_ + " - mu2edev::init write Engine_Control reg 0x%x", addr);
+				// TRACE(TLVL_INIT_DMA_ENGINE, UID_ + " - mu2edev::init write Engine_Control reg 0x%x", addr);
 				// write_register(addr, 0, 0x100);//bit 8 enable=1
 			}
 		}
@@ -213,7 +229,7 @@ int mu2edev::read_data(DTC_DMA_Engine const& chn, void** buffer, int tmo_ms)
 {
 	// WARNING NOTE: if there is existing data still sitting in unreleased buffer, the timeout will not add any delay
 	int retsts;
-	TRACE_EXIT { TRACE(TLVL_DEBUG + 11, UID_ + " - mu2edev::read_data returning retsts(bytes)=%d", retsts); };
+	TRACE_EXIT { TRACE(TLVL_READ_DATA, UID_ + " - mu2edev::read_data returning retsts(bytes)=%d", retsts); };
 
 	if (chn == DTC_DMA_Engine_DCS && !thread_owns_dcs_lock())
 	{
@@ -230,12 +246,12 @@ int mu2edev::read_data(DTC_DMA_Engine const& chn, void** buffer, int tmo_ms)
 	{
 		retsts = 0;
 		unsigned has_recv_data;
-		TRACE(TLVL_DEBUG + 11, UID_ + " - mu2edev::read_data before (mu2e_mmap_ptrs_[%d][0][0][0]!=NULL) || ((retsts=init())==0) tmo_ms=%d", activeDeviceIndex_, tmo_ms);
+		TRACE(TLVL_READ_DATA, UID_ + " - mu2edev::read_data before (mu2e_mmap_ptrs_[%d][0][0][0]!=NULL) || ((retsts=init())==0) tmo_ms=%d", activeDeviceIndex_, tmo_ms);
 		if ((mu2e_mmap_ptrs_[activeDeviceIndex_][0][0][0] != NULL) ||
 			((retsts = init(DTCLib::DTC_SimMode_Disabled, 0)) == 0))  // Default-init mu2edev if not given guidance
 		{
 			has_recv_data = mu2e_chn_info_delta_(activeDeviceIndex_, chn, C2S, &mu2e_channel_info_);
-			TRACE(TLVL_DEBUG + 11, UID_ + " - mu2edev::read_data after %u=has_recv_data = delta_( chn=%d, C2S ), held=%u", has_recv_data, chn, buffers_held_);
+			TRACE(TLVL_READ_DATA, UID_ + " - mu2edev::read_data after %u=has_recv_data = delta_( chn=%d, C2S ), held=%u", has_recv_data, chn, buffers_held_);
 			mu2e_channel_info_[activeDeviceIndex_][chn][C2S].tmo_ms = tmo_ms;  // in case GET_INFO is called
 			if ((has_recv_data > buffers_held_) ||
 				((retsts = ioctl(devfd_, M_IOC_GET_INFO, &mu2e_channel_info_[activeDeviceIndex_][chn][C2S])) == 0 &&
@@ -248,7 +264,7 @@ int mu2edev::read_data(DTC_DMA_Engine const& chn, void** buffer, int tmo_ms)
 				int* BC_p = (int*)mu2e_mmap_ptrs_[activeDeviceIndex_][chn][C2S][MU2E_MAP_META];
 				retsts = BC_p[newNxtIdx];
 				*buffer = ((mu2e_databuff_t*)(mu2e_mmap_ptrs_[activeDeviceIndex_][chn][C2S][MU2E_MAP_BUFF]))[newNxtIdx];
-				TRACE(TLVL_DEBUG + 12,
+				TRACE(TLVL_READ_DATA_2,
 					  "mu2edev::read_data chn%d hIdx=%u, sIdx=%u num_buffs=%u hasRcvDat=%u %p(BC_p)[newNxtIdx=%d]=retsts=%d %p(buf)[0]=0x%08x",
 					  chn,
 					  mu2e_channel_info_[activeDeviceIndex_][chn][C2S].hwIdx,
@@ -256,7 +272,7 @@ int mu2edev::read_data(DTC_DMA_Engine const& chn, void** buffer, int tmo_ms)
 					  mu2e_channel_info_[activeDeviceIndex_][chn][C2S].num_buffs,
 					  has_recv_data, (void*)BC_p, newNxtIdx, retsts,
 					  *buffer, *(uint32_t*)*buffer);
-				TRACE(TLVL_DEBUG + 13, "first 80 bytes: %016lx %016lx %016lx %016lx %016lx %016lx %016lx %016lx %016lx %016lx",
+				TRACE(TLVL_READ_DATA_3, "first 80 bytes: %016lx %016lx %016lx %016lx %016lx %016lx %016lx %016lx %016lx %016lx",
 					  *(((uint64_t*)*buffer) + 0), *(((uint64_t*)*buffer) + 1), *(((uint64_t*)*buffer) + 2), *(((uint64_t*)*buffer) + 3),
 					  *(((uint64_t*)*buffer) + 4), *(((uint64_t*)*buffer) + 5), *(((uint64_t*)*buffer) + 6), *(((uint64_t*)*buffer) + 7),
 					  *(((uint64_t*)*buffer) + 8), *(((uint64_t*)*buffer) + 9));
@@ -274,7 +290,7 @@ int mu2edev::read_data(DTC_DMA_Engine const& chn, void** buffer, int tmo_ms)
 					__SS_THROW__;
 					// exit(1);
 				}
-				TRACE(TLVL_DEBUG + 12, UID_ + " - mu2edev::read_data not error... return %d status", retsts);
+				TRACE(TLVL_READ_DATA_2, UID_ + " - mu2edev::read_data not error... return %d status", retsts);
 			}
 		}
 	}
@@ -307,7 +323,7 @@ int mu2edev::read_release(DTC_DMA_Engine const& chn, unsigned num)
 		unsigned has_recv_data;
 		has_recv_data = mu2e_chn_info_delta_(activeDeviceIndex_, chn, C2S, &mu2e_channel_info_);
 
-		TLOG_DEBUG(2) << "read_release(chn=" << chn << " num=" << num << ") dtc="
+		TLOG(TLVL_READ_RELEASE) << "read_release(chn=" << chn << " num=" << num << ") dtc="
 					  << activeDeviceIndex_ << " has_recv_data=" << has_recv_data;
 
 		// if (num > has_recv_data) num = has_recv_data;
@@ -359,7 +375,7 @@ int mu2edev::read_register(uint16_t address, int tmo_ms, uint32_t* output)
 		if (errorCode < 0) usleep(10000);
 	}
 	*output = reg.val;
-	TRACE(TLVL_DEBUG + 15, UID_ + " - Read value 0x%x from register 0x%x errorcode %d", reg.val, address, errorCode);
+	TRACE(TLVL_READ_REGISTER, UID_ + " - Read value 0x%x from register 0x%x errorcode %d", reg.val, address, errorCode);
 	deviceTime_ += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start).count();
 	return errorCode;
 }
@@ -378,7 +394,7 @@ int mu2edev::write_register(uint16_t address, int tmo_ms, uint32_t data)
 		reg.reg_offset = address;
 		reg.access_type = 1;
 		reg.val = data;
-		TRACE(TLVL_DEBUG + 16, UID_ + " - Writing value 0x%x to register 0x%x", data, address);
+		TRACE(TLVL_WRITE_REGISTER, UID_ + " - Writing value 0x%x to register 0x%x", data, address);
 		if (debugFp_) fprintf(debugFp_, (UID_ + " - Writing value 0x%x to register 0x%x - time delta %ld\n").c_str(), data, address,
 							  std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - lastWriteTime_).count());
 		retsts = ioctl(devfd_, M_IOC_REG_ACCESS, &reg);
@@ -403,7 +419,7 @@ int mu2edev::write_register_checked(uint16_t address, int tmo_ms, uint32_t data,
 		reg.reg_offset = address;
 		reg.access_type = 2;
 		reg.val = data;
-		TRACE(TLVL_DEBUG + 17, UID_ + " - Writing value 0x%x to register 0x%x with readback", data, address);
+		TRACE(TLVL_WRITE_REGISTER_CHECKED, UID_ + " - Writing value 0x%x to register 0x%x with readback", data, address);
 		if (debugFp_) fprintf(debugFp_, (UID_ + " - Writing value 0x%x to register 0x%x with readback - time delta %ld\n").c_str(), data, address,
 							  std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - lastWriteTime_).count());
 		retsts = ioctl(devfd_, M_IOC_REG_ACCESS, &reg);
@@ -416,7 +432,7 @@ int mu2edev::write_register_checked(uint16_t address, int tmo_ms, uint32_t data,
 
 void mu2edev::meta_dump()
 {
-	TRACE(TLVL_DEBUG + 5, UID_ + " - mu2edev::meta_dump");
+	TRACE(TLVL_META_DUMP, UID_ + " - mu2edev::meta_dump");
 	auto start = std::chrono::steady_clock::now();
 	if (simulator_ == nullptr)
 	{
@@ -457,7 +473,7 @@ int mu2edev::write_data(DTC_DMA_Engine const& chn, void* buffer, size_t bytes)
 		int dir = S2C;
 		retsts = 0;
 		unsigned delta = mu2e_chn_info_delta_(activeDeviceIndex_, chn, dir, &mu2e_channel_info_);  // check cached info
-		TRACE(TLVL_TRACE, UID_ + " - write_data delta=%u chn=%d dir=S2C, sz=%zu", delta, chn, bytes);
+		TRACE(TLVL_WRITE_DATA, UID_ + " - write_data delta=%u chn=%d dir=S2C, sz=%zu", delta, chn, bytes);
 		while (delta <= 1 &&
 			   std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count() <
 				   1000)
@@ -499,7 +515,7 @@ int mu2edev::write_data(DTC_DMA_Engine const& chn, void* buffer, size_t bytes)
 			retsts = ioctl(devfd_, M_IOC_BUF_XMIT, arg);
 			if (retsts != 0)
 			{
-				TRACE(TLVL_TRACE, UID_ + " - write_data ioctl returned %d, errno=%d (%s), retrying.", retsts, errno, strerror(errno));
+				TRACE(TLVL_WRITE_DATA, UID_ + " - write_data ioctl returned %d, errno=%d (%s), retrying.", retsts, errno, strerror(errno));
 				// perror("M_IOC_BUF_XMIT");
 				usleep(50000);
 			}  // exit(1); } // Take out the exit call for now
@@ -519,10 +535,10 @@ int mu2edev::write_data(DTC_DMA_Engine const& chn, void* buffer, size_t bytes)
 
 int mu2edev::release_all(DTC_DMA_Engine const& chn)
 {
-	TLOG_DEBUG(25) << __PRETTY_FUNCTION__ << " called from\n"
+	TLOG_DEBUG(TLVL_RELEASE_ALL) << __PRETTY_FUNCTION__ << " called from\n"
 				   << otsStyleStackTrace();
 	auto retsts = 0;
-	TRACE_EXIT { TLOG_DEBUG(26) << "Exit - retsts=" << retsts; };
+	TRACE_EXIT { TLOG_DEBUG(TLVL_RELEASE_ALL) << "Exit - retsts=" << retsts; };
 	if (chn == DTC_DMA_Engine_DCS && !thread_owns_dcs_lock())
 	{
 		TRACE(TLVL_WARN, UID_ + " - release_all dcs lock not held!");
@@ -534,7 +550,7 @@ int mu2edev::release_all(DTC_DMA_Engine const& chn)
 
 	if (simulator_ != nullptr)
 	{
-		TRACE(TLVL_DEBUG + 23, UID_ + " - release all!");
+		TRACE(TLVL_RELEASE_ALL, UID_ + " - release all!");
 		retsts = simulator_->release_all(chn);
 	}
 	else
@@ -556,14 +572,14 @@ int mu2edev::release_all(DTC_DMA_Engine const& chn)
 
 			if (has_recv_data)
 			{
-				TRACE(TLVL_DEBUG + 23, UID_ + " - release_all calling read_release(chn=%d has_recv_data=%d", chn, has_recv_data);
+				TRACE(TLVL_RELEASE_ALL, UID_ + " - release_all calling read_release(chn=%d has_recv_data=%d", chn, has_recv_data);
 				read_release(chn, has_recv_data);
 				time_last_data = std::chrono::steady_clock::now();
 			}
 			auto nano_since_last_data = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - time_last_data).count();
 			if (!has_recv_data && nano_since_last_data > 10000000)  // 100 microseconds is default ROC data tmo
 			{
-				TRACE(TLVL_DEBUG + 23, UID_ + " - release_all done after buffers idle...");
+				TRACE(TLVL_RELEASE_ALL, UID_ + " - release_all done after buffers idle...");
 
 				break;
 			}
@@ -593,21 +609,21 @@ void mu2edev::close()
 
 void mu2edev::begin_dcs_transaction()
 {
-	TLOG_DEBUG(25) << UID_ << " " << __PRETTY_FUNCTION__ << " called from\n"
+	TLOG_DEBUG(TLVL_BEGIN_DCS_TRANSACTION) << UID_ << " " << __PRETTY_FUNCTION__ << " called from\n"
 				   << otsStyleStackTrace();
-	TRACE(TLVL_DEBUG + 13, UID_ + " begin_dcs_transation: who has lock? dcs_lock_held_=%llu, threadid=%llu", dcs_locks_[activeDeviceIndex_].lock_count.load(), std::this_thread::get_id());
+	TRACE(TLVL_BEGIN_DCS_TRANSACTION, UID_ + " begin_dcs_transation: who has lock? dcs_lock_held_=%llu, threadid=%llu", dcs_locks_[activeDeviceIndex_].lock_count.load(), std::this_thread::get_id());
 	if (thread_owns_dcs_lock())
 	{
-		TRACE(TLVL_DEBUG + 13, UID_ + " begin_dcs_transation: device lock already held by this thread. counter=%d, threadid=%llu", dcs_locks_[activeDeviceIndex_].lock_count.load(), std::this_thread::get_id());
+		TRACE(TLVL_BEGIN_DCS_TRANSACTION, UID_ + " begin_dcs_transation: device lock already held by this thread. counter=%d, threadid=%llu", dcs_locks_[activeDeviceIndex_].lock_count.load(), std::this_thread::get_id());
 		dcs_locks_[activeDeviceIndex_].lock_count++;
 		return;
 	}
 	if (!dcs_lock_free())
-		TRACE(TLVL_DEBUG + 13, UID_ + " begin_dcs_transaction: device lock for this instance held by another thread! Waiting... counter=%d, threadid=%llu", dcs_locks_[activeDeviceIndex_].lock_count.load(), std::this_thread::get_id());
+		TRACE(TLVL_BEGIN_DCS_TRANSACTION, UID_ + " begin_dcs_transaction: device lock for this instance held by another thread! Waiting... counter=%d, threadid=%llu", dcs_locks_[activeDeviceIndex_].lock_count.load(), std::this_thread::get_id());
 
 	int tmo_ms = 1000;  // 1s timeout
 	auto start = std::chrono::steady_clock::now();
-	TRACE(TLVL_DEBUG + 13, UID_ + " begin_dcs_transaction: waiting for library thread lock");
+	TRACE(TLVL_BEGIN_DCS_TRANSACTION, UID_ + " begin_dcs_transaction: waiting for library thread lock");
 	while (!dcs_lock_free() && !thread_owns_dcs_lock() && (tmo_ms <= 0 || std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count() < tmo_ms))
 	{
 		std::this_thread::sleep_for(std::chrono::microseconds(100));
@@ -627,33 +643,33 @@ void mu2edev::begin_dcs_transaction()
 	{
 		dcs_locks_[activeDeviceIndex_].thread_id = std::this_thread::get_id();
 		dcs_locks_[activeDeviceIndex_].lock_count++;
-		TRACE(TLVL_DEBUG + 13, UID_ + " begin_dcs_transaction: sim mode, taking library thread lock and returning, counter=%d, threadid=%llu", dcs_locks_[activeDeviceIndex_].lock_count.load(), std::this_thread::get_id());
+		TRACE(TLVL_BEGIN_DCS_TRANSACTION, UID_ + " begin_dcs_transaction: sim mode, taking library thread lock and returning, counter=%d, threadid=%llu", dcs_locks_[activeDeviceIndex_].lock_count.load(), std::this_thread::get_id());
 		return;
 	}
 
-	TRACE(TLVL_DEBUG + 13, UID_ + " begin_dcs_transaction: waiting for driver lock");
+	TRACE(TLVL_BEGIN_DCS_TRANSACTION, UID_ + " begin_dcs_transaction: waiting for driver lock");
 	int retsts = -1;
 	while (retsts == -1 && (tmo_ms <= 0 || std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count() < tmo_ms))
 	{
 		retsts = ioctl(devfd_, M_IOC_DCS_LOCK);
 		if ((retsts == -EAGAIN) || ((retsts == -1) && (errno == EAGAIN)))
 		{
-			TRACE(TLVL_DEBUG + 23, UID_ + " begin_dcs_transaction: ioctl returned %d (errno %d), waiting and retrying, counter=%d, threadid=%llu", retsts, errno, dcs_locks_[activeDeviceIndex_].lock_count.load(), std::this_thread::get_id());
+			TRACE(TLVL_BEGIN_DCS_TRANSACTION_VERBOSE, UID_ + " begin_dcs_transaction: ioctl returned %d (errno %d), waiting and retrying, counter=%d, threadid=%llu", retsts, errno, dcs_locks_[activeDeviceIndex_].lock_count.load(), std::this_thread::get_id());
 			std::this_thread::sleep_for(std::chrono::microseconds(100));
 		}
 		else if (retsts != 0)
 		{
-			TRACE(TLVL_DEBUG + 13, UID_ + " begin_dcs_transaction: Method not supported by driver, taking library lock and returning. ioctl returned %d, errno %d", retsts, errno);
+			TRACE(TLVL_BEGIN_DCS_TRANSACTION, UID_ + " begin_dcs_transaction: Method not supported by driver, taking library lock and returning. ioctl returned %d, errno %d", retsts, errno);
 			dcs_locks_[activeDeviceIndex_].thread_id = std::this_thread::get_id();
 			dcs_locks_[activeDeviceIndex_].lock_count++;
-			TRACE(TLVL_DEBUG + 13, UID_ + " begin_dcs_transaction: Method not supported by driver, taking library lock and returning. ioctl returned %d, errno %d, counter=%d, threadid=%llu", retsts, errno, dcs_locks_[activeDeviceIndex_].lock_count.load(), std::this_thread::get_id());
+			TRACE(TLVL_BEGIN_DCS_TRANSACTION, UID_ + " begin_dcs_transaction: Method not supported by driver, taking library lock and returning. ioctl returned %d, errno %d, counter=%d, threadid=%llu", retsts, errno, dcs_locks_[activeDeviceIndex_].lock_count.load(), std::this_thread::get_id());
 			return;
 		}
 		else
 		{
 			dcs_locks_[activeDeviceIndex_].thread_id = std::this_thread::get_id();
 			dcs_locks_[activeDeviceIndex_].lock_count++;
-			TRACE(TLVL_DEBUG + 13, UID_ + " begin_dcs_transaction: have driver lock, setting library lock and returning true, counter=%d, threadid=%llu", dcs_locks_[activeDeviceIndex_].lock_count.load(), std::this_thread::get_id());
+			TRACE(TLVL_BEGIN_DCS_TRANSACTION, UID_ + " begin_dcs_transaction: have driver lock, setting library lock and returning true, counter=%d, threadid=%llu", dcs_locks_[activeDeviceIndex_].lock_count.load(), std::this_thread::get_id());
 			return;
 		}
 	}
@@ -670,27 +686,27 @@ void mu2edev::begin_dcs_transaction()
 
 void mu2edev::end_dcs_transaction(bool force)
 {
-	TLOG_DEBUG(25) << UID_ << " " << __PRETTY_FUNCTION__ << " called from\n"
+	TLOG_DEBUG(TLVL_END_DCS_TRANSACTION) << UID_ << " " << __PRETTY_FUNCTION__ << " called from\n"
 				   << otsStyleStackTrace();
-	TRACE(TLVL_DEBUG + 14, UID_ + " end_dcs_transaction: checking for ability to release lock force=%d, counter=%d", force, dcs_locks_[activeDeviceIndex_].lock_count.load());
+	TRACE(TLVL_END_DCS_TRANSACTION, UID_ + " end_dcs_transaction: checking for ability to release lock force=%d, counter=%d", force, dcs_locks_[activeDeviceIndex_].lock_count.load());
 	if (force || thread_owns_dcs_lock())
 	{
 		dcs_locks_[activeDeviceIndex_].lock_count--;
-		TRACE(TLVL_DEBUG + 14, UID_ + " end_dcs_transaction: after decrement lock counter, force=%d, counter=%d", force, dcs_locks_[activeDeviceIndex_].lock_count.load());
+		TRACE(TLVL_END_DCS_TRANSACTION, UID_ + " end_dcs_transaction: after decrement lock counter, force=%d, counter=%d", force, dcs_locks_[activeDeviceIndex_].lock_count.load());
 		if (dcs_locks_[activeDeviceIndex_].lock_count.load() <= 0 || force)
 		{
 			dcs_locks_[activeDeviceIndex_].lock_count = 0;
 			if (simulator_ == nullptr)
 			{
-				TRACE(TLVL_DEBUG + 14, UID_ + " end_dcs_transaction: releasing driver lock");
+				TRACE(TLVL_END_DCS_TRANSACTION, UID_ + " end_dcs_transaction: releasing driver lock");
 				int retsts = ioctl(devfd_, M_IOC_DCS_RELEASE);
 				if (retsts != 0)
 				{
-					TRACE(TLVL_DEBUG + 14, UID_ + " end_dcs_transaction: IOCTL returned %d!", retsts);
+					TRACE(TLVL_END_DCS_TRANSACTION, UID_ + " end_dcs_transaction: IOCTL returned %d!", retsts);
 					perror("M_IOC_DCS_RELEASE");
 				}
 			}
-			TRACE(TLVL_DEBUG + 14, UID_ + " end_dcs_transaction: releasing library lock");
+			TRACE(TLVL_END_DCS_TRANSACTION, UID_ + " end_dcs_transaction: releasing library lock");
 			dcs_locks_[activeDeviceIndex_].thread_id = NULL_TID;
 		}
 	}
@@ -708,14 +724,14 @@ bool mu2edev::dcs_lock_free()
 
 std::string mu2edev::get_driver_version()
 {
-	TRACE(TLVL_DEBUG + 5, UID_ + " get_driver_version BEGIN");
+	TRACE(TLVL_GET_DRIVER_VERSION, UID_ + " get_driver_version BEGIN");
 	if (simulator_ != nullptr) { return "SIMULATED"; }
 	mu2e_string_t output;
 	int retsts = ioctl(devfd_, M_IOC_GET_VERSION, &output);
 
 	if (retsts != 0)
 	{
-		TRACE(TLVL_DEBUG + 14, UID_ + " get_driver_version: IOCTL returned %d!", retsts);
+		TRACE(TLVL_GET_DRIVER_VERSION, UID_ + " get_driver_version: IOCTL returned %d!", retsts);
 		perror("M_IOC_GET_VERSION");
 	}
 
