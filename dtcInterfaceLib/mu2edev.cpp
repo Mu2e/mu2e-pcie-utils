@@ -324,7 +324,7 @@ int mu2edev::read_release(DTC_DMA_Engine const& chn, unsigned num)
 		has_recv_data = mu2e_chn_info_delta_(activeDeviceIndex_, chn, C2S, &mu2e_channel_info_);
 
 		TLOG(TLVL_READ_RELEASE) << "read_release(chn=" << chn << " num=" << num << ") dtc="
-					  << activeDeviceIndex_ << " has_recv_data=" << has_recv_data;
+								<< activeDeviceIndex_ << " has_recv_data=" << has_recv_data;
 
 		// if (num > has_recv_data) num = has_recv_data;
 		if (num <= has_recv_data)
@@ -536,7 +536,7 @@ int mu2edev::write_data(DTC_DMA_Engine const& chn, void* buffer, size_t bytes)
 int mu2edev::release_all(DTC_DMA_Engine const& chn)
 {
 	TLOG_DEBUG(TLVL_RELEASE_ALL) << __PRETTY_FUNCTION__ << " called from\n"
-				   << otsStyleStackTrace();
+								 << otsStyleStackTrace();
 	auto retsts = 0;
 	TRACE_EXIT { TLOG_DEBUG(TLVL_RELEASE_ALL) << "Exit - retsts=" << retsts; };
 	if (chn == DTC_DMA_Engine_DCS && !thread_owns_dcs_lock())
@@ -610,7 +610,7 @@ void mu2edev::close()
 void mu2edev::begin_dcs_transaction()
 {
 	TLOG_DEBUG(TLVL_BEGIN_DCS_TRANSACTION) << UID_ << " " << __PRETTY_FUNCTION__ << " called from\n"
-				   << otsStyleStackTrace();
+										   << otsStyleStackTrace();
 	TRACE(TLVL_BEGIN_DCS_TRANSACTION, UID_ + " begin_dcs_transation: who has lock? dcs_lock_held_=%llu, threadid=%llu", dcs_locks_[activeDeviceIndex_].lock_count.load(), std::this_thread::get_id());
 	if (thread_owns_dcs_lock())
 	{
@@ -687,7 +687,7 @@ void mu2edev::begin_dcs_transaction()
 void mu2edev::end_dcs_transaction(bool force)
 {
 	TLOG_DEBUG(TLVL_END_DCS_TRANSACTION) << UID_ << " " << __PRETTY_FUNCTION__ << " called from\n"
-				   << otsStyleStackTrace();
+										 << otsStyleStackTrace();
 	TRACE(TLVL_END_DCS_TRANSACTION, UID_ + " end_dcs_transaction: checking for ability to release lock force=%d, counter=%d", force, dcs_locks_[activeDeviceIndex_].lock_count.load());
 	if (force || thread_owns_dcs_lock())
 	{
