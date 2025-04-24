@@ -10,7 +10,7 @@ std::ofstream outFile;
 int FPGAClock = 40000000;
 
 /********************************************
-                   Program Setup Function
+				   Program Setup Function
  ********************************************/
 void help()
 {
@@ -176,13 +176,13 @@ int main(int argc, char* argv[])
 {
 	std::cout << "Start " << std::endl;
 
-	std::string inFileName = 
+	std::string inFileName =
 		"/home/mu2ehwdev/ots/srcs/mu2e_pcie_utils/cfoInterfaceLib/Commands.txt";
-	std::string outFileName = 
+	std::string outFileName =
 		"/home/mu2ehwdev/ots/srcs/mu2e_pcie_utils/cfoInterfaceLib/Commands.bin";
 
 	CFOLib::CFO_Compiler compiler;
 	compiler.processFile(inFileName, outFileName);
-	
+
 	std::cout << "Done " << std::endl;
 }

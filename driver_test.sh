@@ -8,7 +8,7 @@ insmod trace/src_module/TRACE.ko trace_allow_printk=1 trace_lvlS=0xFFFFFF trace_
 
 set -x
 
-for ii in {0..200};do 
+for ii in {0..200};do
 	echo `date`: rmmod $ii;
 	rmmod mu2e;
 	journalctl --sync;
@@ -20,5 +20,3 @@ for ii in {0..200};do
 done
 
 set +x
-
-

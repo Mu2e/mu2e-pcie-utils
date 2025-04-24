@@ -5,7 +5,6 @@
 // $RCSfile: .emacs.gnu,v $
 // rev="$Revision: 1.23 $$Date: 2012/01/23 15:32:40 $";
 
-
 #include "Mu2eUtil.h"
 
 int main(int argc, char* argv[])

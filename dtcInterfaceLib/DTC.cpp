@@ -35,12 +35,12 @@
 DTCLib::DTC::DTC(DTC_SimMode mode, int dtc, unsigned rocMask, std::string expectedDesignVersion, bool skipInit, std::string simMemoryFile, const std::string& uid)
 	: DTC_Registers(mode, dtc, simMemoryFile, rocMask, expectedDesignVersion, skipInit, uid), daqDMAInfo_(), dcsDMAInfo_()
 {
-	__COUT_INFO__ << "CONSTRUCTOR";
+	__COUT__ << "CONSTRUCTOR";
 }
 
 DTCLib::DTC::~DTC()
 {
-	__COUT_INFO__ << "DESTRUCTOR";
+	__COUT__ << "DESTRUCTOR";
 	// TLOG_ENTEX(-6);
 	TRACE_EXIT
 	{
@@ -575,8 +575,16 @@ uint16_t DTCLib::DTC::ReadROCRegister(const DTC_Link_ID& link, const uint16_t ad
 	// throw exception for no data after retries
 	__SS__ << "A timeout occurred attempting to read a ROC register at link " << static_cast<int>(link) << " address 0x" << std::hex << static_cast<int>(address) << ". No DCS reply packet received after " << std::dec << tmo_ms << " ms! "
 		   << "Restarting the DTC software instance may fix the problem and realign DMA pointers." << std::endl;
-	__SS_THROW__;
 
+	if (TTEST(20))
+	{
+		__COUT_ERR__ << "\n"
+					 << ss.str();
+		device_.spy(DTC_DMA_Engine_DCS, 3 /* for once */ | 8 /* for wide view */);
+		__COUT_ERR__ << otsStyleStackTrace();
+	}
+
+	__SS_THROW__;
 }  // end ReadROCRegister()
 
 bool DTCLib::DTC::WriteROCRegister(const DTC_Link_ID& link, const uint16_t address, const uint16_t data, bool requestAck, int ack_tmo_ms)
@@ -1324,10 +1332,10 @@ std::unique_ptr<DTCLib::DTC_DCSReplyPacket> DTCLib::DTC::ReadNextDCSPacket(int t
 			if ((lastDTCErrorBitsValue_ >> 3) & 0x1)
 				ss << "\t* bit-3 is set: Error in DTC handling of this ROC’s DCS requests has occurred (check the DTC error bit details)." << __E__;
 
-			if(lastDTCErrorBitsValue_) //throw exception if error
+			if (lastDTCErrorBitsValue_)  // throw exception if error
 			{
 				ss << "\n\nIf interpreting as a DTC_DataPacket, here is the data: \n"
-					<< test->toJSON();
+				   << test->toJSON();
 				__SS_THROW__;
 			}
 		}
@@ -1677,7 +1685,7 @@ void DTCLib::DTC::ReleaseBuffers(const DTC_DMA_Engine& channel)  //, int count)/
 // This is on DMA Channel 1 (i.e., DCS)
 void DTCLib::DTC::WriteDataPacket(const DTC_DataPacket& packet)
 {
-	DTC_TLOG(TLVL_WriteDataPacket) << "WriteDataPacket: Writing packet: " << packet.toJSON();
+	DTC_TLOG(TLVL_WriteDataPacket) << "WriteDataPacket: Writing DCS DMA packet: " << packet.toJSON();
 	mu2e_databuff_t buf;
 	uint64_t size = packet.GetSize() + sizeof(uint64_t);
 	//	uint64_t packetSize = packet.GetSize();
@@ -1700,9 +1708,9 @@ void DTCLib::DTC::WriteDataPacket(const DTC_DataPacket& packet)
 	int errorCode;
 	do
 	{
-		DTC_TLOG(TLVL_WriteDataPacket) << "Attempting to write data...";
+		DTC_TLOG(TLVL_WriteDataPacket) << "Attempting to write DCS DMA data...";
 		errorCode = device_.write_data(DTC_DMA_Engine_DCS, &buf, size);
-		DTC_TLOG(TLVL_WriteDataPacket) << "Attempted to write data, errorCode=" << errorCode << ", retries=" << retry;
+		DTC_TLOG(TLVL_WriteDataPacket) << "Attempted to write DCS DMA data, errorCode=" << errorCode << ", retries=" << retry;
 		retry--;
 	} while (retry > 0 && errorCode != 0);
 
@@ -1711,7 +1719,7 @@ void DTCLib::DTC::WriteDataPacket(const DTC_DataPacket& packet)
 
 	if (errorCode != 0)
 	{
-		DTC_TLOG(TLVL_ERROR) << "WriteDataPacket: write_data returned " << errorCode << ", throwing DTC_IOErrorException! lock_taken_locally=" << lock_taken_locally;
+		DTC_TLOG(TLVL_ERROR) << "WriteDataPacket: write_data DCS DMA returned " << errorCode << ", throwing DTC_IOErrorException! lock_taken_locally=" << lock_taken_locally;
 		throw DTC_IOErrorException(errorCode);
 	}
 }

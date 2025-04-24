@@ -23,7 +23,7 @@ lsmod | grep mu2e           >/dev/null && rmmod mu2e
 lsmod | grep TRACE          >/dev/null && rmmod TRACE
 
 if ! [ -z "${MRB_BUILDDIR-}" ] && [ -e "${MRB_BUILDDIR}/TRACE/module/`uname -r`/TRACE.ko" ]; then
-    source $TRACE_DIR/script/trace.sh.functions 
+    source $TRACE_DIR/script/trace.sh.functions
 else
   # (re)setup TRACE (no get functions defined in this script
     . /mu2e/ups/setup

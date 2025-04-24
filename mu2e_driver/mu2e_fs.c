@@ -1,10 +1,10 @@
 /*  This file (mu2e_fs.c) was created by Ron Rechenmacher <ron@fnal.gov> on
-    Feb  5, 2014. "TERMS AND CONDITIONS" governing this file are in the README
-    or COPYING file. If you do not have such a file, one can be obtained by
-    contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
-    $RCSfile: .emacs.gnu,v $
-    rev="$Revision: 1.23 $$Date: 2012/01/23 15:32:40 $";
-    */
+	Feb  5, 2014. "TERMS AND CONDITIONS" governing this file are in the README
+	or COPYING file. If you do not have such a file, one can be obtained by
+	contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
+	$RCSfile: .emacs.gnu,v $
+	rev="$Revision: 1.23 $$Date: 2012/01/23 15:32:40 $";
+	*/
 
 #include <linux/cdev.h>   /* cdev_add */
 #include <linux/device.h> /* class_create */
@@ -30,7 +30,7 @@ static struct file_operations mu2e_file_ops = {
 	.open = mu2e_open,                   /* open         */
 	.flush = NULL,                       /* flush        */
 	.release = mu2e_release,             /* release (close?)*/
-	.fsync = 0                                    /* fsync        */
+	.fsync = 0                           /* fsync        */
 										 /* fasync       */
 										 /* check_media_change */
 										 /* revalidate   */
@@ -55,12 +55,13 @@ int mu2e_fs_up()
 		return (sts);
 	}
 
-#   if RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION( 9, 4 )
+#if RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(9, 4)
 	mu2e_dev_class = class_create(THIS_MODULE, "mu2e_dev");
-#   else
+#else
 	mu2e_dev_class = class_create("mu2e_dev");
-#   endif
-	if((void*)mu2e_dev_class == ERR_PTR) {
+#endif
+	if ((void *)mu2e_dev_class == ERR_PTR)
+	{
 		TRACE(0, "mu2e_fs_up failed to create device class");
 		return -1;
 	}
@@ -86,10 +87,11 @@ void mu2e_fs_down()
 
 int mu2e_open(struct inode *inode, struct file *filp)
 {
-    // Root doesn't have to ask for permission, and shouldn't lock out anyone
-    if (capable(CAP_DAC_OVERRIDE)) {
+	// Root doesn't have to ask for permission, and shouldn't lock out anyone
+	if (capable(CAP_DAC_OVERRIDE))
+	{
 		return 0;
-    }
+	}
 	int dtc = iminor(inode);
 
 	spin_lock(&mu2e_fs_spinlock);
@@ -131,7 +133,7 @@ int mu2e_release(struct inode *inode, struct file *filp)
 	{
 		inode->i_uid = root_uid;
 		mark_inode_dirty(inode);
-    }
+	}
 	spin_unlock(&mu2e_fs_spinlock);
 	return 0;
 }

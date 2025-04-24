@@ -26,27 +26,26 @@ using namespace DTCLib;
 void printHelpMsg()
 {
 	std::cout << "Usage: rocUtil [options] "
-		"[read_register,simple_read,reset_roc,write_register,read_extregister,write_extregister,test_read,read_release,"
-		"toggle_serdes,block_read,block_write,raw_block_read]"
-		<< std::endl;
+				 "[read_register,simple_read,reset_roc,write_register,read_extregister,write_extregister,test_read,read_release,"
+				 "toggle_serdes,block_read,block_write,raw_block_read]"
+			  << std::endl;
 	std::cout << "Options are:" << std::endl
-		<< " -h: This message." << std::endl
-		<< " -l: Link to send requests on (Default: 0)" << std::endl
-		<< " -n: Number of times to repeat test. (Default: 1)" << std::endl
-		<< " -d: Delay between tests, in us (Default: 0)." << std::endl
-		<< " -w: Data to write to address" << std::endl
-		<< " -a: Address to write" << std::endl
-		<< " -b: Block address (for write_rocext)" << std::endl
-		<< " -q: Quiet mode (Don't print requests)" << std::endl
-		<< " -Q: Really Quiet mode (Try not to print anything)" << std::endl
-		<< " -v: Expected DTC Design version string (Default: \"\")" << std::endl
-		<< " -c: Word count for Block Reads (Default: 0)" << std::endl
-		<< " -i: Do not set the incrementAddress bit for block operations" << std::endl
-		<< " --dtc: Use dtc <num> (Defaults to DTCLIB_DTC if set, 0 otherwise, see ls /dev/mu2e* for available DTCs)" << std::endl
-		<< " --stop-on-error: Abort operation if an error occurs" << std::endl
-		<< " --timeout-ms Try this long to read a DCS DMA from the DTC (Default: 10 ms)"
-		<< " --link-mask ROC links to enable on DTC (Default: 0x111111)"
-		;
+			  << " -h: This message." << std::endl
+			  << " -l: Link to send requests on (Default: 0)" << std::endl
+			  << " -n: Number of times to repeat test. (Default: 1)" << std::endl
+			  << " -d: Delay between tests, in us (Default: 0)." << std::endl
+			  << " -w: Data to write to address" << std::endl
+			  << " -a: Address to write" << std::endl
+			  << " -b: Block address (for write_rocext)" << std::endl
+			  << " -q: Quiet mode (Don't print requests)" << std::endl
+			  << " -Q: Really Quiet mode (Try not to print anything)" << std::endl
+			  << " -v: Expected DTC Design version string (Default: \"\")" << std::endl
+			  << " -c: Word count for Block Reads (Default: 0)" << std::endl
+			  << " -i: Do not set the incrementAddress bit for block operations" << std::endl
+			  << " --dtc: Use dtc <num> (Defaults to DTCLIB_DTC if set, 0 otherwise, see ls /dev/mu2e* for available DTCs)" << std::endl
+			  << " --stop-on-error: Abort operation if an error occurs" << std::endl
+			  << " --timeout-ms Try this long to read a DCS DMA from the DTC (Default: 10 ms)"
+			  << " --link-mask ROC links to enable on DTC (Default: 0x111111)";
 	exit(0);
 }
 
@@ -74,68 +73,69 @@ int main(int argc, char* argv[])
 		{
 			switch (argv[optind][1])
 			{
-			case 'l':
-				link = DTCLib::Utilities::getOptionValue(&optind, &argv);
-				break;
-			case 'd':
-				delay = DTCLib::Utilities::getOptionValue(&optind, &argv);
-				break;
-			case 'n':
-				number = DTCLib::Utilities::getOptionValue(&optind, &argv);
-				break;
-			case 'w':
-				data = DTCLib::Utilities::getOptionValue(&optind, &argv);
-				break;
-			case 'a':
-				address = DTCLib::Utilities::getOptionValue(&optind, &argv);
-				break;
-			case 'b':
-				block = DTCLib::Utilities::getOptionValue(&optind, &argv);
-				break;
-			case 'c':
-				count = DTCLib::Utilities::getOptionValue(&optind, &argv);
-				break;
-			case 'i':
-				incrementAddress = !incrementAddress;
-				break;
-			case 'q':
-				quiet = true;
-				break;
-			case 'Q':
-				quiet = true;
-				reallyQuiet = true;
-				break;
-			case '-':  // Long option
-			{
-				auto option = DTCLib::Utilities::getLongOptionOption(&optind, &argv);
-				if (option == "--dtc")
+				case 'l':
+					link = DTCLib::Utilities::getOptionValue(&optind, &argv);
+					break;
+				case 'd':
+					delay = DTCLib::Utilities::getOptionValue(&optind, &argv);
+					break;
+				case 'n':
+					number = DTCLib::Utilities::getOptionValue(&optind, &argv);
+					break;
+				case 'w':
+					data = DTCLib::Utilities::getOptionValue(&optind, &argv);
+					break;
+				case 'a':
+					address = DTCLib::Utilities::getOptionValue(&optind, &argv);
+					break;
+				case 'b':
+					block = DTCLib::Utilities::getOptionValue(&optind, &argv);
+					break;
+				case 'c':
+					count = DTCLib::Utilities::getOptionValue(&optind, &argv);
+					break;
+				case 'i':
+					incrementAddress = !incrementAddress;
+					break;
+				case 'q':
+					quiet = true;
+					break;
+				case 'Q':
+					quiet = true;
+					reallyQuiet = true;
+					break;
+				case '-':  // Long option
 				{
-					dtc = DTCLib::Utilities::getLongOptionValue(&optind, &argv);
+					auto option = DTCLib::Utilities::getLongOptionOption(&optind, &argv);
+					if (option == "--dtc")
+					{
+						dtc = DTCLib::Utilities::getLongOptionValue(&optind, &argv);
+					}
+					else if (option == "--stop-on-error")
+					{
+						stopOnError = true;
+					}
+					else if (option == "--timeout-ms")
+					{
+						tmo_ms = DTCLib::Utilities::getLongOptionValue(&optind, &argv);
+					}
+					else if (option == "--link-mask")
+					{
+						link_mask = DTCLib::Utilities::getLongOptionValue(&optind, &argv);
+					}
+					else if (option == "--help")
+					{
+						printHelpMsg();
+					}
+					break;
 				}
-				else if (option == "--stop-on-error")
-				{
-					stopOnError = true;
-				}
-				else if (option == "--timeout-ms")
-				{
-					tmo_ms = DTCLib::Utilities::getLongOptionValue(&optind, &argv);
-				}
-				else if (option == "--link-mask") {
-					link_mask = DTCLib::Utilities::getLongOptionValue(&optind, &argv);
-				}
-				else if (option == "--help")
-				{
+				default:
+					TLOG(TLVL_ERROR) << "Unknown option: " << argv[optind] << std::endl;
 					printHelpMsg();
-				}
-				break;
-			}
-			default:
-				TLOG(TLVL_ERROR) << "Unknown option: " << argv[optind] << std::endl;
-				printHelpMsg();
-				break;
-			case 'h':
-				printHelpMsg();
-				break;
+					break;
+				case 'h':
+					printHelpMsg();
+					break;
 			}
 		}
 		else
@@ -150,20 +150,20 @@ int main(int argc, char* argv[])
 	}
 
 	TLOG(TLVL_DEBUG) << "Options are: " << std::boolalpha
-		<< "Operation: " << std::string(op)
-		<< ", Num: " << number
-		<< ", Link: " << link
-		<< ", Link Mask: " << std::hex << std::showbase << link_mask << std::dec
-		<< ", Delay: " << delay
-		<< ", Address: " << address
-		<< ", Data: " << data
-		<< ", Block: " << block
-		<< ", Quiet Mode: " << quiet
-		<< ", Really Quiet Mode: " << reallyQuiet
-		<< std::endl;
+					 << "Operation: " << std::string(op)
+					 << ", Num: " << number
+					 << ", Link: " << link
+					 << ", Link Mask: " << std::hex << std::showbase << link_mask << std::dec
+					 << ", Delay: " << delay
+					 << ", Address: " << address
+					 << ", Data: " << data
+					 << ", Block: " << block
+					 << ", Quiet Mode: " << quiet
+					 << ", Really Quiet Mode: " << reallyQuiet
+					 << std::endl;
 
 	auto dtc_link = static_cast<DTC_Link_ID>(link);
-	link_mask |= 1 << (link * 4); // Always enable the link being tested
+	link_mask |= 1 << (link * 4);                               // Always enable the link being tested
 	auto thisDTC = new DTC(DTC_SimMode_NoCFO, dtc, link_mask);  // rocMask is in hex, not binary
 	auto device = thisDTC->GetDevice();
 
@@ -398,19 +398,18 @@ int main(int argc, char* argv[])
 
 				if (!thisDTC->ReadDCSReception()) thisDTC->EnableDCSReception();
 
-
 				mu2e_databuff_t* buffer;
 				auto tmo_ms = 1500;
 
 				thisDTC->GetDevice()->begin_dcs_transaction();
 				thisDTC->WriteDMAPacket(req);
 				TLOG(TLVL_TRACE) << "rocUtil raw_block_read: after  WriteDMADCSPacket - DTC_DCSRequestPacket";
-				usleep(2500);				
+				usleep(2500);
 				auto sts = device->read_data(DTC_DMA_Engine_DCS, reinterpret_cast<void**>(&buffer), tmo_ms);
 				device->read_release(DTC_DMA_Engine_DCS, 1);
 				thisDTC->GetDevice()->end_dcs_transaction();
 				TLOG(TLVL_TRACE) << "rocUtil raw_block_read: after DCS read_data - "
-					<< " sts=" << sts << ", buffer=" << (void*)buffer;
+								 << " sts=" << sts << ", buffer=" << (void*)buffer;
 
 				if (sts > 0)
 				{
@@ -418,7 +417,7 @@ int main(int argc, char* argv[])
 					auto bufSize = static_cast<uint16_t>(*static_cast<uint64_t*>(readPtr));
 					readPtr = static_cast<uint8_t*>(readPtr) + 8;
 					TLOG((reallyQuiet ? TLVL_DEBUG + 5 : TLVL_INFO)) << "Buffer reports DMA size of " << std::dec << bufSize << " bytes. Device driver reports read of "
-						<< sts << " bytes," << std::endl;
+																	 << sts << " bytes," << std::endl;
 
 					TLOG(TLVL_TRACE) << "util - bufSize is " << bufSize;
 

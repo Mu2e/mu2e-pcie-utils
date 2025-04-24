@@ -11,7 +11,7 @@ cmake_minimum_required (VERSION 3.19 FATAL_ERROR)
 
 find_package(cetmodules 3.19.02 REQUIRED)
 
-project(mu2e_pcie_utils VERSION 3.04.00)
+project(mu2e-pcie-utils VERSION 4.00.00)
 
 include(CetCMakeEnv)
 cet_cmake_env()
@@ -33,7 +33,7 @@ string(TOUPPER ${CMAKE_BUILD_TYPE} BTYPE_UC )
 
 find_package(TRACE 3.17.05 REQUIRED)
 find_package(messagefacility REQUIRED)
-find_package(artdaq_core_mu2e REQUIRED)
+find_package(artdaq-core-mu2e REQUIRED)
 
 set(BUILD_PYTHON_INTERFACE FALSE)
 set(BUILD_ROOT_INTERFACE FALSE)

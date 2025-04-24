@@ -15,26 +15,26 @@ cet_make_library(LIBRARY_NAME DTCInterface
       otsStyleCoutMacros.cpp
     LIBRARIES PUBLIC 
       TRACE::MF
-      artdaq_core_mu2e::artdaq-core-mu2e_Overlays
+      artdaq-core-mu2e::Overlays
       Threads::Threads
 )
 
-cet_make_exec(NAME mu2eUtil SOURCE util_main.cc Mu2eUtil.cpp LIBRARIES mu2e_pcie_utils::DTCInterface)
+cet_make_exec(NAME mu2eUtil SOURCE util_main.cc Mu2eUtil.cpp LIBRARIES mu2e-pcie-utils::DTCInterface)
 
-cet_make_exec(NAME rocUtil SOURCE dcs_main.cc LIBRARIES mu2e_pcie_utils::DTCInterface)
+cet_make_exec(NAME rocUtil SOURCE dcs_main.cc LIBRARIES mu2e-pcie-utils::DTCInterface)
 
-cet_make_exec(NAME data_file_verifier SOURCE data_file_verifier.cc LIBRARIES  mu2e_pcie_utils::DTCInterface)
+cet_make_exec(NAME data_file_verifier SOURCE data_file_verifier.cc LIBRARIES  mu2e-pcie-utils::DTCInterface)
 
-cet_make_exec(NAME binary_dump_to_DTC_file SOURCE binary_dump_to_DTC_file.cc LIBRARIES  mu2e_pcie_utils::DTCInterface)
+cet_make_exec(NAME binary_dump_to_DTC_file SOURCE binary_dump_to_DTC_file.cc LIBRARIES  mu2e-pcie-utils::DTCInterface)
 
-cet_make_exec(NAME DTC_binary_file_compare SOURCE DTC_binary_file_compare.cc LIBRARIES  mu2e_pcie_utils::DTCInterface)
+cet_make_exec(NAME DTC_binary_file_compare SOURCE DTC_binary_file_compare.cc LIBRARIES  mu2e-pcie-utils::DTCInterface)
 
-cet_make_exec(NAME mu2eRequestSender SOURCE requestSender.cc LIBRARIES mu2e_pcie_utils::DTCInterface)
+cet_make_exec(NAME mu2eRequestSender SOURCE requestSender.cc LIBRARIES mu2e-pcie-utils::DTCInterface)
 
-cet_make_exec(NAME DTCRegDump SOURCE dtcRegDump.cc LIBRARIES mu2e_pcie_utils::DTCInterface)
+cet_make_exec(NAME DTCRegDump SOURCE dtcRegDump.cc LIBRARIES mu2e-pcie-utils::DTCInterface)
 
-cet_make_exec(NAME my_cntl SOURCE my_cntl.cc LIBRARIES mu2e_pcie_utils::DTCInterface)
-cet_make_exec(NAME rick_clock_test SOURCE rick_clock_test.cc LIBRARIES mu2e_pcie_utils::DTCInterface)
+cet_make_exec(NAME my_cntl SOURCE my_cntl.cc LIBRARIES mu2e-pcie-utils::DTCInterface)
+cet_make_exec(NAME rick_clock_test SOURCE rick_clock_test.cc LIBRARIES mu2e-pcie-utils::DTCInterface)
 
 # Install_headers MUST BE FIRST...for some reason
 install_headers()

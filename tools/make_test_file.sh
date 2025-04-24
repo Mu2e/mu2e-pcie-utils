@@ -9,4 +9,3 @@ export DTCLIB_NUM_CRV_BLOCKS=0
 
 # Create file
 mu2eUtil -Q -n 10000 --binary-file-mode DTC_packets.bin buffer_test
-

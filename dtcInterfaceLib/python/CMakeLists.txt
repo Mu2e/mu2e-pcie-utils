@@ -12,7 +12,7 @@ swig_add_library(dtcInterfaceLib LANGUAGE python SOURCES dtcInterfaceLib.i)
 
 # swig_link_libraries(dtc ${PROJECT_NAME} ${PYTHON_LIBRARIES})
 # ${PROJECT_NAME} translates into mu2e_pcie_utils
-swig_link_libraries(dtcInterfaceLib mu2e_pcie_utils::DTCInterface artdaq_core_mu2e::artdaq-core-mu2e_Overlays Python::Python)
+swig_link_libraries(dtcInterfaceLib mu2e-pcie-utils::DTCInterface artdaq-core-mu2e::Overlays Python::Python)
 
 # Configure setup.py and copy to output directory
 set(SETUP_PY_IN ${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in)

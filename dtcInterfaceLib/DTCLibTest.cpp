@@ -466,7 +466,7 @@ void DTCLib::DTCLibTest::doDAQTest()
 		if (data.size() > 0)
 		{
 			if (printMessages_) std::cout << data.size() << " packets returned\n";
-			}
+		}
 		else
 		{
 			TRACE_CNTL("modeM", 0L);

@@ -11,7 +11,7 @@ set_source_files_properties(cfoInterfaceLib.i PROPERTIES CPLUSPLUS ON USE_TARGET
 swig_add_library(cfoInterfaceLib LANGUAGE python SOURCES cfoInterfaceLib.i)
 
 # ${PROJECT_NAME} translates into mu2e_pcie_utils
-swig_link_libraries(cfoInterfaceLib mu2e_pcie_utils::CFOInterface artdaq_core_mu2e::artdaq-core-mu2e_Overlays Python::Python)
+swig_link_libraries(cfoInterfaceLib mu2e-pcie-utils::CFOInterface artdaq-core-mu2e::Overlays Python::Python)
 
 # Configure setup.py and copy to output directory
 set(SETUP_PY_IN  ${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in)

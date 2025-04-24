@@ -73,7 +73,7 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	auto thisDTC = new DTCLib::DTC_Registers(DTCLib::DTC_SimMode_Disabled, dtc,memFileName, 0x1, "", true);
+	auto thisDTC = new DTCLib::DTC_Registers(DTCLib::DTC_SimMode_Disabled, dtc, memFileName, 0x1, "", true);
 
 	auto cols = 80;
 	auto lines = 24;
@@ -108,14 +108,14 @@ int main(int argc, char* argv[])
 	{
 		std::cout << std::endl
 				  << std::endl;
-		std::cout << thisDTC->FormattedRegDump(cols, thisDTC->formattedSERDESCounterFunctions_) << std::endl;
+		std::cout << "NOT IMPLEMENTED" << std::endl;  // thisDTC->FormattedRegDump(cols, thisDTC->formattedSERDESCounterFunctions_) << std::endl;
 	}
 
 	if (printPerformanceCounters)
 	{
 		std::cout << std::endl
 				  << std::endl;
-		std::cout << thisDTC->FormattedRegDump(cols, thisDTC->formattedPerformanceCounterFunctions_) << std::endl; 
+		std::cout << thisDTC->FormattedRegDump(cols, thisDTC->formattedPerformanceCounterFunctions_) << std::endl;
 	}
 
 	if (printSERDESErrors)

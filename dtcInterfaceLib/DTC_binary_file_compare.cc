@@ -35,7 +35,6 @@
 #include "artdaq-core-mu2e/Overlays/DTC_Types/Exceptions.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/Utilities.h"
 
-
 #include "TRACE/tracemf.h"
 #define TRACE_NAME "binary_file_compare"
 
@@ -69,7 +68,7 @@ size_t add_to_map(event_map& map, mu2e_databuff_t& buf, size_t offset)
 	uint64_t timestamp = header.s.ts10 + (static_cast<uint64_t>(header.s.ts32) << 16) + (static_cast<uint64_t>(header.s.ts54) << 32);
 	auto bufSize = blockByteSize - 0x10;
 
-	//TLOG(TLVL_DEBUG) << "Adding TS " << timestamp << " SS " << header.s.SubsystemID << " DTC " << header.s.DTCID << " ROC " << header.s.LinkID << " to map with size " << bufSize;
+	// TLOG(TLVL_DEBUG) << "Adding TS " << timestamp << " SS " << header.s.SubsystemID << " DTC " << header.s.DTCID << " ROC " << header.s.LinkID << " to map with size " << bufSize;
 	map[timestamp][header.s.SubsystemID][header.s.DTCID][header.s.LinkID].push_back(std::vector<uint8_t>(bufSize));
 	for (auto jj = 0; jj < bufSize; ++jj)
 	{
@@ -119,7 +118,7 @@ int main(int argc, char* argv[])
 		exit(1);
 	}
 
-	//Theory of comparison: Load first file into event_map, then go through second file, removing equivalent items from event_map. At the end, print the remainder of event_map, plus any disagreements.
+	// Theory of comparison: Load first file into event_map, then go through second file, removing equivalent items from event_map. At the end, print the remainder of event_map, plus any disagreements.
 	event_map first_file_contents;
 	event_map second_file_disagreements;
 

@@ -23,13 +23,13 @@
  _IOR  - implementation has copy_to_user   (or equiv., at end)
  _IOW  - implementation has copy_from_user (or equiv., at beginnning)
  _IOWR - implementaions has both copy_from_user (at beginnning) and
-                 copy_to_user (at end)
+				 copy_to_user (at end)
 NOTE: for _IOR, _IOW: the size is only for the data at the address used in the
-          ioctl call; NOT for the size at an address contained within the data
-          pointed to by the address used in the ioctl call.  So, if a small
-          structure is pointed to (to be copied in) which has an address of a
-          large buffer, the only thing that these macros should consider is the
-          pointer used (directly) in the ioctl call.
+		  ioctl call; NOT for the size at an address contained within the data
+		  pointed to by the address used in the ioctl call.  So, if a small
+		  structure is pointed to (to be copied in) which has an address of a
+		  large buffer, the only thing that these macros should consider is the
+		  pointer used (directly) in the ioctl call.
  */
 #define DEVL_IOC_MAGIC 'D'
 

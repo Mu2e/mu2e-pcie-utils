@@ -35,7 +35,7 @@ DTCLib::DTC_Registers::DTC_Registers(DTC_SimMode mode, int dtc, std::string simF
 									 bool skipInit, const std::string& uid)
 	: simMode_(mode), usingDetectorEmulator_(false), dmaSize_(64)
 {
-	TLOG(TLVL_INFO) << "CONSTRUCTOR";
+	TLOG(TLVL_TRACE) << "CONSTRUCTOR";
 
 	auto sim = getenv("DTCLIB_SIM_ENABLE");
 	if (sim != nullptr)
@@ -63,7 +63,7 @@ DTCLib::DTC_Registers::DTC_Registers(DTC_SimMode mode, int dtc, std::string simF
 /// </summary>
 DTCLib::DTC_Registers::~DTC_Registers()
 {
-	TLOG(TLVL_INFO) << "DESTRUCTOR";
+	TLOG(TLVL_TRACE) << "DESTRUCTOR";
 	DisableDetectorEmulator();
 	// DisableDetectorEmulatorMode();
 	// DisableCFOEmulation();
@@ -423,19 +423,19 @@ bool DTCLib::DTC_Registers::ReadAutogenDRP(std::optional<uint32_t> val)
 /// </summary>
 void DTCLib::DTC_Registers::EnableSoftwareDRP()
 {
-    DisableAutogenDRP();
+	DisableAutogenDRP();
 }
 
 /// <summary>
 /// Disable receiving Data Request Packets from the DTCLib on DMA Channel 0
 /// Possibly obsolete, ask Rick before using
 /// </summary>
-//void DTCLib::DTC_Registers::DisableSoftwareDRP()
+// void DTCLib::DTC_Registers::DisableSoftwareDRP()
 //{
 //	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_Control);
 //	data[22] = 0;
 //	WriteRegister_(data.to_ulong(), CFOandDTC_Register_Control);
-//}
+// }
 
 /// <summary>
 /// Read whether receiving Data Request Packets from the DTCLib on DMA Channel 0 is enabled
@@ -725,7 +725,6 @@ bool DTCLib::DTC_Registers::ReadROCInterfaceSoftReset(std::optional<uint32_t> va
 	return data[11];
 }
 
-
 void DTCLib::DTC_Registers::EnableDropDataToEmulateEventBuilding()
 {
 	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_Control);
@@ -769,17 +768,17 @@ bool DTCLib::DTC_Registers::ReadPunchEnable(std::optional<uint32_t> val)
 void DTCLib::DTC_Registers::SetExternalCFOSampleEdgeMode(int forceCFOedge)
 {
 	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_Control);
-	
-	data[6] = ((forceCFOedge>>1)&1) ? 0:1; //invert bit[1], DTC control bit [6] := 1 for forced, 0 for auto
-	data[5] = (forceCFOedge&1); //DTC control bit [5] := 1 for falling-edge, 0 for rising-edge
+
+	data[6] = ((forceCFOedge >> 1) & 1) ? 0 : 1;  // invert bit[1], DTC control bit [6] := 1 for forced, 0 for auto
+	data[5] = (forceCFOedge & 1);                 // DTC control bit [5] := 1 for falling-edge, 0 for rising-edge
 	WriteRegister_(data.to_ulong(), CFOandDTC_Register_Control);
-} //end SetExternalCFOSampleEdgeMode()
+}  // end SetExternalCFOSampleEdgeMode()
 
 int DTCLib::DTC_Registers::ReadExternalCFOSampleEdgeMode(std::optional<uint32_t> val)
 {
 	std::bitset<32> data = val.has_value() ? *val : ReadRegister_(CFOandDTC_Register_Control);
-	return (data[6]<<1) | data[5];
-} //end ReadExternalCFOSampleEdgeMode()
+	return (data[6] << 1) | data[5];
+}  // end ReadExternalCFOSampleEdgeMode()
 
 void DTCLib::DTC_Registers::SetExternalFanoutClockInput()
 {
@@ -2037,16 +2036,24 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatROCReplyTimeoutError()
 	return form;
 }
 
+/// <summary>
+/// Set the DTC ID and EVB Info register
+/// </summary>
+/// <returns></returns>
 void DTCLib::DTC_Registers::SetEVBInfo(uint8_t dtcid, uint8_t mode,
 									   uint8_t partitionId, uint8_t macByte)
 {
 	uint32_t regVal = dtcid << 24;
 	regVal |= mode << 16;
-	regVal |= (partitionId & 0x3) << 8;
-	regVal |= (macByte & 0x3F);
+	regVal |= partitionId << 8;  //(partitionId & 0x3) << 8;
+	regVal |= macByte;           //(macByte & 0x3F);
 	WriteRegister_(regVal, DTC_Register_EVBPartitionID);
 }
 
+/// <summary>
+/// Set only the DTC ID within the EVB Info register
+/// </summary>
+/// <returns></returns>
 void DTCLib::DTC_Registers::SetDTCID(uint8_t dtcid)
 {
 	auto regVal = ReadRegister_(DTC_Register_EVBPartitionID) & 0x00FFFFFF;
@@ -2130,43 +2137,43 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBLocalParitionIDMACInde
 	form.description = "EVB Local Partition ID / MAC Index";
 	form.vals.push_back("");  // translation
 	std::ostringstream o;
-	o << "DTC ID: 0x" << std::hex << static_cast<int>(ReadDTCID(form.value));
+	o << "DTC ID:                    0x" << std::hex << static_cast<int>(ReadDTCID(form.value));
 	form.vals.push_back(o.str());
 	o.str("");
 	o.clear();
-	o << "EVB Mode: 0x" << std::hex << static_cast<int>(ReadEVBMode(form.value));
+	o << "EVB Mode:                  0x" << std::hex << static_cast<int>(ReadEVBMode(form.value));
 	form.vals.push_back(o.str());
 	o.str("");
 	o.clear();
-	o << "EVB Local Parition ID: 0x" << std::hex << static_cast<int>(ReadEVBLocalParitionID(form.value));
+	o << "EVB Parition ID:           0x" << std::hex << static_cast<int>(ReadEVBLocalParitionID(form.value));
 	form.vals.push_back(o.str());
 	o.str("");
 	o.clear();
-	o << "EVB MAC Index:         0x" << std::hex << static_cast<int>(ReadEVBLocalMACAddress(form.value));
+	o << "EVB MAC Address Last Byte: 0x" << std::hex << static_cast<int>(ReadEVBLocalMACAddress(form.value));
 	form.vals.push_back(o.str());
 	return form;
 }
 
 // EVB Number of Destination Nodes Register
-void DTCLib::DTC_Registers::SetEVBBufferInfo(uint8_t bufferCount,
-											 uint8_t startNode, uint8_t numOfNodes)
+void DTCLib::DTC_Registers::SetEVBClusterInfo(  // uint8_t bufferCount,
+	uint8_t baseDTCAddress, uint8_t numOfDTCs)
 {
-	uint32_t regVal = (bufferCount & 0xFF) << 16;
-	regVal |= (startNode & 0x3F) << 8;
-	regVal |= (numOfNodes & 0x3F);
+	uint32_t regVal = 0;            //(bufferCount & 0xFF) << 16;
+	regVal |= baseDTCAddress << 8;  //(startNode & 0x3F) << 8;
+	regVal |= numOfDTCs;            //(numOfNodes & 0x3F);
 	WriteRegister_(regVal, DTC_Register_EVBConfiguration);
 }
 
-void DTCLib::DTC_Registers::SetEVBNumberInputBuffers(uint8_t bufferCount)
-{
-	auto regVal = ReadRegister_(DTC_Register_EVBConfiguration) & 0xFF00FFFF;
-	regVal += (bufferCount & 0xFF) << 16;
-	WriteRegister_(regVal, DTC_Register_EVBConfiguration);
-}
-uint8_t DTCLib::DTC_Registers::ReadEVBNumberInputBuffers(std::optional<uint32_t> val)
-{
-	return static_cast<uint8_t>((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBConfiguration) & 0xFF0000) >> 16);
-}
+// void DTCLib::DTC_Registers::SetEVBNumberInputBuffers(uint8_t bufferCount)
+// {
+// 	auto regVal = ReadRegister_(DTC_Register_EVBConfiguration) & 0xFF00FFFF;
+// 	regVal += (bufferCount & 0xFF) << 16;
+// 	WriteRegister_(regVal, DTC_Register_EVBConfiguration);
+// }
+// uint8_t DTCLib::DTC_Registers::ReadEVBNumberInputBuffers(std::optional<uint32_t> val)
+// {
+// 	return static_cast<uint8_t>((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBConfiguration) & 0xFF0000) >> 16);
+// }
 
 /// <summary>
 /// Set the start node in the EVB cluster
@@ -2215,11 +2222,11 @@ uint8_t DTCLib::DTC_Registers::ReadEVBNumberOfDestinationNodes(std::optional<uin
 DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBNumberOfDestinationNodes()
 {
 	auto form = CreateFormatter(DTC_Register_EVBConfiguration);
-	form.description = "EVB Buffer Configuration";
+	form.description = "EVB DTC Cluster Configuration";
 	form.vals.push_back("");  // translation
 	std::stringstream o;
-	o << "Input Buffer Count: " << std::dec << static_cast<int>(ReadEVBNumberInputBuffers(form.value));
-	form.vals.push_back(o.str());
+	// o << "Input Buffer Count: " << std::dec << static_cast<int>(ReadEVBNumberInputBuffers(form.value));
+	// form.vals.push_back(o.str());
 	o.str("");
 	o.clear();
 	o << "EVB Start Node: " << std::dec << static_cast<int>(ReadEVBStartNode(form.value));
@@ -2823,18 +2830,18 @@ uint32_t DTCLib::DTC_Registers::ReadCFOEmulationLoopbackDelayMeasure(std::option
 {
 	uint32_t readVal = val.has_value() ? *val : ReadRegister_(DTC_Register_CFOEmulation_LoopbackDelayMeasure);
 	uint32_t i = 0;
-	while(!(readVal >> 31))
+	while (!(readVal >> 31))
 	{
 		usleep(100);
 		readVal = val.has_value() ? *val : ReadRegister_(DTC_Register_CFOEmulation_LoopbackDelayMeasure);
 		++i;
-		if(i > 10) 
+		if (i > 10)
 		{
 			__SS__ << "Timeout looking for the CFO Emulator Loopback Test to complete...";
 			__SS_THROW__;
 		}
 	}
-	return readVal & (~(1<<31)); //clear the Ready bit from return value
+	return readVal & (~(1 << 31));  // clear the Ready bit from return value
 }
 
 /// <summary>
@@ -2846,9 +2853,7 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatCFOEmulationLoopbackDelay
 	auto form = CreateFormatter(DTC_Register_CFOEmulation_LoopbackDelayMeasure);
 	form.description = "CFO Emu. Loopback Delay Measure";
 	std::stringstream o;
-	o << "0x" << std::hex << ReadCFOEmulationEventWindowInterval(form.value) <<
-		std::dec << "(" << double(1.0) * ReadCFOEmulationEventWindowInterval(form.value) * 
-			5 /*ns for 200MHz period*/ / 8.0 /* for 8 samples */ << " ns)";
+	o << "0x" << std::hex << ReadCFOEmulationEventWindowInterval(form.value) << std::dec << "(" << double(1.0) * ReadCFOEmulationEventWindowInterval(form.value) * 5 /*ns for 200MHz period*/ / 8.0 /* for 8 samples */ << " ns)";
 	form.vals.push_back(o.str());
 	return form;
 }
@@ -3723,7 +3728,7 @@ void DTCLib::DTC_Registers::SetCFO40MHzClockMarkerEnable(DTC_Link_ID const& link
 	std::bitset<32> data = ReadRegister_(DTC_Register_CFOMarkerEnables);
 	if (link == DTC_Link_ALL)
 	{
-		for (uint8_t i = 0; i < 8; ++i)
+		for (uint8_t i = 0; i < 6; ++i)  // just ROC links
 			data[i] = enable;
 	}
 	else
@@ -3738,9 +3743,9 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatCFO40MHzClockMarkerEnable
 	// form.vals.push_back("        [Event Start, 40 MHz]");
 	form.vals.push_back("        [40 MHz Clock Marker]");
 	for (auto r : DTC_ROC_Links)
-		form.vals.push_back(std::string("Link ") + std::to_string(r) + ": [" + 
-				// (ReadCFOEventStartMarkerEnable(r, form.value) ? "x" : " ") + "," + 
-				(ReadCFO40MHzClockMarkerEnable(r, form.value) ? "x" : " ") + "]");
+		form.vals.push_back(std::string("Link ") + std::to_string(r) + ": [" +
+							// (ReadCFOEventStartMarkerEnable(r, form.value) ? "x" : " ") + "," +
+							(ReadCFO40MHzClockMarkerEnable(r, form.value) ? "x" : " ") + "]");
 	return form;
 }
 
@@ -3762,707 +3767,6 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatROCFinishThreshold()
 	form.description = "ROC Finish Threshold";
 	std::stringstream o;
 	o << "ROC Comma Limit: 0x" << std::hex << static_cast<int>(ReadROCCommaLimit(form.value));
-	form.vals.push_back(o.str());
-	return form;
-}
-
-// SERDES Counter Registers
-/// <summary>
-/// Clear the value of the Receive byte counter
-/// </summary>
-/// <param name="link">Link to clear counter for</param>
-void DTCLib::DTC_Registers::ClearReceiveByteCount(DTC_Link_ID const& link)
-{
-	DTC_Register reg;
-	switch (link)
-	{
-		case DTC_Link_0:
-			reg = DTC_Register_ReceiveByteCount_Link0;
-			break;
-		case DTC_Link_1:
-			reg = DTC_Register_ReceiveByteCount_Link1;
-			break;
-		case DTC_Link_2:
-			reg = DTC_Register_ReceiveByteCount_Link2;
-			break;
-		case DTC_Link_3:
-			reg = DTC_Register_ReceiveByteCount_Link3;
-			break;
-		case DTC_Link_4:
-			reg = DTC_Register_ReceiveByteCount_Link4;
-			break;
-		case DTC_Link_5:
-			reg = DTC_Register_ReceiveByteCount_Link5;
-			break;
-		case DTC_Link_CFO:
-			reg = DTC_Register_ReceiveByteCount_CFOLink;
-			break;
-		default: {
-			__SS__ << "Illegal link index provided: " << link << __E__;
-			__SS_THROW__;
-		}
-	}
-	WriteRegister_(0, reg);
-}
-
-/// <summary>
-/// Read the value of the Receive byte counter
-/// </summary>
-/// <param name="link">Link to read counter for</param>
-/// <returns>Current value of the Receive byte counter on the given link</returns>
-uint32_t DTCLib::DTC_Registers::ReadReceiveByteCount(DTC_Link_ID const& link, std::optional<uint32_t> val)
-{
-	DTC_Register reg;
-	switch (link)
-	{
-		case DTC_Link_0:
-			reg = DTC_Register_ReceiveByteCount_Link0;
-			break;
-		case DTC_Link_1:
-			reg = DTC_Register_ReceiveByteCount_Link1;
-			break;
-		case DTC_Link_2:
-			reg = DTC_Register_ReceiveByteCount_Link2;
-			break;
-		case DTC_Link_3:
-			reg = DTC_Register_ReceiveByteCount_Link3;
-			break;
-		case DTC_Link_4:
-			reg = DTC_Register_ReceiveByteCount_Link4;
-			break;
-		case DTC_Link_5:
-			reg = DTC_Register_ReceiveByteCount_Link5;
-			break;
-		case DTC_Link_CFO:
-			reg = DTC_Register_ReceiveByteCount_CFOLink;
-			break;
-		default: {
-			__SS__ << "Illegal link index provided: " << link << __E__;
-			__SS_THROW__;
-		}
-	}
-	return val.has_value() ? *val : ReadRegister_(reg);
-}
-
-/// <summary>
-/// Clear the value of the Receive Packet counter
-/// </summary>
-/// <param name="link">Link to clear counter for</param>
-void DTCLib::DTC_Registers::ClearReceivePacketCount(DTC_Link_ID const& link)
-{
-	DTC_Register reg;
-	switch (link)
-	{
-		case DTC_Link_0:
-			reg = DTC_Register_ReceivePacketCount_Link0;
-			break;
-		case DTC_Link_1:
-			reg = DTC_Register_ReceivePacketCount_Link1;
-			break;
-		case DTC_Link_2:
-			reg = DTC_Register_ReceivePacketCount_Link2;
-			break;
-		case DTC_Link_3:
-			reg = DTC_Register_ReceivePacketCount_Link3;
-			break;
-		case DTC_Link_4:
-			reg = DTC_Register_ReceivePacketCount_Link4;
-			break;
-		case DTC_Link_5:
-			reg = DTC_Register_ReceivePacketCount_Link5;
-			break;
-		case DTC_Link_CFO:
-			reg = DTC_Register_ReceivePacketCount_CFOLink;
-			break;
-		default: {
-			__SS__ << "Illegal link index provided: " << link << __E__;
-			__SS_THROW__;
-		}
-	}
-	WriteRegister_(0, reg);
-}
-
-/// <summary>
-/// Read the value of the Receive Packet counter
-/// </summary>
-/// <param name="link">Link to read counter for</param>
-/// <returns>Current value of the Receive Packet counter on the given link</returns>
-uint32_t DTCLib::DTC_Registers::ReadReceivePacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val)
-{
-	DTC_Register reg;
-	switch (link)
-	{
-		case DTC_Link_0:
-			reg = DTC_Register_ReceivePacketCount_Link0;
-			break;
-		case DTC_Link_1:
-			reg = DTC_Register_ReceivePacketCount_Link1;
-			break;
-		case DTC_Link_2:
-			reg = DTC_Register_ReceivePacketCount_Link2;
-			break;
-		case DTC_Link_3:
-			reg = DTC_Register_ReceivePacketCount_Link3;
-			break;
-		case DTC_Link_4:
-			reg = DTC_Register_ReceivePacketCount_Link4;
-			break;
-		case DTC_Link_5:
-			reg = DTC_Register_ReceivePacketCount_Link5;
-			break;
-		case DTC_Link_CFO:
-			reg = DTC_Register_ReceivePacketCount_CFOLink;
-			break;
-		default: {
-			__SS__ << "Illegal link index provided: " << link << __E__;
-			__SS_THROW__;
-		}
-	}
-	return val.has_value() ? *val : ReadRegister_(reg);
-}
-
-/// <summary>
-/// Clear the value of the Transmit byte counter
-/// </summary>
-/// <param name="link">Link to clear counter for</param>
-void DTCLib::DTC_Registers::ClearTransmitByteCount(DTC_Link_ID const& link)
-{
-	DTC_Register reg;
-	switch (link)
-	{
-		case DTC_Link_0:
-			reg = DTC_Register_TransmitByteCount_Link0;
-			break;
-		case DTC_Link_1:
-			reg = DTC_Register_TransmitByteCount_Link1;
-			break;
-		case DTC_Link_2:
-			reg = DTC_Register_TransmitByteCount_Link2;
-			break;
-		case DTC_Link_3:
-			reg = DTC_Register_TransmitByteCount_Link3;
-			break;
-		case DTC_Link_4:
-			reg = DTC_Register_TransmitByteCount_Link4;
-			break;
-		case DTC_Link_5:
-			reg = DTC_Register_TransmitByteCount_Link5;
-			break;
-		case DTC_Link_CFO:
-			reg = DTC_Register_TransmitByteCount_CFOLink;
-			break;
-		default: {
-			__SS__ << "Illegal link index provided: " << link << __E__;
-			__SS_THROW__;
-		}
-	}
-	WriteRegister_(0, reg);
-}
-
-/// <summary>
-/// Read the value of the Transmit byye counter
-/// </summary>
-/// <param name="link">Link to read counter for</param>
-/// <returns>Current value of the Transmit byte counter on the given link</returns>
-uint32_t DTCLib::DTC_Registers::ReadTransmitByteCount(DTC_Link_ID const& link, std::optional<uint32_t> val)
-{
-	DTC_Register reg;
-	switch (link)
-	{
-		case DTC_Link_0:
-			reg = DTC_Register_TransmitByteCount_Link0;
-			break;
-		case DTC_Link_1:
-			reg = DTC_Register_TransmitByteCount_Link1;
-			break;
-		case DTC_Link_2:
-			reg = DTC_Register_TransmitByteCount_Link2;
-			break;
-		case DTC_Link_3:
-			reg = DTC_Register_TransmitByteCount_Link3;
-			break;
-		case DTC_Link_4:
-			reg = DTC_Register_TransmitByteCount_Link4;
-			break;
-		case DTC_Link_5:
-			reg = DTC_Register_TransmitByteCount_Link5;
-			break;
-		case DTC_Link_CFO:
-			reg = DTC_Register_TransmitByteCount_CFOLink;
-			break;
-		default: {
-			__SS__ << "Illegal link index provided: " << link << __E__;
-			__SS_THROW__;
-		}
-	}
-	return val.has_value() ? *val : ReadRegister_(reg);
-}
-
-/// <summary>
-/// Clear the value of the Transmit Packet counter
-/// </summary>
-/// <param name="link">Link to clear counter for</param>
-void DTCLib::DTC_Registers::ClearTransmitPacketCount(DTC_Link_ID const& link)
-{
-	DTC_Register reg;
-	switch (link)
-	{
-		case DTC_Link_0:
-			reg = DTC_Register_TransmitPacketCount_Link0;
-			break;
-		case DTC_Link_1:
-			reg = DTC_Register_TransmitPacketCount_Link1;
-			break;
-		case DTC_Link_2:
-			reg = DTC_Register_TransmitPacketCount_Link2;
-			break;
-		case DTC_Link_3:
-			reg = DTC_Register_TransmitPacketCount_Link3;
-			break;
-		case DTC_Link_4:
-			reg = DTC_Register_TransmitPacketCount_Link4;
-			break;
-		case DTC_Link_5:
-			reg = DTC_Register_TransmitPacketCount_Link5;
-			break;
-		case DTC_Link_CFO:
-			reg = DTC_Register_TransmitPacketCount_CFOLink;
-			break;
-		default: {
-			__SS__ << "Illegal link index provided: " << link << __E__;
-			__SS_THROW__;
-		}
-	}
-	WriteRegister_(0, reg);
-}
-
-/// <summary>
-/// Read the value of the Transmit Packet counter
-/// </summary>
-/// <param name="link">Link to read counter for</param>
-/// <returns>Current value of the Transmit Packet counter on the given link</returns>
-uint32_t DTCLib::DTC_Registers::ReadTransmitPacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val)
-{
-	DTC_Register reg;
-	switch (link)
-	{
-		case DTC_Link_0:
-			reg = DTC_Register_TransmitPacketCount_Link0;
-			break;
-		case DTC_Link_1:
-			reg = DTC_Register_TransmitPacketCount_Link1;
-			break;
-		case DTC_Link_2:
-			reg = DTC_Register_TransmitPacketCount_Link2;
-			break;
-		case DTC_Link_3:
-			reg = DTC_Register_TransmitPacketCount_Link3;
-			break;
-		case DTC_Link_4:
-			reg = DTC_Register_TransmitPacketCount_Link4;
-			break;
-		case DTC_Link_5:
-			reg = DTC_Register_TransmitPacketCount_Link5;
-			break;
-		case DTC_Link_CFO:
-			reg = DTC_Register_TransmitPacketCount_CFOLink;
-			break;
-		default: {
-			__SS__ << "Illegal link index provided: " << link << __E__;
-			__SS_THROW__;
-		}
-	}
-	return val.has_value() ? *val : ReadRegister_(reg);
-}
-
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatReceiveByteCountLink0()
-{
-	auto form = CreateFormatter(DTC_Register_ReceiveByteCount_Link0);
-	form.description = "Receive Byte Count: Link 0";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadReceiveByteCount(DTC_Link_0, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatReceiveByteCountLink1()
-{
-	auto form = CreateFormatter(DTC_Register_ReceiveByteCount_Link1);
-	form.description = "Receive Byte Count: Link 1";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadReceiveByteCount(DTC_Link_1, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatReceiveByteCountLink2()
-{
-	auto form = CreateFormatter(DTC_Register_ReceiveByteCount_Link2);
-	form.description = "Receive Byte Count: Link 2";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadReceiveByteCount(DTC_Link_2, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatReceiveByteCountLink3()
-{
-	auto form = CreateFormatter(DTC_Register_ReceiveByteCount_Link3);
-	form.description = "Receive Byte Count: Link 3";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadReceiveByteCount(DTC_Link_3, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatReceiveByteCountLink4()
-{
-	auto form = CreateFormatter(DTC_Register_ReceiveByteCount_Link4);
-	form.description = "Receive Byte Count: Link 4";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadReceiveByteCount(DTC_Link_4, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatReceiveByteCountLink5()
-{
-	auto form = CreateFormatter(DTC_Register_ReceiveByteCount_Link5);
-	form.description = "Receive Byte Count: Link 5";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadReceiveByteCount(DTC_Link_5, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatReceiveByteCountCFO()
-{
-	auto form = CreateFormatter(DTC_Register_ReceiveByteCount_CFOLink);
-	form.description = "Receive Byte Count: CFO";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadReceiveByteCount(DTC_Link_CFO, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatReceivePacketCountLink0()
-{
-	auto form = CreateFormatter(DTC_Register_ReceivePacketCount_Link0);
-	form.description = "Receive Packet Count: Link 0";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadReceivePacketCount(DTC_Link_0);
-	form.vals.push_back(o.str());
-	return form;
-}
-
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatReceivePacketCountLink1()
-{
-	auto form = CreateFormatter(DTC_Register_ReceivePacketCount_Link1);
-	form.description = "Receive Packet Count: Link 1";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadReceivePacketCount(DTC_Link_1);
-	form.vals.push_back(o.str());
-	return form;
-}
-
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatReceivePacketCountLink2()
-{
-	auto form = CreateFormatter(DTC_Register_ReceivePacketCount_Link2);
-	form.description = "Receive Packet Count: Link 2";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadReceivePacketCount(DTC_Link_2);
-	form.vals.push_back(o.str());
-	return form;
-}
-
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatReceivePacketCountLink3()
-{
-	auto form = CreateFormatter(DTC_Register_ReceivePacketCount_Link3);
-	form.description = "Receive Packet Count: Link 3";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadReceivePacketCount(DTC_Link_3);
-	form.vals.push_back(o.str());
-	return form;
-}
-
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatReceivePacketCountLink4()
-{
-	auto form = CreateFormatter(DTC_Register_ReceivePacketCount_Link4);
-	form.description = "Receive Packet Count: Link 4";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadReceivePacketCount(DTC_Link_4);
-	form.vals.push_back(o.str());
-	return form;
-}
-
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatReceivePacketCountLink5()
-{
-	auto form = CreateFormatter(DTC_Register_ReceivePacketCount_Link5);
-	form.description = "Receive Packet Count: Link 5";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadReceivePacketCount(DTC_Link_5);
-	form.vals.push_back(o.str());
-	return form;
-}
-
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatReceivePacketCountCFO()
-{
-	auto form = CreateFormatter(DTC_Register_ReceivePacketCount_CFOLink);
-	form.description = "Receive Packet Count: CFO";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadReceivePacketCount(DTC_Link_CFO);
-	form.vals.push_back(o.str());
-	return form;
-}
-
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatTramsitByteCountLink0()
-{
-	auto form = CreateFormatter(DTC_Register_TransmitByteCount_Link0);
-	form.description = "Transmit Byte Count: Link 0";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadTransmitByteCount(DTC_Link_0);
-	form.vals.push_back(o.str());
-	return form;
-}
-
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatTramsitByteCountLink1()
-{
-	auto form = CreateFormatter(DTC_Register_TransmitByteCount_Link1);
-	form.description = "Transmit Byte Count: Link 1";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadTransmitByteCount(DTC_Link_1);
-	form.vals.push_back(o.str());
-	return form;
-}
-
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatTramsitByteCountLink2()
-{
-	auto form = CreateFormatter(DTC_Register_TransmitByteCount_Link2);
-	form.description = "Transmit Byte Count: Link 2";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadTransmitByteCount(DTC_Link_2);
-	form.vals.push_back(o.str());
-	return form;
-}
-
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatTramsitByteCountLink3()
-{
-	auto form = CreateFormatter(DTC_Register_TransmitByteCount_Link3);
-	form.description = "Transmit Byte Count: Link 3";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadTransmitByteCount(DTC_Link_3);
-	form.vals.push_back(o.str());
-	return form;
-}
-
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatTramsitByteCountLink4()
-{
-	auto form = CreateFormatter(DTC_Register_TransmitByteCount_Link4);
-	form.description = "Transmit Byte Count: Link 4";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadTransmitByteCount(DTC_Link_4);
-	form.vals.push_back(o.str());
-	return form;
-}
-
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatTramsitByteCountLink5()
-{
-	auto form = CreateFormatter(DTC_Register_TransmitByteCount_Link5);
-	form.description = "Transmit Byte Count: Link 5";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadTransmitByteCount(DTC_Link_5);
-	form.vals.push_back(o.str());
-	return form;
-}
-
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatTramsitByteCountCFO()
-{
-	auto form = CreateFormatter(DTC_Register_TransmitByteCount_CFOLink);
-	form.description = "Transmit Byte Count: CFO";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadTransmitByteCount(DTC_Link_CFO);
-	form.vals.push_back(o.str());
-	return form;
-}
-
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatTransmitPacketCountLink0()
-{
-	auto form = CreateFormatter(DTC_Register_TransmitPacketCount_Link0);
-	form.description = "Transmit Packet Count: Link 0";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadTransmitPacketCount(DTC_Link_0);
-	form.vals.push_back(o.str());
-	return form;
-}
-
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatTransmitPacketCountLink1()
-{
-	auto form = CreateFormatter(DTC_Register_TransmitPacketCount_Link1);
-	form.description = "Transmit Packet Count: Link 1";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadTransmitPacketCount(DTC_Link_1);
-	form.vals.push_back(o.str());
-	return form;
-}
-
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatTransmitPacketCountLink2()
-{
-	auto form = CreateFormatter(DTC_Register_TransmitPacketCount_Link2);
-	form.description = "Transmit Packet Count: Link 2";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadTransmitPacketCount(DTC_Link_2);
-	form.vals.push_back(o.str());
-	return form;
-}
-
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatTransmitPacketCountLink3()
-{
-	auto form = CreateFormatter(DTC_Register_TransmitPacketCount_Link3);
-	form.description = "Transmit Packet Count: Link 3";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadTransmitPacketCount(DTC_Link_3);
-	form.vals.push_back(o.str());
-	return form;
-}
-
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatTransmitPacketCountLink4()
-{
-	auto form = CreateFormatter(DTC_Register_TransmitPacketCount_Link4);
-	form.description = "Transmit Packet Count: Link 4";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadTransmitPacketCount(DTC_Link_4);
-	form.vals.push_back(o.str());
-	return form;
-}
-
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatTransmitPacketCountLink5()
-{
-	auto form = CreateFormatter(DTC_Register_TransmitPacketCount_Link5);
-	form.description = "Transmit Packet Count: Link 5";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadTransmitPacketCount(DTC_Link_5);
-	form.vals.push_back(o.str());
-	return form;
-}
-
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatTransmitPacketCountCFO()
-{
-	auto form = CreateFormatter(DTC_Register_TransmitPacketCount_CFOLink);
-	form.description = "Transmit Packet Count: CFO";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadTransmitPacketCount(DTC_Link_CFO);
 	form.vals.push_back(o.str());
 	return form;
 }
@@ -5914,12 +5218,12 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatCFOLinkError()
 	std::stringstream o;
 	o << "0x" << std::hex << form.value;
 	form.vals.push_back(o.str());
-	//bit 9 - Event Start marker tx error
-	//bit 10 - Clock marker tx error
+	// bit 9 - Event Start marker tx error
+	// bit 10 - Clock marker tx error
 	form.vals.push_back(std::string("CFO Event Start Marker tx Error:     [") +
-		(((form.value >> 9)&1) ? "x" : " ") + "]");
+						(((form.value >> 9) & 1) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("CFO Clock Marker tx Error:     [") +
-		(((form.value >> 10)&1) ? "x" : " ") + "]");
+						(((form.value >> 10) & 1) ? "x" : " ") + "]");
 	return form;
 }
 
@@ -6323,7 +5627,7 @@ void DTCLib::DTC_Registers::SetSoftwareDataRequest(const DTC_EventWindowTag& ts)
 	auto timestampHigh = static_cast<uint16_t>(timestamp.to_ulong());
 
 	WriteRegister_(timestampHigh, DTC_Register_DataRequest_High);
-	WriteRegister_(timestampLow, DTC_Register_DataRequest_Low); // this triggers the DR
+	WriteRegister_(timestampLow, DTC_Register_DataRequest_Low);  // this triggers the DR
 }
 
 DTCLib::DTC_EventWindowTag DTCLib::DTC_Registers::ReadSoftwareDataRequest(std::optional<uint32_t> val)
@@ -6732,285 +6036,285 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatSERDESInduceErrorSequence
 	return form;
 }
 
-DTCLib::DTC_DDRFlags DTCLib::DTC_Registers::ReadDDRFlags(uint8_t buffer_id)
-{
-	return DTC_DDRFlags(ReadDDRLinkBufferFullFlags()[buffer_id],
-						ReadDDRLinkBufferEmptyFlags()[buffer_id],
-						ReadDDRLinkBufferHalfFullFlags()[buffer_id],
-						ReadDDREventBuilderBufferFullFlags()[buffer_id],
-						ReadDDREventBuilderBufferEmptyFlags()[buffer_id],
-						ReadDDREventBuilderBufferHalfFullFlags()[buffer_id]);
-}
+// DTCLib::DTC_DDRFlags DTCLib::DTC_Registers::ReadDDRFlags(uint8_t buffer_id)
+// {
+// 	return DTC_DDRFlags(ReadDDRLinkBufferFullFlags()[buffer_id],
+// 						ReadDDRLinkBufferEmptyFlags()[buffer_id],
+// 						ReadDDRLinkBufferHalfFullFlags()[buffer_id],
+// 						ReadDDREventBuilderBufferFullFlags()[buffer_id],
+// 						ReadDDREventBuilderBufferEmptyFlags()[buffer_id],
+// 						ReadDDREventBuilderBufferHalfFullFlags()[buffer_id]);
+// }
 
-std::bitset<128> DTCLib::DTC_Registers::ReadDDRLinkBufferFullFlags()
-{
-	uint32_t word0 = ReadRegister_(DTC_Register_DDR3LinkBufferFullFlags0);
-	uint32_t word1 = ReadRegister_(DTC_Register_DDR3LinkBufferFullFlags1);
-	uint32_t word2 = ReadRegister_(DTC_Register_DDR3LinkBufferFullFlags2);
-	uint32_t word3 = ReadRegister_(DTC_Register_DDR3LinkBufferFullFlags3);
-	std::bitset<128> out;
-	for (size_t ii = 0; ii < 32; ++ii)
-	{
-		out[ii] = (word0 >> ii) & 0x1;
-		out[ii + 32] = (word1 >> ii) & 0x1;
-		out[ii + 64] = (word2 >> ii) & 0x1;
-		out[ii + 96] = (word3 >> ii) & 0x1;
-	}
-	return out;
-}
+// std::bitset<128> DTCLib::DTC_Registers::ReadDDRLinkBufferFullFlags()
+// {
+// 	uint32_t word0 = ReadRegister_(DTC_Register_DDR3LinkBufferFullFlags0);
+// 	uint32_t word1 = ReadRegister_(DTC_Register_DDR3LinkBufferFullFlags1);
+// 	uint32_t word2 = ReadRegister_(DTC_Register_DDR3LinkBufferFullFlags2);
+// 	uint32_t word3 = ReadRegister_(DTC_Register_DDR3LinkBufferFullFlags3);
+// 	std::bitset<128> out;
+// 	for (size_t ii = 0; ii < 32; ++ii)
+// 	{
+// 		out[ii] = (word0 >> ii) & 0x1;
+// 		out[ii + 32] = (word1 >> ii) & 0x1;
+// 		out[ii + 64] = (word2 >> ii) & 0x1;
+// 		out[ii + 96] = (word3 >> ii) & 0x1;
+// 	}
+// 	return out;
+// }
 
-std::bitset<128> DTCLib::DTC_Registers::ReadDDRLinkBufferEmptyFlags()
-{
-	uint32_t word0 = ReadRegister_(DTC_Register_DDR3LinkBufferEmptyFlags0);
-	uint32_t word1 = ReadRegister_(DTC_Register_DDR3LinkBufferEmptyFlags1);
-	uint32_t word2 = ReadRegister_(DTC_Register_DDR3LinkBufferEmptyFlags2);
-	uint32_t word3 = ReadRegister_(DTC_Register_DDR3LinkBufferEmptyFlags3);
-	std::bitset<128> out;
-	for (size_t ii = 0; ii < 32; ++ii)
-	{
-		out[ii] = (word0 >> ii) & 0x1;
-		out[ii + 32] = (word1 >> ii) & 0x1;
-		out[ii + 64] = (word2 >> ii) & 0x1;
-		out[ii + 96] = (word3 >> ii) & 0x1;
-	}
-	return out;
-}
+// std::bitset<128> DTCLib::DTC_Registers::ReadDDRLinkBufferEmptyFlags()
+// {
+// 	uint32_t word0 = ReadRegister_(DTC_Register_DDR3LinkBufferEmptyFlags0);
+// 	uint32_t word1 = ReadRegister_(DTC_Register_DDR3LinkBufferEmptyFlags1);
+// 	uint32_t word2 = ReadRegister_(DTC_Register_DDR3LinkBufferEmptyFlags2);
+// 	uint32_t word3 = ReadRegister_(DTC_Register_DDR3LinkBufferEmptyFlags3);
+// 	std::bitset<128> out;
+// 	for (size_t ii = 0; ii < 32; ++ii)
+// 	{
+// 		out[ii] = (word0 >> ii) & 0x1;
+// 		out[ii + 32] = (word1 >> ii) & 0x1;
+// 		out[ii + 64] = (word2 >> ii) & 0x1;
+// 		out[ii + 96] = (word3 >> ii) & 0x1;
+// 	}
+// 	return out;
+// }
 
-std::bitset<128> DTCLib::DTC_Registers::ReadDDRLinkBufferHalfFullFlags()
-{
-	uint32_t word0 = ReadRegister_(DTC_Register_DDR3LinkBufferHalfFullFlags0);
-	uint32_t word1 = ReadRegister_(DTC_Register_DDR3LinkBufferHalfFullFlags1);
-	uint32_t word2 = ReadRegister_(DTC_Register_DDR3LinkBufferHalfFullFlags2);
-	uint32_t word3 = ReadRegister_(DTC_Register_DDR3LinkBufferHalfFullFlags3);
-	std::bitset<128> out;
-	for (size_t ii = 0; ii < 32; ++ii)
-	{
-		out[ii] = (word0 >> ii) & 0x1;
-		out[ii + 32] = (word1 >> ii) & 0x1;
-		out[ii + 64] = (word2 >> ii) & 0x1;
-		out[ii + 96] = (word3 >> ii) & 0x1;
-	}
-	return out;
-}
+// std::bitset<128> DTCLib::DTC_Registers::ReadDDRLinkBufferHalfFullFlags()
+// {
+// 	uint32_t word0 = ReadRegister_(DTC_Register_DDR3LinkBufferHalfFullFlags0);
+// 	uint32_t word1 = ReadRegister_(DTC_Register_DDR3LinkBufferHalfFullFlags1);
+// 	uint32_t word2 = ReadRegister_(DTC_Register_DDR3LinkBufferHalfFullFlags2);
+// 	uint32_t word3 = ReadRegister_(DTC_Register_DDR3LinkBufferHalfFullFlags3);
+// 	std::bitset<128> out;
+// 	for (size_t ii = 0; ii < 32; ++ii)
+// 	{
+// 		out[ii] = (word0 >> ii) & 0x1;
+// 		out[ii + 32] = (word1 >> ii) & 0x1;
+// 		out[ii + 64] = (word2 >> ii) & 0x1;
+// 		out[ii + 96] = (word3 >> ii) & 0x1;
+// 	}
+// 	return out;
+// }
 
-std::bitset<128> DTCLib::DTC_Registers::ReadDDREventBuilderBufferFullFlags()
-{
-	uint32_t word0 = ReadRegister_(DTC_Register_DDR3EVBBufferFullFlags0);
-	uint32_t word1 = ReadRegister_(DTC_Register_DDR3EVBBufferFullFlags1);
-	uint32_t word2 = ReadRegister_(DTC_Register_DDR3EVBBufferFullFlags2);
-	uint32_t word3 = ReadRegister_(DTC_Register_DDR3EVBBufferFullFlags3);
-	std::bitset<128> out;
-	for (size_t ii = 0; ii < 32; ++ii)
-	{
-		out[ii] = (word0 >> ii) & 0x1;
-		out[ii + 32] = (word1 >> ii) & 0x1;
-		out[ii + 64] = (word2 >> ii) & 0x1;
-		out[ii + 96] = (word3 >> ii) & 0x1;
-	}
-	return out;
-}
+// std::bitset<128> DTCLib::DTC_Registers::ReadDDREventBuilderBufferFullFlags()
+// {
+// 	uint32_t word0 = ReadRegister_(DTC_Register_DDR3EVBBufferFullFlags0);
+// 	uint32_t word1 = ReadRegister_(DTC_Register_DDR3EVBBufferFullFlags1);
+// 	uint32_t word2 = ReadRegister_(DTC_Register_DDR3EVBBufferFullFlags2);
+// 	uint32_t word3 = ReadRegister_(DTC_Register_DDR3EVBBufferFullFlags3);
+// 	std::bitset<128> out;
+// 	for (size_t ii = 0; ii < 32; ++ii)
+// 	{
+// 		out[ii] = (word0 >> ii) & 0x1;
+// 		out[ii + 32] = (word1 >> ii) & 0x1;
+// 		out[ii + 64] = (word2 >> ii) & 0x1;
+// 		out[ii + 96] = (word3 >> ii) & 0x1;
+// 	}
+// 	return out;
+// }
 
-std::bitset<128> DTCLib::DTC_Registers::ReadDDREventBuilderBufferEmptyFlags()
-{
-	uint32_t word0 = ReadRegister_(DTC_Register_DDR3EVBBufferEmptyFlags0);
-	uint32_t word1 = ReadRegister_(DTC_Register_DDR3EVBBufferEmptyFlags1);
-	uint32_t word2 = ReadRegister_(DTC_Register_DDR3EVBBufferEmptyFlags2);
-	uint32_t word3 = ReadRegister_(DTC_Register_DDR3EVBBufferEmptyFlags3);
-	std::bitset<128> out;
-	for (size_t ii = 0; ii < 32; ++ii)
-	{
-		out[ii] = (word0 >> ii) & 0x1;
-		out[ii + 32] = (word1 >> ii) & 0x1;
-		out[ii + 64] = (word2 >> ii) & 0x1;
-		out[ii + 96] = (word3 >> ii) & 0x1;
-	}
-	return out;
-}
+// std::bitset<128> DTCLib::DTC_Registers::ReadDDREventBuilderBufferEmptyFlags()
+// {
+// 	uint32_t word0 = ReadRegister_(DTC_Register_DDR3EVBBufferEmptyFlags0);
+// 	uint32_t word1 = ReadRegister_(DTC_Register_DDR3EVBBufferEmptyFlags1);
+// 	uint32_t word2 = ReadRegister_(DTC_Register_DDR3EVBBufferEmptyFlags2);
+// 	uint32_t word3 = ReadRegister_(DTC_Register_DDR3EVBBufferEmptyFlags3);
+// 	std::bitset<128> out;
+// 	for (size_t ii = 0; ii < 32; ++ii)
+// 	{
+// 		out[ii] = (word0 >> ii) & 0x1;
+// 		out[ii + 32] = (word1 >> ii) & 0x1;
+// 		out[ii + 64] = (word2 >> ii) & 0x1;
+// 		out[ii + 96] = (word3 >> ii) & 0x1;
+// 	}
+// 	return out;
+// }
 
-std::bitset<128> DTCLib::DTC_Registers::ReadDDREventBuilderBufferHalfFullFlags()
-{
-	uint32_t word0 = ReadRegister_(DTC_Register_DDR3EVBBufferHalfFullFlags0);
-	uint32_t word1 = ReadRegister_(DTC_Register_DDR3EVBBufferHalfFullFlags1);
-	uint32_t word2 = ReadRegister_(DTC_Register_DDR3EVBBufferHalfFullFlags2);
-	uint32_t word3 = ReadRegister_(DTC_Register_DDR3EVBBufferHalfFullFlags3);
-	std::bitset<128> out;
-	for (size_t ii = 0; ii < 32; ++ii)
-	{
-		out[ii] = (word0 >> ii) & 0x1;
-		out[ii + 32] = (word1 >> ii) & 0x1;
-		out[ii + 64] = (word2 >> ii) & 0x1;
-		out[ii + 96] = (word3 >> ii) & 0x1;
-	}
-	return out;
-}
+// std::bitset<128> DTCLib::DTC_Registers::ReadDDREventBuilderBufferHalfFullFlags()
+// {
+// 	uint32_t word0 = ReadRegister_(DTC_Register_DDR3EVBBufferHalfFullFlags0);
+// 	uint32_t word1 = ReadRegister_(DTC_Register_DDR3EVBBufferHalfFullFlags1);
+// 	uint32_t word2 = ReadRegister_(DTC_Register_DDR3EVBBufferHalfFullFlags2);
+// 	uint32_t word3 = ReadRegister_(DTC_Register_DDR3EVBBufferHalfFullFlags3);
+// 	std::bitset<128> out;
+// 	for (size_t ii = 0; ii < 32; ++ii)
+// 	{
+// 		out[ii] = (word0 >> ii) & 0x1;
+// 		out[ii + 32] = (word1 >> ii) & 0x1;
+// 		out[ii + 64] = (word2 >> ii) & 0x1;
+// 		out[ii + 96] = (word3 >> ii) & 0x1;
+// 	}
+// 	return out;
+// }
 
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDRLinkBufferEmptyFlags0()
-{
-	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferEmptyFlags0);
-	form.description = "DDR Link Buffer Empty Flags 0-31";
-	return form;
-}
+// DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDRLinkBufferEmptyFlags0()
+// {
+// 	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferEmptyFlags0);
+// 	form.description = "DDR Link Buffer Empty Flags 0-31";
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDRLinkBufferEmptyFlags1()
-{
-	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferEmptyFlags1);
-	form.description = "DDR Link Buffer Empty Flags 63-32";
-	return form;
-}
+// DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDRLinkBufferEmptyFlags1()
+// {
+// 	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferEmptyFlags1);
+// 	form.description = "DDR Link Buffer Empty Flags 63-32";
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDRLinkBufferEmptyFlags2()
-{
-	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferEmptyFlags2);
-	form.description = "DDR Link Buffer Empty Flags 95-64";
-	return form;
-}
+// DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDRLinkBufferEmptyFlags2()
+// {
+// 	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferEmptyFlags2);
+// 	form.description = "DDR Link Buffer Empty Flags 95-64";
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDRLinkBufferEmptyFlags3()
-{
-	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferEmptyFlags3);
-	form.description = "DDR Link Buffer Empty Flags 127-96";
-	return form;
-}
+// DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDRLinkBufferEmptyFlags3()
+// {
+// 	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferEmptyFlags3);
+// 	form.description = "DDR Link Buffer Empty Flags 127-96";
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDRLinkBufferHalfFullFlags0()
-{
-	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferHalfFullFlags0);
-	form.description = "DDR Link Buffer Half-Full Flags 0-31";
-	return form;
-}
+// DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDRLinkBufferHalfFullFlags0()
+// {
+// 	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferHalfFullFlags0);
+// 	form.description = "DDR Link Buffer Half-Full Flags 0-31";
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDRLinkBufferHalfFullFlags1()
-{
-	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferHalfFullFlags1);
-	form.description = "DDR Link Buffer Half-Full Flags 63-32";
-	return form;
-}
+// DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDRLinkBufferHalfFullFlags1()
+// {
+// 	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferHalfFullFlags1);
+// 	form.description = "DDR Link Buffer Half-Full Flags 63-32";
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDRLinkBufferHalfFullFlags2()
-{
-	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferHalfFullFlags2);
-	form.description = "DDR Link Buffer Half-Full Flags 95-64";
-	return form;
-}
+// DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDRLinkBufferHalfFullFlags2()
+// {
+// 	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferHalfFullFlags2);
+// 	form.description = "DDR Link Buffer Half-Full Flags 95-64";
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDRLinkBufferHalfFullFlags3()
-{
-	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferHalfFullFlags3);
-	form.description = "DDR Link Buffer Half-Full Flags 127-96";
-	return form;
-}
+// DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDRLinkBufferHalfFullFlags3()
+// {
+// 	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferHalfFullFlags3);
+// 	form.description = "DDR Link Buffer Half-Full Flags 127-96";
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDRLinkBufferFullFlags0()
-{
-	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferEmptyFlags0);
-	form.description = "DDR Link Buffer Full Flags 0-31";
-	return form;
-}
+// DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDRLinkBufferFullFlags0()
+// {
+// 	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferEmptyFlags0);
+// 	form.description = "DDR Link Buffer Full Flags 0-31";
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDRLinkBufferFullFlags1()
-{
-	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferEmptyFlags1);
-	form.description = "DDR Link Buffer Full Flags 63-32";
-	return form;
-}
+// DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDRLinkBufferFullFlags1()
+// {
+// 	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferEmptyFlags1);
+// 	form.description = "DDR Link Buffer Full Flags 63-32";
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDRLinkBufferFullFlags2()
-{
-	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferEmptyFlags2);
-	form.description = "DDR Link Buffer Full Flags 95-64";
-	return form;
-}
+// DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDRLinkBufferFullFlags2()
+// {
+// 	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferEmptyFlags2);
+// 	form.description = "DDR Link Buffer Full Flags 95-64";
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDRLinkBufferFullFlags3()
-{
-	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferEmptyFlags3);
-	form.description = "DDR Link Buffer Full Flags 127-96";
-	return form;
-}
+// DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDRLinkBufferFullFlags3()
+// {
+// 	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferEmptyFlags3);
+// 	form.description = "DDR Link Buffer Full Flags 127-96";
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDREventBuilderBufferEmptyFlags0()
-{
-	auto form = CreateFormatter(DTC_Register_DDR3EVBBufferEmptyFlags0);
-	form.description = "DDR EVB Buffer Empty Flags 0-31";
-	return form;
-}
+// DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDREventBuilderBufferEmptyFlags0()
+// {
+// 	auto form = CreateFormatter(DTC_Register_DDR3EVBBufferEmptyFlags0);
+// 	form.description = "DDR EVB Buffer Empty Flags 0-31";
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDREventBuilderBufferEmptyFlags1()
-{
-	auto form = CreateFormatter(DTC_Register_DDR3EVBBufferEmptyFlags1);
-	form.description = "DDR EVB Buffer Empty Flags 63-32";
-	return form;
-}
+// DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDREventBuilderBufferEmptyFlags1()
+// {
+// 	auto form = CreateFormatter(DTC_Register_DDR3EVBBufferEmptyFlags1);
+// 	form.description = "DDR EVB Buffer Empty Flags 63-32";
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDREventBuilderBufferEmptyFlags2()
-{
-	auto form = CreateFormatter(DTC_Register_DDR3EVBBufferEmptyFlags2);
-	form.description = "DDR EVB Buffer Empty Flags 95-64";
-	return form;
-}
+// DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDREventBuilderBufferEmptyFlags2()
+// {
+// 	auto form = CreateFormatter(DTC_Register_DDR3EVBBufferEmptyFlags2);
+// 	form.description = "DDR EVB Buffer Empty Flags 95-64";
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDREventBuilderBufferEmptyFlags3()
-{
-	auto form = CreateFormatter(DTC_Register_DDR3EVBBufferEmptyFlags3);
-	form.description = "DDR EVB Buffer Empty Flags 127-96";
-	return form;
-}
+// DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDREventBuilderBufferEmptyFlags3()
+// {
+// 	auto form = CreateFormatter(DTC_Register_DDR3EVBBufferEmptyFlags3);
+// 	form.description = "DDR EVB Buffer Empty Flags 127-96";
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDREventBuilderBufferHalfFullFlags0()
-{
-	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferHalfFullFlags0);
-	form.description = "DDR Link Buffer Half-Full Flags 0-31";
-	return form;
-}
+// DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDREventBuilderBufferHalfFullFlags0()
+// {
+// 	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferHalfFullFlags0);
+// 	form.description = "DDR Link Buffer Half-Full Flags 0-31";
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDREventBuilderBufferHalfFullFlags1()
-{
-	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferHalfFullFlags1);
-	form.description = "DDR Link Buffer Half-Full Flags 63-32";
-	return form;
-}
+// DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDREventBuilderBufferHalfFullFlags1()
+// {
+// 	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferHalfFullFlags1);
+// 	form.description = "DDR Link Buffer Half-Full Flags 63-32";
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDREventBuilderBufferHalfFullFlags2()
-{
-	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferHalfFullFlags2);
-	form.description = "DDR Link Buffer Half-Full Flags 95-64";
-	return form;
-}
+// DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDREventBuilderBufferHalfFullFlags2()
+// {
+// 	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferHalfFullFlags2);
+// 	form.description = "DDR Link Buffer Half-Full Flags 95-64";
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDREventBuilderBufferHalfFullFlags3()
-{
-	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferHalfFullFlags3);
-	form.description = "DDR Link Buffer Half-Full Flags 127-96";
-	return form;
-}
+// DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDREventBuilderBufferHalfFullFlags3()
+// {
+// 	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferHalfFullFlags3);
+// 	form.description = "DDR Link Buffer Half-Full Flags 127-96";
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDREventBuilderBufferFullFlags0()
-{
-	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferFullFlags0);
-	form.description = "DDR Link Buffer Full Flags 0-31";
-	return form;
-}
+// DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDREventBuilderBufferFullFlags0()
+// {
+// 	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferFullFlags0);
+// 	form.description = "DDR Link Buffer Full Flags 0-31";
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDREventBuilderBufferFullFlags1()
-{
-	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferFullFlags1);
-	form.description = "DDR Link Buffer Full Flags 63-32";
-	return form;
-}
+// DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDREventBuilderBufferFullFlags1()
+// {
+// 	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferFullFlags1);
+// 	form.description = "DDR Link Buffer Full Flags 63-32";
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDREventBuilderBufferFullFlags2()
-{
-	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferFullFlags2);
-	form.description = "DDR Link Buffer Full Flags 95-64";
-	return form;
-}
+// DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDREventBuilderBufferFullFlags2()
+// {
+// 	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferFullFlags2);
+// 	form.description = "DDR Link Buffer Full Flags 95-64";
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDREventBuilderBufferFullFlags3()
-{
-	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferFullFlags3);
-	form.description = "DDR Link Buffer Full Flags 127-96";
-	return form;
-}
+// DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDREventBuilderBufferFullFlags3()
+// {
+// 	auto form = CreateFormatter(DTC_Register_DDR3LinkBufferFullFlags3);
+// 	form.description = "DDR Link Buffer Full Flags 127-96";
+// 	return form;
+// }
 
 uint32_t DTCLib::DTC_Registers::ReadDataPendingDiagnosticTimer(DTC_Link_ID const& link, std::optional<uint32_t> val)
 {
@@ -7120,578 +6424,6 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDataPendingDiagnosticTime
 	form.description = "Data Pending Diagnostic Timer Link 5";
 	std::stringstream o;
 	o << std::dec << ReadDataPendingDiagnosticTimer(DTC_Link_5, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-
-bool DTCLib::DTC_Registers::ReadEnableROCEmulatorPeriodicTimeoutError(DTC_Link_ID const& link, std::optional<uint32_t> val)
-{
-	DTC_Register reg;
-	switch (link)
-	{
-		case DTC_Link_0:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link0;
-			break;
-		case DTC_Link_1:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link1;
-			break;
-		case DTC_Link_2:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link2;
-			break;
-		case DTC_Link_3:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link3;
-			break;
-		case DTC_Link_4:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link4;
-			break;
-		case DTC_Link_5:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link5;
-			break;
-		default: {
-			__SS__ << "Illegal link index provided: " << link << __E__;
-			__SS_THROW__;
-		}
-	}
-
-	std::bitset<32> dataSet = std::bitset<32>(val.has_value() ? *val : ReadRegister_(reg));
-	return dataSet[31];
-}
-
-void DTCLib::DTC_Registers::EnableROCEmulatorPeriodicTimeoutError(DTC_Link_ID const& link)
-{
-	DTC_Register reg;
-	switch (link)
-	{
-		case DTC_Link_0:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link0;
-			break;
-		case DTC_Link_1:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link1;
-			break;
-		case DTC_Link_2:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link2;
-			break;
-		case DTC_Link_3:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link3;
-			break;
-		case DTC_Link_4:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link4;
-			break;
-		case DTC_Link_5:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link5;
-			break;
-		default: {
-			__SS__ << "Illegal link index provided: " << link << __E__;
-			__SS_THROW__;
-		}
-	}
-	auto dataSet = std::bitset<32>(ReadRegister_(reg));
-	dataSet[31] = 1;
-	WriteRegister_(dataSet.to_ulong(), reg);
-}
-void DTCLib::DTC_Registers::DisableROCEmulatorPeriodicTimeoutError(DTC_Link_ID const& link)
-{
-	DTC_Register reg;
-	switch (link)
-	{
-		case DTC_Link_0:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link0;
-			break;
-		case DTC_Link_1:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link1;
-			break;
-		case DTC_Link_2:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link2;
-			break;
-		case DTC_Link_3:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link3;
-			break;
-		case DTC_Link_4:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link4;
-			break;
-		case DTC_Link_5:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link5;
-			break;
-		default: {
-			__SS__ << "Illegal link index provided: " << link << __E__;
-			__SS_THROW__;
-		}
-	}
-	auto dataSet = std::bitset<32>(ReadRegister_(reg));
-	dataSet[31] = 0;
-	WriteRegister_(dataSet.to_ulong(), reg);
-}
-bool DTCLib::DTC_Registers::ReadEnableROCEmulatorTimeoutErrorOutputPartialData(DTC_Link_ID const& link, std::optional<uint32_t> val)
-{
-	DTC_Register reg;
-	switch (link)
-	{
-		case DTC_Link_0:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link0;
-			break;
-		case DTC_Link_1:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link1;
-			break;
-		case DTC_Link_2:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link2;
-			break;
-		case DTC_Link_3:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link3;
-			break;
-		case DTC_Link_4:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link4;
-			break;
-		case DTC_Link_5:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link5;
-			break;
-		default: {
-			__SS__ << "Illegal link index provided: " << link << __E__;
-			__SS_THROW__;
-		}
-	}
-	auto dataSet = std::bitset<32>(val.has_value() ? *val : ReadRegister_(reg));
-	return dataSet[30];
-}
-void DTCLib::DTC_Registers::EnableROCEmulatorTimeoutErrorOutputPartialData(DTC_Link_ID const& link)
-{
-	DTC_Register reg;
-	switch (link)
-	{
-		case DTC_Link_0:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link0;
-			break;
-		case DTC_Link_1:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link1;
-			break;
-		case DTC_Link_2:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link2;
-			break;
-		case DTC_Link_3:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link3;
-			break;
-		case DTC_Link_4:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link4;
-			break;
-		case DTC_Link_5:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link5;
-			break;
-		default: {
-			__SS__ << "Illegal link index provided: " << link << __E__;
-			__SS_THROW__;
-		}
-	}
-	auto dataSet = std::bitset<32>(ReadRegister_(reg));
-	dataSet[30] = 1;
-	WriteRegister_(dataSet.to_ulong(), reg);
-}
-void DTCLib::DTC_Registers::DisableROCEmulatorTimeoutErrorOutputPartialData(DTC_Link_ID const& link)
-{
-	DTC_Register reg;
-	switch (link)
-	{
-		case DTC_Link_0:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link0;
-			break;
-		case DTC_Link_1:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link1;
-			break;
-		case DTC_Link_2:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link2;
-			break;
-		case DTC_Link_3:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link3;
-			break;
-		case DTC_Link_4:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link4;
-			break;
-		case DTC_Link_5:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link5;
-			break;
-		default: {
-			__SS__ << "Illegal link index provided: " << link << __E__;
-			__SS_THROW__;
-		}
-	}
-	auto dataSet = std::bitset<32>(ReadRegister_(reg));
-	dataSet[30] = 0;
-	WriteRegister_(dataSet.to_ulong(), reg);
-}
-
-uint32_t DTCLib::DTC_Registers::ReadROCEmulatorTimeoutErrorTimestamp(DTC_Link_ID const& link, std::optional<uint32_t> val)
-{
-	DTC_Register reg;
-	switch (link)
-	{
-		case DTC_Link_0:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link0;
-			break;
-		case DTC_Link_1:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link1;
-			break;
-		case DTC_Link_2:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link2;
-			break;
-		case DTC_Link_3:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link3;
-			break;
-		case DTC_Link_4:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link4;
-			break;
-		case DTC_Link_5:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link5;
-			break;
-		default: {
-			__SS__ << "Illegal link index provided: " << link << __E__;
-			__SS_THROW__;
-		}
-	}
-	return val.has_value() ? *val : ReadRegister_(reg) & 0x3FFFFFFF;
-}
-void DTCLib::DTC_Registers::SetROCEmulatorTimeoutErrorTimestamp(DTC_Link_ID const& link, uint32_t timestamp)
-{
-	DTC_Register reg;
-	switch (link)
-	{
-		case DTC_Link_0:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link0;
-			break;
-		case DTC_Link_1:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link1;
-			break;
-		case DTC_Link_2:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link2;
-			break;
-		case DTC_Link_3:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link3;
-			break;
-		case DTC_Link_4:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link4;
-			break;
-		case DTC_Link_5:
-			reg = DTC_Register_ROCEmulator_InduceTimeoutError_Link5;
-			break;
-		default: {
-			__SS__ << "Illegal link index provided: " << link << __E__;
-			__SS_THROW__;
-		}
-	}
-	timestamp &= 0x3FFFFFFF;
-	WriteRegister_(timestamp, reg);
-}
-
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatROCEmulatorInduceTimeoutErrorLink0()
-{
-	auto form = CreateFormatter(DTC_Register_ROCEmulator_InduceTimeoutError_Link0);
-	form.description = "ROC Emulator Induce Timeout Error Link 0";
-	form.vals.push_back("([ x = 1 (hi) ])");  // translation
-	form.vals.push_back(std::string("Enable Periodic Error:      [") +
-						(ReadEnableROCEmulatorPeriodicTimeoutError(DTC_Link_0, form.value) ? "x" : " ") + "]");
-	form.vals.push_back(std::string("Enable Output Partial Data: [") +
-						(ReadEnableROCEmulatorTimeoutErrorOutputPartialData(DTC_Link_0, form.value) ? "x" : " ") + "]");
-	std::stringstream o;
-	o << std::dec << ReadROCEmulatorTimeoutErrorTimestamp(DTC_Link_0, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatROCEmulatorInduceTimeoutErrorLink1()
-{
-	auto form = CreateFormatter(DTC_Register_ROCEmulator_InduceTimeoutError_Link1);
-	form.description = "ROC Emulator Induce Timeout Error Link 1";
-	form.vals.push_back("([ x = 1 (hi) ])");  // translation
-	form.vals.push_back(std::string("Enable Periodic Error:      [") +
-						(ReadEnableROCEmulatorPeriodicTimeoutError(DTC_Link_1, form.value) ? "x" : " ") + "]");
-	form.vals.push_back(std::string("Enable Output Partial Data: [") +
-						(ReadEnableROCEmulatorTimeoutErrorOutputPartialData(DTC_Link_1, form.value) ? "x" : " ") + "]");
-	std::stringstream o;
-	o << std::dec << ReadROCEmulatorTimeoutErrorTimestamp(DTC_Link_1, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatROCEmulatorInduceTimeoutErrorLink2()
-{
-	auto form = CreateFormatter(DTC_Register_ROCEmulator_InduceTimeoutError_Link2);
-	form.description = "ROC Emulator Induce Timeout Error Link 2";
-	form.vals.push_back("([ x = 1 (hi) ])");  // translation
-	form.vals.push_back(std::string("Enable Periodic Error:      [") +
-						(ReadEnableROCEmulatorPeriodicTimeoutError(DTC_Link_2, form.value) ? "x" : " ") + "]");
-	form.vals.push_back(std::string("Enable Output Partial Data: [") +
-						(ReadEnableROCEmulatorTimeoutErrorOutputPartialData(DTC_Link_2, form.value) ? "x" : " ") + "]");
-	std::stringstream o;
-	o << std::dec << ReadROCEmulatorTimeoutErrorTimestamp(DTC_Link_2, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatROCEmulatorInduceTimeoutErrorLink3()
-{
-	auto form = CreateFormatter(DTC_Register_ROCEmulator_InduceTimeoutError_Link3);
-	form.description = "ROC Emulator Induce Timeout Error Link 3";
-	form.vals.push_back("([ x = 1 (hi) ])");  // translation
-	form.vals.push_back(std::string("Enable Periodic Error:      [") +
-						(ReadEnableROCEmulatorPeriodicTimeoutError(DTC_Link_3, form.value) ? "x" : " ") + "]");
-	form.vals.push_back(std::string("Enable Output Partial Data: [") +
-						(ReadEnableROCEmulatorTimeoutErrorOutputPartialData(DTC_Link_3, form.value) ? "x" : " ") + "]");
-	std::stringstream o;
-	o << std::dec << ReadROCEmulatorTimeoutErrorTimestamp(DTC_Link_3, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatROCEmulatorInduceTimeoutErrorLink4()
-{
-	auto form = CreateFormatter(DTC_Register_ROCEmulator_InduceTimeoutError_Link4);
-	form.description = "ROC Emulator Induce Timeout Error Link 4";
-	form.vals.push_back("([ x = 1 (hi) ])");  // translation
-	form.vals.push_back(std::string("Enable Periodic Error:      [") +
-						(ReadEnableROCEmulatorPeriodicTimeoutError(DTC_Link_4, form.value) ? "x" : " ") + "]");
-	form.vals.push_back(std::string("Enable Output Partial Data: [") +
-						(ReadEnableROCEmulatorTimeoutErrorOutputPartialData(DTC_Link_4, form.value) ? "x" : " ") + "]");
-	std::stringstream o;
-	o << std::dec << ReadROCEmulatorTimeoutErrorTimestamp(DTC_Link_4, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatROCEmulatorInduceTimeoutErrorLink5()
-{
-	auto form = CreateFormatter(DTC_Register_ROCEmulator_InduceTimeoutError_Link5);
-	form.description = "ROC Emulator Induce Timeout Error Link 5";
-	form.vals.push_back("([ x = 1 (hi) ])");  // translation
-	form.vals.push_back(std::string("Enable Periodic Error:      [") +
-						(ReadEnableROCEmulatorPeriodicTimeoutError(DTC_Link_5, form.value) ? "x" : " ") + "]");
-	form.vals.push_back(std::string("Enable Output Partial Data: [") +
-						(ReadEnableROCEmulatorTimeoutErrorOutputPartialData(DTC_Link_5, form.value) ? "x" : " ") + "]");
-	std::stringstream o;
-	o << std::dec << ReadROCEmulatorTimeoutErrorTimestamp(DTC_Link_5, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-
-bool DTCLib::DTC_Registers::ReadEnableROCEmulatorExtraWordError(DTC_Link_ID const& link, std::optional<uint32_t> val)
-{
-	DTC_Register reg;
-	switch (link)
-	{
-		case DTC_Link_0:
-			reg = DTC_Register_ROCEmulator_InduceExtraWordError_Link0;
-			break;
-		case DTC_Link_1:
-			reg = DTC_Register_ROCEmulator_InduceExtraWordError_Link1;
-			break;
-		case DTC_Link_2:
-			reg = DTC_Register_ROCEmulator_InduceExtraWordError_Link2;
-			break;
-		case DTC_Link_3:
-			reg = DTC_Register_ROCEmulator_InduceExtraWordError_Link3;
-			break;
-		case DTC_Link_4:
-			reg = DTC_Register_ROCEmulator_InduceExtraWordError_Link4;
-			break;
-		case DTC_Link_5:
-			reg = DTC_Register_ROCEmulator_InduceExtraWordError_Link5;
-			break;
-		default: {
-			__SS__ << "Illegal link index provided: " << link << __E__;
-			__SS_THROW__;
-		}
-	}
-	std::bitset<32> dataSet = std::bitset<32>(val.has_value() ? *val : ReadRegister_(reg));
-	return dataSet[31];
-}
-
-void DTCLib::DTC_Registers::EnableROCEmulatorExtraWordError(DTC_Link_ID const& link)
-{
-	DTC_Register reg;
-	switch (link)
-	{
-		case DTC_Link_0:
-			reg = DTC_Register_ROCEmulator_InduceExtraWordError_Link0;
-			break;
-		case DTC_Link_1:
-			reg = DTC_Register_ROCEmulator_InduceExtraWordError_Link1;
-			break;
-		case DTC_Link_2:
-			reg = DTC_Register_ROCEmulator_InduceExtraWordError_Link2;
-			break;
-		case DTC_Link_3:
-			reg = DTC_Register_ROCEmulator_InduceExtraWordError_Link3;
-			break;
-		case DTC_Link_4:
-			reg = DTC_Register_ROCEmulator_InduceExtraWordError_Link4;
-			break;
-		case DTC_Link_5:
-			reg = DTC_Register_ROCEmulator_InduceExtraWordError_Link5;
-			break;
-		default: {
-			__SS__ << "Illegal link index provided: " << link << __E__;
-			__SS_THROW__;
-		}
-	}
-	auto dataSet = std::bitset<32>(ReadRegister_(reg));
-	dataSet[31] = 1;
-	WriteRegister_(dataSet.to_ulong(), reg);
-}
-void DTCLib::DTC_Registers::DisableROCEmulatorExtraWordError(DTC_Link_ID const& link)
-{
-	DTC_Register reg;
-	switch (link)
-	{
-		case DTC_Link_0:
-			reg = DTC_Register_ROCEmulator_InduceExtraWordError_Link0;
-			break;
-		case DTC_Link_1:
-			reg = DTC_Register_ROCEmulator_InduceExtraWordError_Link1;
-			break;
-		case DTC_Link_2:
-			reg = DTC_Register_ROCEmulator_InduceExtraWordError_Link2;
-			break;
-		case DTC_Link_3:
-			reg = DTC_Register_ROCEmulator_InduceExtraWordError_Link3;
-			break;
-		case DTC_Link_4:
-			reg = DTC_Register_ROCEmulator_InduceExtraWordError_Link4;
-			break;
-		case DTC_Link_5:
-			reg = DTC_Register_ROCEmulator_InduceExtraWordError_Link5;
-			break;
-		default: {
-			__SS__ << "Illegal link index provided: " << link << __E__;
-			__SS_THROW__;
-		}
-	}
-	auto dataSet = std::bitset<32>(ReadRegister_(reg));
-	dataSet[31] = 0;
-	WriteRegister_(dataSet.to_ulong(), reg);
-}
-
-uint32_t DTCLib::DTC_Registers::ReadROCEmulatorExtraWordErrorTimestamp(DTC_Link_ID const& link, std::optional<uint32_t> val)
-{
-	DTC_Register reg;
-	switch (link)
-	{
-		case DTC_Link_0:
-			reg = DTC_Register_ROCEmulator_InduceExtraWordError_Link0;
-			break;
-		case DTC_Link_1:
-			reg = DTC_Register_ROCEmulator_InduceExtraWordError_Link1;
-			break;
-		case DTC_Link_2:
-			reg = DTC_Register_ROCEmulator_InduceExtraWordError_Link2;
-			break;
-		case DTC_Link_3:
-			reg = DTC_Register_ROCEmulator_InduceExtraWordError_Link3;
-			break;
-		case DTC_Link_4:
-			reg = DTC_Register_ROCEmulator_InduceExtraWordError_Link4;
-			break;
-		case DTC_Link_5:
-			reg = DTC_Register_ROCEmulator_InduceExtraWordError_Link5;
-			break;
-		default: {
-			__SS__ << "Illegal link index provided: " << link << __E__;
-			__SS_THROW__;
-		}
-	}
-	return val.has_value() ? *val : ReadRegister_(reg) & 0x7FFFFFFF;
-}
-void DTCLib::DTC_Registers::SetROCEmulatorExtraWordErrorTimestamp(DTC_Link_ID const& link, uint32_t timestamp)
-{
-	DTC_Register reg;
-	switch (link)
-	{
-		case DTC_Link_0:
-			reg = DTC_Register_ROCEmulator_InduceExtraWordError_Link0;
-			break;
-		case DTC_Link_1:
-			reg = DTC_Register_ROCEmulator_InduceExtraWordError_Link1;
-			break;
-		case DTC_Link_2:
-			reg = DTC_Register_ROCEmulator_InduceExtraWordError_Link2;
-			break;
-		case DTC_Link_3:
-			reg = DTC_Register_ROCEmulator_InduceExtraWordError_Link3;
-			break;
-		case DTC_Link_4:
-			reg = DTC_Register_ROCEmulator_InduceExtraWordError_Link4;
-			break;
-		case DTC_Link_5:
-			reg = DTC_Register_ROCEmulator_InduceExtraWordError_Link5;
-			break;
-		default: {
-			__SS__ << "Illegal link index provided: " << link << __E__;
-			__SS_THROW__;
-		}
-	}
-	timestamp &= 0x7FFFFFFF;
-	WriteRegister_(timestamp, reg);
-}
-
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatROCEmulatorExtraWordErrorLink0()
-{
-	auto form = CreateFormatter(DTC_Register_ROCEmulator_InduceExtraWordError_Link0);
-	form.description = "ROC Emulator Induce Extra Word Error Link 0";
-	form.vals.push_back("([ x = 1 (hi) ])");  // translation
-	form.vals.push_back(std::string("Enable Periodic Error:      [") +
-						(ReadEnableROCEmulatorExtraWordError(DTC_Link_0, form.value) ? "x" : " ") + "]");
-	std::stringstream o;
-	o << std::dec << ReadROCEmulatorExtraWordErrorTimestamp(DTC_Link_0, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatROCEmulatorExtraWordErrorLink1()
-{
-	auto form = CreateFormatter(DTC_Register_ROCEmulator_InduceExtraWordError_Link1);
-	form.description = "ROC Emulator Induce Extra Word Error Link 1";
-	form.vals.push_back("([ x = 1 (hi) ])");  // translation
-	form.vals.push_back(std::string("Enable Periodic Error:      [") +
-						(ReadEnableROCEmulatorExtraWordError(DTC_Link_1, form.value) ? "x" : " ") + "]");
-	std::stringstream o;
-	o << std::dec << ReadROCEmulatorExtraWordErrorTimestamp(DTC_Link_1, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatROCEmulatorExtraWordErrorLink2()
-{
-	auto form = CreateFormatter(DTC_Register_ROCEmulator_InduceExtraWordError_Link2);
-	form.description = "ROC Emulator Induce Extra Word Error Link 2";
-	form.vals.push_back("([ x = 1 (hi) ])");  // translation
-	form.vals.push_back(std::string("Enable Periodic Error:      [") +
-						(ReadEnableROCEmulatorExtraWordError(DTC_Link_2, form.value) ? "x" : " ") + "]");
-	std::stringstream o;
-	o << std::dec << ReadROCEmulatorExtraWordErrorTimestamp(DTC_Link_2, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatROCEmulatorExtraWordErrorLink3()
-{
-	auto form = CreateFormatter(DTC_Register_ROCEmulator_InduceExtraWordError_Link3);
-	form.description = "ROC Emulator Induce Extra Word Error Link 3";
-	form.vals.push_back("([ x = 1 (hi) ])");  // translation
-	form.vals.push_back(std::string("Enable Periodic Error:      [") +
-						(ReadEnableROCEmulatorExtraWordError(DTC_Link_3, form.value) ? "x" : " ") + "]");
-	std::stringstream o;
-	o << std::dec << ReadROCEmulatorExtraWordErrorTimestamp(DTC_Link_3, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatROCEmulatorExtraWordErrorLink4()
-{
-	auto form = CreateFormatter(DTC_Register_ROCEmulator_InduceExtraWordError_Link4);
-	form.description = "ROC Emulator Induce Extra Word Error Link 4";
-	form.vals.push_back("([ x = 1 (hi) ])");  // translation
-	form.vals.push_back(std::string("Enable Periodic Error:      [") +
-						(ReadEnableROCEmulatorExtraWordError(DTC_Link_4, form.value) ? "x" : " ") + "]");
-	std::stringstream o;
-	o << std::dec << ReadROCEmulatorExtraWordErrorTimestamp(DTC_Link_4, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatROCEmulatorExtraWordErrorLink5()
-{
-	auto form = CreateFormatter(DTC_Register_ROCEmulator_InduceExtraWordError_Link5);
-	form.description = "ROC Emulator Induce Extra Word Error Link 5";
-	form.vals.push_back("([ x = 1 (hi) ])");  // translation
-	form.vals.push_back(std::string("Enable Periodic Error:      [") +
-						(ReadEnableROCEmulatorExtraWordError(DTC_Link_5, form.value) ? "x" : " ") + "]");
-	std::stringstream o;
-	o << std::dec << ReadROCEmulatorExtraWordErrorTimestamp(DTC_Link_5, form.value);
 	form.vals.push_back(o.str());
 	return form;
 }
@@ -8318,21 +7050,21 @@ uint32_t DTCLib::DTC_Registers::ReadROCEmulatorInterpacketDelay(DTC_Link_ID cons
 		case DTC_Link_0:
 			reg = DTC_Register_ROCEmulator_InterpacketDelay_Link0;
 			break;
-		case DTC_Link_1:
-			reg = DTC_Register_ROCEmulator_InterpacketDelay_Link1;
-			break;
-		case DTC_Link_2:
-			reg = DTC_Register_ROCEmulator_InterpacketDelay_Link2;
-			break;
-		case DTC_Link_3:
-			reg = DTC_Register_ROCEmulator_InterpacketDelay_Link3;
-			break;
-		case DTC_Link_4:
-			reg = DTC_Register_ROCEmulator_InterpacketDelay_Link4;
-			break;
-		case DTC_Link_5:
-			reg = DTC_Register_ROCEmulator_InterpacketDelay_Link5;
-			break;
+		// case DTC_Link_1:
+		// 	reg = DTC_Register_ROCEmulator_InterpacketDelay_Link1;
+		// 	break;
+		// case DTC_Link_2:
+		// 	reg = DTC_Register_ROCEmulator_InterpacketDelay_Link2;
+		// 	break;
+		// case DTC_Link_3:
+		// 	reg = DTC_Register_ROCEmulator_InterpacketDelay_Link3;
+		// 	break;
+		// case DTC_Link_4:
+		// 	reg = DTC_Register_ROCEmulator_InterpacketDelay_Link4;
+		// 	break;
+		// case DTC_Link_5:
+		// 	reg = DTC_Register_ROCEmulator_InterpacketDelay_Link5;
+		// 	break;
 		default: {
 			__SS__ << "Illegal link index provided: " << link << __E__;
 			__SS_THROW__;
@@ -8348,21 +7080,21 @@ void DTCLib::DTC_Registers::SetROCEmulatorInterpacketDelay(DTC_Link_ID const& li
 		case DTC_Link_0:
 			reg = DTC_Register_ROCEmulator_InterpacketDelay_Link0;
 			break;
-		case DTC_Link_1:
-			reg = DTC_Register_ROCEmulator_InterpacketDelay_Link1;
-			break;
-		case DTC_Link_2:
-			reg = DTC_Register_ROCEmulator_InterpacketDelay_Link2;
-			break;
-		case DTC_Link_3:
-			reg = DTC_Register_ROCEmulator_InterpacketDelay_Link3;
-			break;
-		case DTC_Link_4:
-			reg = DTC_Register_ROCEmulator_InterpacketDelay_Link4;
-			break;
-		case DTC_Link_5:
-			reg = DTC_Register_ROCEmulator_InterpacketDelay_Link5;
-			break;
+		// case DTC_Link_1:
+		// 	reg = DTC_Register_ROCEmulator_InterpacketDelay_Link1;
+		// 	break;
+		// case DTC_Link_2:
+		// 	reg = DTC_Register_ROCEmulator_InterpacketDelay_Link2;
+		// 	break;
+		// case DTC_Link_3:
+		// 	reg = DTC_Register_ROCEmulator_InterpacketDelay_Link3;
+		// 	break;
+		// case DTC_Link_4:
+		// 	reg = DTC_Register_ROCEmulator_InterpacketDelay_Link4;
+		// 	break;
+		// case DTC_Link_5:
+		// 	reg = DTC_Register_ROCEmulator_InterpacketDelay_Link5;
+		// 	break;
 		default: {
 			__SS__ << "Illegal link index provided: " << link << __E__;
 			__SS_THROW__;
@@ -8373,75 +7105,79 @@ void DTCLib::DTC_Registers::SetROCEmulatorInterpacketDelay(DTC_Link_ID const& li
 DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatROCEmulatorInterpacketDelayLink0()
 {
 	auto form = CreateFormatter(DTC_Register_ROCEmulator_InterpacketDelay_Link0);
-	form.description = "ROC Emulator Interpacket Delay Link 0 (*5ns)";
+	form.description = "ROC Emulator Interpacket Delay all Links (*5ns)";
 	std::stringstream o;
 	o << std::dec << ReadROCEmulatorInterpacketDelay(DTC_Link_0, form.value);
 	form.vals.push_back(o.str());
 	return form;
 }
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatROCEmulatorInterpacketDelayLink1()
-{
-	auto form = CreateFormatter(DTC_Register_ROCEmulator_InterpacketDelay_Link1);
-	form.description = "ROC Emulator Interpacket Delay Link 1 (*5ns)";
-	std::stringstream o;
-	o << std::dec << ReadROCEmulatorInterpacketDelay(DTC_Link_1, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatROCEmulatorInterpacketDelayLink2()
-{
-	auto form = CreateFormatter(DTC_Register_ROCEmulator_InterpacketDelay_Link2);
-	form.description = "ROC Emulator Interpacket Delay Link 2 (*5ns)";
-	std::stringstream o;
-	o << std::dec << ReadROCEmulatorInterpacketDelay(DTC_Link_2, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatROCEmulatorInterpacketDelayLink3()
-{
-	auto form = CreateFormatter(DTC_Register_ROCEmulator_InterpacketDelay_Link3);
-	form.description = "ROC Emulator Interpacket Delay Link 3 (*5ns)";
-	std::stringstream o;
-	o << std::dec << ReadROCEmulatorInterpacketDelay(DTC_Link_3, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatROCEmulatorInterpacketDelayLink4()
-{
-	auto form = CreateFormatter(DTC_Register_ROCEmulator_InterpacketDelay_Link4);
-	form.description = "ROC Emulator Interpacket Delay Link 4 (*5ns)";
-	std::stringstream o;
-	o << std::dec << ReadROCEmulatorInterpacketDelay(DTC_Link_4, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatROCEmulatorInterpacketDelayLink5()
-{
-	auto form = CreateFormatter(DTC_Register_ROCEmulator_InterpacketDelay_Link5);
-	form.description = "ROC Emulator Interpacket Delay Link 5 (*5ns)";
-	std::stringstream o;
-	o << std::dec << ReadROCEmulatorInterpacketDelay(DTC_Link_5, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
+// DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatROCEmulatorInterpacketDelayLink1()
+// {
+// 	auto form = CreateFormatter(DTC_Register_ROCEmulator_InterpacketDelay_Link1);
+// 	form.description = "ROC Emulator Interpacket Delay Link 1 (*5ns)";
+// 	std::stringstream o;
+// 	o << std::dec << ReadROCEmulatorInterpacketDelay(DTC_Link_1, form.value);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
+// DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatROCEmulatorInterpacketDelayLink2()
+// {
+// 	auto form = CreateFormatter(DTC_Register_ROCEmulator_InterpacketDelay_Link2);
+// 	form.description = "ROC Emulator Interpacket Delay Link 2 (*5ns)";
+// 	std::stringstream o;
+// 	o << std::dec << ReadROCEmulatorInterpacketDelay(DTC_Link_2, form.value);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
+// DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatROCEmulatorInterpacketDelayLink3()
+// {
+// 	auto form = CreateFormatter(DTC_Register_ROCEmulator_InterpacketDelay_Link3);
+// 	form.description = "ROC Emulator Interpacket Delay Link 3 (*5ns)";
+// 	std::stringstream o;
+// 	o << std::dec << ReadROCEmulatorInterpacketDelay(DTC_Link_3, form.value);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
+// DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatROCEmulatorInterpacketDelayLink4()
+// {
+// 	auto form = CreateFormatter(DTC_Register_ROCEmulator_InterpacketDelay_Link4);
+// 	form.description = "ROC Emulator Interpacket Delay Link 4 (*5ns)";
+// 	std::stringstream o;
+// 	o << std::dec << ReadROCEmulatorInterpacketDelay(DTC_Link_4, form.value);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
+// DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatROCEmulatorInterpacketDelayLink5()
+// {
+// 	auto form = CreateFormatter(DTC_Register_ROCEmulator_InterpacketDelay_Link5);
+// 	form.description = "ROC Emulator Interpacket Delay Link 5 (*5ns)";
+// 	std::stringstream o;
+// 	o << std::dec << ReadROCEmulatorInterpacketDelay(DTC_Link_5, form.value);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
 
 // TX Data Request Packet Count
-uint32_t DTCLib::DTC_Registers::ReadTXEventWindowMarkerCountLinkRegister(DTC_Link_ID const& link, std::optional<uint32_t> val)
+uint32_t DTCLib::DTC_Registers::ReadTXEventWindowMarkerCount(DTC_Link_ID const& link, std::optional<uint32_t> val)
 {
 	return val.has_value() ? *val : ReadRegister_(GetTXEventWindowMarkerCountLinkRegister(link));
-} //end ReadTXEventWindowMarkerCountLinkRegister()
+}  // end ReadTXEventWindowMarkerCount()
 
 DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatTXEventWindowMarkerCountLink(DTC_Link_ID const& link)
 {
 	auto form = CreateFormatter(GetTXEventWindowMarkerCountLinkRegister(link));
-	form.description = "Data Request Packet TX Counter Link " + 
-		std::to_string((GetTXEventWindowMarkerCountLinkRegister(link) -
-			GetTXEventWindowMarkerCountLinkRegister(DTC_Link_0))/4 );
+	if (link == DTC_Link_CFO)
+		form.description = "CFO Event Window Marker (EWM) Count";
+	else
+		form.description = "EWM TX Count on Link " +
+						   std::to_string((GetTXEventWindowMarkerCountLinkRegister(link) -
+										   GetTXEventWindowMarkerCountLinkRegister(DTC_Link_0)) /
+										  4);
 	std::stringstream o;
-	o << std::dec << ReadTXEventWindowMarkerCountLinkRegister(link, form.value);
+	o << std::dec << ReadTXEventWindowMarkerCount(link, form.value);
 	form.vals.push_back(o.str());
 	return form;
-} //end FormatTXEventWindowMarkerCountLink()
+}  // end FormatTXEventWindowMarkerCountLink()
 
 DTCLib::DTC_Register DTCLib::DTC_Registers::GetTXEventWindowMarkerCountLinkRegister(DTC_Link_ID const& link)
 {
@@ -8472,17 +7208,34 @@ DTCLib::DTC_Register DTCLib::DTC_Registers::GetTXEventWindowMarkerCountLinkRegis
 		default: {
 			__SS__ << "Illegal link index provided: " << link << __E__;
 			ss << "\n\nThe stack trace is as follows:\n"
-				<< otsStyleStackTrace() << __E__;
+			   << otsStyleStackTrace() << __E__;
 			__SS_THROW__;
 		}
 	}
 	return reg;
-} //end GetTXEventWindowMarkerCountLinkRegister()
-
+}  // end GetTXEventWindowMarkerCountLinkRegister()
 
 // TX Data Request Packet Count
 uint32_t DTCLib::DTC_Registers::ReadTXDataRequestPacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val)
 {
+	return val.has_value() ? *val : ReadRegister_(GetTXDataRequestPacketCountLinkRegister(link));
+}  // end ReadTXDataRequestPacketCount()
+
+DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatTXDataRequestPacketCountLink(DTC_Link_ID const& link)
+{
+	auto form = CreateFormatter(GetTXEventWindowMarkerCountLinkRegister(link));
+	form.description = "DRP TX Count on Link " +
+					   std::to_string((GetTXDataRequestPacketCountLinkRegister(link) -
+									   GetTXDataRequestPacketCountLinkRegister(DTC_Link_0)) /
+									  4);
+	std::stringstream o;
+	o << std::dec << ReadTXDataRequestPacketCount(link, form.value);
+	form.vals.push_back(o.str());
+	return form;
+}  // end FormatTXEventWindowMarkerCountLink()
+
+DTCLib::DTC_Register DTCLib::DTC_Registers::GetTXDataRequestPacketCountLinkRegister(DTC_Link_ID const& link)
+{
 	DTC_Register reg;
 	switch (link)
 	{
@@ -8507,129 +7260,48 @@ uint32_t DTCLib::DTC_Registers::ReadTXDataRequestPacketCount(DTC_Link_ID const& 
 		default: {
 			__SS__ << "Illegal link index provided: " << link << __E__;
 			ss << "\n\nThe stack trace is as follows:\n"
-				<< otsStyleStackTrace() << __E__;
+			   << otsStyleStackTrace() << __E__;
 			__SS_THROW__;
 		}
 	}
-	return val.has_value() ? *val : ReadRegister_(reg);
-}
-void DTCLib::DTC_Registers::ClearTXDataRequetsPacketCount(DTC_Link_ID const& link)
-{
-	DTC_Register reg;
-	switch (link)
-	{
-		case DTC_Link_0:
-			reg = DTC_Register_TXDataRequestPacketCount_Link0;
-			break;
-		case DTC_Link_1:
-			reg = DTC_Register_TXDataRequestPacketCount_Link1;
-			break;
-		case DTC_Link_2:
-			reg = DTC_Register_TXDataRequestPacketCount_Link2;
-			break;
-		case DTC_Link_3:
-			reg = DTC_Register_TXDataRequestPacketCount_Link3;
-			break;
-		case DTC_Link_4:
-			reg = DTC_Register_TXDataRequestPacketCount_Link4;
-			break;
-		case DTC_Link_5:
-			reg = DTC_Register_TXDataRequestPacketCount_Link5;
-			break;
-		default: {
-			__SS__ << "Illegal link index provided: " << link << __E__;
-			ss << "\n\nThe stack trace is as follows:\n"
-				<< otsStyleStackTrace() << __E__;
-			__SS_THROW__;
-		}
-	}
-	WriteRegister_(0, reg);
-}
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatTXDataRequestPacketCountLink0()
-{
-	auto form = CreateFormatter(DTC_Register_TXDataRequestPacketCount_Link0);
-	form.description = "Data Request Packet TX Counter Link 0";
-	std::stringstream o;
-	o << std::dec << ReadTXDataRequestPacketCount(DTC_Link_0, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatTXDataRequestPacketCountLink1()
-{
-	auto form = CreateFormatter(DTC_Register_TXDataRequestPacketCount_Link1);
-	form.description = "Data Request Packet TX Counter Link 1";
-	std::stringstream o;
-	o << std::dec << ReadTXDataRequestPacketCount(DTC_Link_1, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatTXDataRequestPacketCountLink2()
-{
-	auto form = CreateFormatter(DTC_Register_TXDataRequestPacketCount_Link2);
-	form.description = "Data Request Packet TX Counter Link 2";
-	std::stringstream o;
-	o << std::dec << ReadTXDataRequestPacketCount(DTC_Link_2, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatTXDataRequestPacketCountLink3()
-{
-	auto form = CreateFormatter(DTC_Register_TXDataRequestPacketCount_Link3);
-	form.description = "Data Request Packet TX Counter Link 3";
-	std::stringstream o;
-	o << std::dec << ReadTXDataRequestPacketCount(DTC_Link_3, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatTXDataRequestPacketCountLink4()
-{
-	auto form = CreateFormatter(DTC_Register_TXDataRequestPacketCount_Link4);
-	form.description = "Data Request Packet TX Counter Link 4";
-	std::stringstream o;
-	o << std::dec << ReadTXDataRequestPacketCount(DTC_Link_4, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatTXDataRequestPacketCountLink5()
-{
-	auto form = CreateFormatter(DTC_Register_TXDataRequestPacketCount_Link5);
-	form.description = "Data Request Packet TX Counter Link 5";
-	std::stringstream o;
-	o << std::dec << ReadTXDataRequestPacketCount(DTC_Link_5, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
+	return reg;
+}  // end GetTXDataRequestPacketCountLinkRegister()
+
 DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatCFOTXClockMarkerCountLink6()
 {
 	auto form = CreateFormatter(DTC_Register_CFOTXClockMarkerCount_Link6);
-	form.description = "CFO TX Event Window Marker Counter Link 6";
+	form.description = "CFO Clock Marker Count";
 	std::stringstream o;
 	o << std::dec << ReadCFOTXClockMarkerCountLink6(form.value);
 	form.vals.push_back(o.str());
 	return form;
-} //end FormatCFOTXClockMarkerCountLink6()
+}  // end FormatCFOTXClockMarkerCountLink6()
 
 uint32_t DTCLib::DTC_Registers::ReadCFOTXClockMarkerCountLink6(std::optional<uint32_t> val)
 {
 	return val.has_value() ? *val : ReadRegister_(DTC_Register_CFOTXClockMarkerCount_Link6);
-} //end ReadCFOTXClockMarkerCountLink6()
+}  // end ReadCFOTXClockMarkerCountLink6()
 
 // TX Heartbeat Packet Count
 uint32_t DTCLib::DTC_Registers::ReadTXHeartbeatPacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val)
 {
 	return val.has_value() ? *val : ReadRegister_(GetTXHeartbeatPacketCountLinkRegister(link));
-} //end ReadTXHeartbeatPacketCount()
+}  // end ReadTXHeartbeatPacketCount()
 DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatTXHeartbeatPacketCountLink(DTC_Link_ID const& link)
 {
 	auto form = CreateFormatter(GetTXHeartbeatPacketCountLinkRegister(link));
-	form.description = "Heartbeat Packet TX Counter Link " + 
-		std::to_string((GetTXHeartbeatPacketCountLinkRegister(link) -
-			GetTXHeartbeatPacketCountLinkRegister(DTC_Link_0))/4 );
+	if (link == DTC_Link_CFO)
+		form.description = "CFO Heartbeat Packet (HBP) Count";
+	else
+		form.description = "HBP TX Counter Link " +
+						   std::to_string((GetTXHeartbeatPacketCountLinkRegister(link) -
+										   GetTXHeartbeatPacketCountLinkRegister(DTC_Link_0)) /
+										  4);
 	std::stringstream o;
 	o << std::dec << ReadTXHeartbeatPacketCount(DTC_Link_0, form.value);
 	form.vals.push_back(o.str());
 	return form;
-} //end FormatTXHeartbeatPacketCountLink()
+}  // end FormatTXHeartbeatPacketCountLink()
 
 DTCLib::DTC_Register DTCLib::DTC_Registers::GetTXHeartbeatPacketCountLinkRegister(DTC_Link_ID const& link)
 {
@@ -8663,11 +7335,29 @@ DTCLib::DTC_Register DTCLib::DTC_Registers::GetTXHeartbeatPacketCountLinkRegiste
 		}
 	}
 	return reg;
-} //end GetTXHeartbeatPacketCountLinkRegister()
+}  // end GetTXHeartbeatPacketCountLinkRegister()
 
 // RX Data Header Packet Count
 uint32_t DTCLib::DTC_Registers::ReadRXDataHeaderPacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val)
 {
+	return val.has_value() ? *val : ReadRegister_(GetRXDataHeaderPacketCountLinkRegister(link));
+}  // end ReadRXDataHeaderPacketCount()
+
+DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatRXDataHeaderPacketCountLink(DTC_Link_ID const& link)
+{
+	auto form = CreateFormatter(GetRXDataHeaderPacketCountLinkRegister(link));
+	form.description = "ROC DH RX Count on Link " +
+					   std::to_string((GetRXDataHeaderPacketCountLinkRegister(link) -
+									   GetRXDataHeaderPacketCountLinkRegister(DTC_Link_0)) /
+									  4);
+	std::stringstream o;
+	o << std::dec << ReadRXDataHeaderPacketCount(link, form.value);
+	form.vals.push_back(o.str());
+	return form;
+}  // end FormatRXDataHeaderPacketCountLink()
+
+DTCLib::DTC_Register DTCLib::DTC_Registers::GetRXDataHeaderPacketCountLinkRegister(DTC_Link_ID const& link)
+{
 	DTC_Register reg;
 	switch (link)
 	{
@@ -8694,96 +7384,30 @@ uint32_t DTCLib::DTC_Registers::ReadRXDataHeaderPacketCount(DTC_Link_ID const& l
 			__SS_THROW__;
 		}
 	}
-	return val.has_value() ? *val : ReadRegister_(reg);
-}
-void DTCLib::DTC_Registers::ClearRXDataHeaderPacketCount(DTC_Link_ID const& link)
-{
-	DTC_Register reg;
-	switch (link)
-	{
-		case DTC_Link_0:
-			reg = DTC_Register_RXDataHeaderPacketCount_Link0;
-			break;
-		case DTC_Link_1:
-			reg = DTC_Register_RXDataHeaderPacketCount_Link1;
-			break;
-		case DTC_Link_2:
-			reg = DTC_Register_RXDataHeaderPacketCount_Link2;
-			break;
-		case DTC_Link_3:
-			reg = DTC_Register_RXDataHeaderPacketCount_Link3;
-			break;
-		case DTC_Link_4:
-			reg = DTC_Register_RXDataHeaderPacketCount_Link4;
-			break;
-		case DTC_Link_5:
-			reg = DTC_Register_RXDataHeaderPacketCount_Link5;
-			break;
-		default: {
-			__SS__ << "Illegal link index provided: " << link << __E__;
-			__SS_THROW__;
-		}
-	}
-	WriteRegister_(0, reg);
-}
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatRXDataHeaderPacketCountLink0()
-{
-	auto form = CreateFormatter(DTC_Register_RXDataHeaderPacketCount_Link0);
-	form.description = "Data Header Packet RX Counter Link 0";
-	std::stringstream o;
-	o << std::dec << ReadRXDataHeaderPacketCount(DTC_Link_0, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatRXDataHeaderPacketCountLink1()
-{
-	auto form = CreateFormatter(DTC_Register_RXDataHeaderPacketCount_Link1);
-	form.description = "Data Header Packet RX Counter Link 1";
-	std::stringstream o;
-	o << std::dec << ReadRXDataHeaderPacketCount(DTC_Link_1, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatRXDataHeaderPacketCountLink2()
-{
-	auto form = CreateFormatter(DTC_Register_RXDataHeaderPacketCount_Link2);
-	form.description = "Data Header Packet RX Counter Link 2";
-	std::stringstream o;
-	o << std::dec << ReadRXDataHeaderPacketCount(DTC_Link_2, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatRXDataHeaderPacketCountLink3()
-{
-	auto form = CreateFormatter(DTC_Register_RXDataHeaderPacketCount_Link3);
-	form.description = "Data Header Packet RX Counter Link 3";
-	std::stringstream o;
-	o << std::dec << ReadRXDataHeaderPacketCount(DTC_Link_3, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatRXDataHeaderPacketCountLink4()
-{
-	auto form = CreateFormatter(DTC_Register_RXDataHeaderPacketCount_Link4);
-	form.description = "Data Header Packet RX Counter Link 4";
-	std::stringstream o;
-	o << std::dec << ReadRXDataHeaderPacketCount(DTC_Link_4, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatRXDataHeaderPacketCountLink5()
-{
-	auto form = CreateFormatter(DTC_Register_RXDataHeaderPacketCount_Link5);
-	form.description = "Data Header Packet RX Counter Link 5";
-	std::stringstream o;
-	o << std::dec << ReadRXDataHeaderPacketCount(DTC_Link_5, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
+	return reg;
+}  // end GetRXDataHeaderPacketCountLinkRegister()
 
 // RX Data Packet Count
 uint32_t DTCLib::DTC_Registers::ReadRXDataPacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val)
 {
+	return val.has_value() ? *val : ReadRegister_(GetRXDataPacketCountLinkRegister(link));
+}  // end ReadRXDataPacketCount()
+
+DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatRXDataPacketCountLink(DTC_Link_ID const& link)
+{
+	auto form = CreateFormatter(GetRXDataPacketCountLinkRegister(link));
+	form.description = "ROC DP RX Count on Link " +
+					   std::to_string((GetRXDataPacketCountLinkRegister(link) -
+									   GetRXDataPacketCountLinkRegister(DTC_Link_0)) /
+									  4);
+	std::stringstream o;
+	o << std::dec << ReadRXDataHeaderPacketCount(link, form.value);
+	form.vals.push_back(o.str());
+	return form;
+}  // end FormatRXDataPacketCountLink()
+
+DTCLib::DTC_Register DTCLib::DTC_Registers::GetRXDataPacketCountLinkRegister(DTC_Link_ID const& link)
+{
 	DTC_Register reg;
 	switch (link)
 	{
@@ -8810,92 +7434,8 @@ uint32_t DTCLib::DTC_Registers::ReadRXDataPacketCount(DTC_Link_ID const& link, s
 			__SS_THROW__;
 		}
 	}
-	return val.has_value() ? *val : ReadRegister_(reg);
-}
-void DTCLib::DTC_Registers::ClearRXDataPacketCount(DTC_Link_ID const& link)
-{
-	DTC_Register reg;
-	switch (link)
-	{
-		case DTC_Link_0:
-			reg = DTC_Register_RXDataPacketCount_Link0;
-			break;
-		case DTC_Link_1:
-			reg = DTC_Register_RXDataPacketCount_Link1;
-			break;
-		case DTC_Link_2:
-			reg = DTC_Register_RXDataPacketCount_Link2;
-			break;
-		case DTC_Link_3:
-			reg = DTC_Register_RXDataPacketCount_Link3;
-			break;
-		case DTC_Link_4:
-			reg = DTC_Register_RXDataPacketCount_Link4;
-			break;
-		case DTC_Link_5:
-			reg = DTC_Register_RXDataPacketCount_Link5;
-			break;
-		default: {
-			__SS__ << "Illegal link index provided: " << link << __E__;
-			__SS_THROW__;
-		}
-	}
-	WriteRegister_(0, reg);
-}
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatRXDataPacketCountLink0()
-{
-	auto form = CreateFormatter(DTC_Register_RXDataPacketCount_Link0);
-	form.description = "Data Packet RX Counter Link 0";
-	std::stringstream o;
-	o << std::dec << ReadRXDataPacketCount(DTC_Link_0, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatRXDataPacketCountLink1()
-{
-	auto form = CreateFormatter(DTC_Register_RXDataPacketCount_Link1);
-	form.description = "Data Packet RX Counter Link 1";
-	std::stringstream o;
-	o << std::dec << ReadRXDataPacketCount(DTC_Link_1, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatRXDataPacketCountLink2()
-{
-	auto form = CreateFormatter(DTC_Register_RXDataPacketCount_Link2);
-	form.description = "Data Packet RX Counter Link 2";
-	std::stringstream o;
-	o << std::dec << ReadRXDataPacketCount(DTC_Link_2, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatRXDataPacketCountLink3()
-{
-	auto form = CreateFormatter(DTC_Register_RXDataPacketCount_Link3);
-	form.description = "Data Packet RX Counter Link 3";
-	std::stringstream o;
-	o << std::dec << ReadRXDataPacketCount(DTC_Link_3, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatRXDataPacketCountLink4()
-{
-	auto form = CreateFormatter(DTC_Register_RXDataPacketCount_Link4);
-	form.description = "Data Packet RX Counter Link 4";
-	std::stringstream o;
-	o << std::dec << ReadRXDataPacketCount(DTC_Link_4, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatRXDataPacketCountLink5()
-{
-	auto form = CreateFormatter(DTC_Register_RXDataPacketCount_Link5);
-	form.description = "Data Packet RX Counter Link 5";
-	std::stringstream o;
-	o << std::dec << ReadRXDataPacketCount(DTC_Link_5, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
+	return reg;
+}  // end GetRXDataPacketCountLinkRegister()
 
 // EVB Diagnostic RX Packet FIFO
 uint64_t DTCLib::DTC_Registers::ReadEVBDiagnosticFIFO(std::optional<uint32_t> val)
@@ -9150,7 +7690,7 @@ void DTCLib::DTC_Registers::VerifyRegisterWrite_(const CFOandDTC_Register& addre
 					   << " to register 0x" << std::setw(4) << std::setfill('0') << std::setprecision(4) << std::hex << static_cast<uint32_t>(address) << "... read back 0x" << std::setw(8) << std::setfill('0') << std::setprecision(8) << std::hex << static_cast<uint32_t>(readbackValue) << std::endl
 					   << std::endl
 					   << "If you do not understand this error, try checking the DTC firmware version: " << ReadDesignDate() << std::endl;
-				__SS_THROW_ONLY__;
+				__SS_ONLY_THROW__;
 			}
 			catch (const std::runtime_error& e)
 			{

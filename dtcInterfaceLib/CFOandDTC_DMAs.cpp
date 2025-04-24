@@ -23,18 +23,15 @@
 
 #include "dtcInterfaceLib/otsStyleCoutMacros.h"
 
-
 #include <unistd.h>
 #include <fstream>
 #include <iostream>
 #include <sstream>  // Convert uint to hex string
 
-
-
 int DTCLib::CFOandDTC_DMAs::GetCurrentBuffer(DMAInfo* info)
 {
 	TLOG(TLVL_GetCurrentBuffer) << "GetCurrentBuffer BEGIN currentReadPtr=" << (void*)info->currentReadPtr
-									<< " buffer.size()=" << info->buffer.size();
+								<< " buffer.size()=" << info->buffer.size();
 
 	if (info->buffer.size())  // might crash in ReleaseBuffers if currentReadPtr = nullptr ????????????????????????????????
 	{
@@ -74,4 +71,3 @@ uint16_t DTCLib::CFOandDTC_DMAs::GetBufferByteCount(DMAInfo* info, size_t index)
 	TLOG(TLVL_ReadNextDAQPacket) << "bufferSize = " << bufferSize;
 	return bufferSize;
 }
-
