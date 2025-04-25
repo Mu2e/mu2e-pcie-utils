@@ -749,44 +749,6 @@ public:
 	void SetROCCommaLimit(uint8_t limit);
 	RegisterFormatter FormatROCFinishThreshold();
 
-	// SERDES Counter Registers
-	void ClearReceiveByteCount(DTC_Link_ID const& link);
-	uint32_t ReadReceiveByteCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
-	void ClearReceivePacketCount(DTC_Link_ID const& link);
-	uint32_t ReadReceivePacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
-	void ClearTransmitByteCount(DTC_Link_ID const& link);
-	uint32_t ReadTransmitByteCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
-	void ClearTransmitPacketCount(DTC_Link_ID const& link);
-	uint32_t ReadTransmitPacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
-	RegisterFormatter FormatReceiveByteCountLink0();
-	RegisterFormatter FormatReceiveByteCountLink1();
-	RegisterFormatter FormatReceiveByteCountLink2();
-	RegisterFormatter FormatReceiveByteCountLink3();
-	RegisterFormatter FormatReceiveByteCountLink4();
-	RegisterFormatter FormatReceiveByteCountLink5();
-	RegisterFormatter FormatReceiveByteCountCFO();
-	RegisterFormatter FormatReceivePacketCountLink0();
-	RegisterFormatter FormatReceivePacketCountLink1();
-	RegisterFormatter FormatReceivePacketCountLink2();
-	RegisterFormatter FormatReceivePacketCountLink3();
-	RegisterFormatter FormatReceivePacketCountLink4();
-	RegisterFormatter FormatReceivePacketCountLink5();
-	RegisterFormatter FormatReceivePacketCountCFO();
-	RegisterFormatter FormatTramsitByteCountLink0();
-	RegisterFormatter FormatTramsitByteCountLink1();
-	RegisterFormatter FormatTramsitByteCountLink2();
-	RegisterFormatter FormatTramsitByteCountLink3();
-	RegisterFormatter FormatTramsitByteCountLink4();
-	RegisterFormatter FormatTramsitByteCountLink5();
-	RegisterFormatter FormatTramsitByteCountCFO();
-	RegisterFormatter FormatTransmitPacketCountLink0();
-	RegisterFormatter FormatTransmitPacketCountLink1();
-	RegisterFormatter FormatTransmitPacketCountLink2();
-	RegisterFormatter FormatTransmitPacketCountLink3();
-	RegisterFormatter FormatTransmitPacketCountLink4();
-	RegisterFormatter FormatTransmitPacketCountLink5();
-	RegisterFormatter FormatTransmitPacketCountCFO();
-
 	// SERDES TX PRBS Control
 	bool ReadTXPRBSForceError(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
 	void SetTXPRBSForceError(DTC_Link_ID const& link);
@@ -1154,12 +1116,7 @@ public:
 	uint32_t ReadROCEmulatorInterpacketDelay(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
 	void SetROCEmulatorInterpacketDelay(DTC_Link_ID const& link, uint32_t delay);
 	RegisterFormatter FormatROCEmulatorInterpacketDelayLink0();
-	RegisterFormatter FormatROCEmulatorInterpacketDelayLink1();
-	RegisterFormatter FormatROCEmulatorInterpacketDelayLink2();
-	RegisterFormatter FormatROCEmulatorInterpacketDelayLink3();
-	RegisterFormatter FormatROCEmulatorInterpacketDelayLink4();
-	RegisterFormatter FormatROCEmulatorInterpacketDelayLink5();
-
+	
 	// TX Data Request Packet Count
 	uint32_t ReadTXDataRequestPacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
 	RegisterFormatter FormatTXDataRequestPacketCountLink(DTC_Link_ID const& link);
