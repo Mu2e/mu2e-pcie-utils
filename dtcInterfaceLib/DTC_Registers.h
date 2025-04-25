@@ -1116,7 +1116,7 @@ public:
 	uint32_t ReadROCEmulatorInterpacketDelay(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
 	void SetROCEmulatorInterpacketDelay(DTC_Link_ID const& link, uint32_t delay);
 	RegisterFormatter FormatROCEmulatorInterpacketDelayLink0();
-	
+
 	// TX Data Request Packet Count
 	uint32_t ReadTXDataRequestPacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
 	RegisterFormatter FormatTXDataRequestPacketCountLink(DTC_Link_ID const& link);
