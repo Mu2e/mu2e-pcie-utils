@@ -10,6 +10,7 @@
 
 %{
 #include "mu2e_driver/mu2e_mmap_ioctl.h"
+#include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_SimMode.h"
 #include "dtcInterfaceLib/CFOandDTC_Registers.h"
 #include "dtcInterfaceLib/DTC_Registers.h"
 #include "dtcInterfaceLib/DTC.h"
@@ -26,6 +27,7 @@ using namespace DTCLib;
 //-----------------------------------------------------------------------------
 // Process symbols in the headers
 //-----------------------------------------------------------------------------
+%include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_SimMode.h"
 %include "mu2e_driver/mu2e_mmap_ioctl.h"
 %include "dtcInterfaceLib/mu2esim.h"
 %include "dtcInterfaceLib/mu2edev.h"
