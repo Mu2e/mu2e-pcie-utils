@@ -329,7 +329,7 @@ protected:
 		RegisterFormatter form;
 		form.descWidth = formatterWidth_;
 		form.address = address;
-		if(getValue)
+		if (getValue)
 			form.value = ReadRegister_(address);
 		return form;
 	}
