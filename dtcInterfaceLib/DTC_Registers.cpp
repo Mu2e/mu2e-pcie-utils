@@ -2767,14 +2767,13 @@ uint32_t DTCLib::DTC_Registers::ReadCFOEmulationLoopbackDelayMeasure(std::option
 	{
 		if (i > 1000)
 		{
-			__SS__ << "Timeout looking for the CFO Emulator Loopback Test to complete... readval: 0x" <<
-				std::hex << readVal << __E__;
+			__SS__ << "Timeout looking for the CFO Emulator Loopback Test to complete... readval: 0x" << std::hex << readVal << __E__;
 			__SS_THROW__;
 		}
 
 		usleep(10000);
 		readVal = ReadRegister_(DTC_Register_CFOEmulation_LoopbackDelayMeasure);
-		++i;		
+		++i;
 	}
 	return readVal & (~(1 << 31));  // clear the Ready bit from return value
 }
@@ -2788,8 +2787,7 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatCFOEmulationLoopbackDelay
 	auto form = CreateFormatter(DTC_Register_CFOEmulation_LoopbackDelayMeasure);
 	form.description = "CFO Emu. Loopback Delay Measure";
 	std::stringstream o;
-	o << "0x" << std::hex << ReadCFOEmulationLoopbackDelayMeasure(form.value) << std::dec << 
-		"(" << double(1.0) * ReadCFOEmulationLoopbackDelayMeasure(form.value) * 5 /*ns for 200MHz period*/ / 8.0 /* for 8 samples */ << " ns)";
+	o << "0x" << std::hex << ReadCFOEmulationLoopbackDelayMeasure(form.value) << std::dec << "(" << double(1.0) * ReadCFOEmulationLoopbackDelayMeasure(form.value) * 5 /*ns for 200MHz period*/ / 8.0 /* for 8 samples */ << " ns)";
 	form.vals.push_back(o.str());
 	return form;
 }
