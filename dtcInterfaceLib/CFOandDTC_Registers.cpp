@@ -114,10 +114,10 @@ std::string DTCLib::CFOandDTC_Registers::ReadDesignDate(std::optional<uint32_t> 
 	auto readData = val.has_value() ? *val : ReadRegister_(CFOandDTC_Register_DesignDate);
 	std::ostringstream o;
 	std::vector<std::string> months({"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"});
-	int mon = ((readData >> 20) & 0xF) * 10 + ((readData >> 16) & 0xF);
-	if (mon - 1 > 11)
+	size_t mon = ((readData >> 20) & 0xF) * 10 + ((readData >> 16) & 0xF);
+	if (mon - 1 >= months.size())
 	{
-		__SS__ << "Invalid register read for firmware design date: " + std::to_string(mon) << ". If the value is 165, this likely means the PCIe in not initialized and perhaps a PCIe reset of the linux system would fix the issue.";
+		__SS__ << "Invalid register read for firmware design date: " + std::to_string(mon) << " in hex read-data 0x" << std::hex << readData << ". If the value is 0 or 165, this likely means the PCIe in not initialized and perhaps a PCIe reset of the linux system would fix the issue.";
 		__SS_THROW__;
 		// throw std::runtime_error("Invalid register read for firmware design date: " + std::to_string(mon));
 	}

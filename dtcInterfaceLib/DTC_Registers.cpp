@@ -992,7 +992,7 @@ void DTCLib::DTC_Registers::SetSERDESLoopbackMode(DTC_Link_ID const& link, const
 /// <returns>DTC_SERDESLoopbackMode of the link</returns>
 DTCLib::DTC_SERDESLoopbackMode DTCLib::DTC_Registers::ReadSERDESLoopback(DTC_Link_ID const& link, std::optional<uint32_t> val)
 {
-	std::bitset<3> dataSet = val.has_value() ? *val : ReadRegister_(CFOandDTC_Register_SERDES_LoopbackEnable) >> 3 * link;
+	std::bitset<3> dataSet = (val.has_value() ? *val : ReadRegister_(CFOandDTC_Register_SERDES_LoopbackEnable)) >> 3 * link;
 	return static_cast<DTC_SERDESLoopbackMode>(dataSet.to_ulong());
 }
 
@@ -1164,7 +1164,7 @@ void DTCLib::DTC_Registers::DisableTransmitCFOLink()
 	WriteRegister_(data.to_ulong(), CFOandDTC_Register_LinkEnable);
 }
 /// <summary>
-/// Enable a SERDES Link
+/// Enable a SERDES Link based on the mode tx/rx enable bits (default is enabled)
 /// </summary>
 /// <param name="link">Link to enable</param>
 /// <param name="mode">Link enable bits to set (Default: All)</param>
@@ -1802,7 +1802,7 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatSERDESPLLPowerDown()
 /// <returns>DTC_RXStatus object</returns>
 DTCLib::DTC_RXStatus DTCLib::DTC_Registers::ReadSERDESRXStatus(DTC_Link_ID const& link, std::optional<uint32_t> val)
 {
-	std::bitset<3> dataSet = val.has_value() ? *val : ReadRegister_(CFOandDTC_Register_SERDES_RXStatus) >> 3 * link;
+	std::bitset<3> dataSet = (val.has_value() ? *val : ReadRegister_(CFOandDTC_Register_SERDES_RXStatus)) >> 3 * link;
 	return static_cast<DTC_RXStatus>(dataSet.to_ulong());
 }
 
@@ -2045,8 +2045,8 @@ void DTCLib::DTC_Registers::SetEVBInfo(uint8_t dtcid, uint8_t mode,
 {
 	uint32_t regVal = dtcid << 24;
 	regVal |= mode << 16;
-	regVal |= partitionId << 8;  //(partitionId & 0x3) << 8;
-	regVal |= macByte;           //(macByte & 0x3F);
+	regVal |= partitionId << 8;
+	regVal |= macByte;
 	WriteRegister_(regVal, DTC_Register_EVBPartitionID);
 }
 
@@ -2064,7 +2064,7 @@ void DTCLib::DTC_Registers::SetDTCID(uint8_t dtcid)
 // EVB Network Partition ID / EVB Network Local MAC Index Register
 uint8_t DTCLib::DTC_Registers::ReadDTCID(std::optional<uint32_t> val)
 {
-	auto regVal = val.has_value() ? *val : ReadRegister_(DTC_Register_EVBPartitionID) & 0xFF000000;
+	auto regVal = (val.has_value() ? *val : ReadRegister_(DTC_Register_EVBPartitionID)) & 0xFF000000;
 	return static_cast<uint8_t>(regVal >> 24);
 }
 
@@ -2085,7 +2085,7 @@ void DTCLib::DTC_Registers::SetEVBMode(uint8_t mode)
 /// <returns>EVB Mode byte</returns>
 uint8_t DTCLib::DTC_Registers::ReadEVBMode(std::optional<uint32_t> val)
 {
-	auto regVal = val.has_value() ? *val : ReadRegister_(DTC_Register_EVBPartitionID) & 0xFF0000;
+	auto regVal = (val.has_value() ? *val : ReadRegister_(DTC_Register_EVBPartitionID)) & 0xFF0000;
 	return static_cast<uint8_t>(regVal >> 16);
 }
 
@@ -2106,7 +2106,7 @@ void DTCLib::DTC_Registers::SetEVBLocalParitionID(uint8_t partitionId)
 /// <returns>Partition ID</returns>
 uint8_t DTCLib::DTC_Registers::ReadEVBLocalParitionID(std::optional<uint32_t> val)
 {
-	auto regVal = val.has_value() ? *val : ReadRegister_(DTC_Register_EVBPartitionID) & 0xFF0000;
+	auto regVal = (val.has_value() ? *val : ReadRegister_(DTC_Register_EVBPartitionID)) & 0xFF0000;
 	return static_cast<uint8_t>((regVal >> 8) & 0x3);
 }
 
@@ -2137,24 +2137,24 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBLocalParitionIDMACInde
 	form.description = "EVB Local Partition ID / MAC Index";
 	form.vals.push_back("");  // translation
 	std::ostringstream o;
-	o << "DTC ID:                    0x" << std::hex << static_cast<int>(ReadDTCID(form.value));
+	o << "DTC ID:                         0x" << std::hex << static_cast<int>(ReadDTCID(form.value));
 	form.vals.push_back(o.str());
 	o.str("");
 	o.clear();
-	o << "EVB Mode:                  0x" << std::hex << static_cast<int>(ReadEVBMode(form.value));
+	o << "EVB Mode:                       0x" << std::hex << static_cast<int>(ReadEVBMode(form.value));
 	form.vals.push_back(o.str());
 	o.str("");
 	o.clear();
-	o << "EVB Parition ID:           0x" << std::hex << static_cast<int>(ReadEVBLocalParitionID(form.value));
+	o << "EVB Parition ID:                0x" << std::hex << static_cast<int>(ReadEVBLocalParitionID(form.value));
 	form.vals.push_back(o.str());
 	o.str("");
 	o.clear();
-	o << "EVB MAC Address Last Byte: 0x" << std::hex << static_cast<int>(ReadEVBLocalMACAddress(form.value));
+	o << "EVB Self MAC Address Last Byte: 0x" << std::hex << static_cast<int>(ReadEVBLocalMACAddress(form.value));
 	form.vals.push_back(o.str());
 	return form;
 }
 
-// EVB Number of Destination Nodes Register
+/// EVB Number of Destination Nodes Register
 void DTCLib::DTC_Registers::SetEVBClusterInfo(  // uint8_t bufferCount,
 	uint8_t baseDTCAddress, uint8_t numOfDTCs)
 {
@@ -2163,17 +2163,6 @@ void DTCLib::DTC_Registers::SetEVBClusterInfo(  // uint8_t bufferCount,
 	regVal |= numOfDTCs;            //(numOfNodes & 0x3F);
 	WriteRegister_(regVal, DTC_Register_EVBConfiguration);
 }
-
-// void DTCLib::DTC_Registers::SetEVBNumberInputBuffers(uint8_t bufferCount)
-// {
-// 	auto regVal = ReadRegister_(DTC_Register_EVBConfiguration) & 0xFF00FFFF;
-// 	regVal += (bufferCount & 0xFF) << 16;
-// 	WriteRegister_(regVal, DTC_Register_EVBConfiguration);
-// }
-// uint8_t DTCLib::DTC_Registers::ReadEVBNumberInputBuffers(std::optional<uint32_t> val)
-// {
-// 	return static_cast<uint8_t>((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBConfiguration) & 0xFF0000) >> 16);
-// }
 
 /// <summary>
 /// Set the start node in the EVB cluster
@@ -2192,7 +2181,7 @@ void DTCLib::DTC_Registers::SetEVBStartNode(uint8_t startNode)
 /// <returns>Node ID (MAC Address)</returns>
 uint8_t DTCLib::DTC_Registers::ReadEVBStartNode(std::optional<uint32_t> val)
 {
-	return static_cast<uint8_t>((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBConfiguration) & 0x3F00) >> 8);
+	return static_cast<uint8_t>((((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBConfiguration)) & 0x3F00)) >> 8);
 }
 
 /// <summary>
@@ -2212,14 +2201,14 @@ void DTCLib::DTC_Registers::SetEVBNumberOfDestinationNodes(uint8_t numOfNodes)
 /// <returns>Number of nodes</returns>
 uint8_t DTCLib::DTC_Registers::ReadEVBNumberOfDestinationNodes(std::optional<uint32_t> val)
 {
-	return static_cast<uint8_t>(val.has_value() ? *val : ReadRegister_(DTC_Register_EVBConfiguration) & 0x3F);
+	return static_cast<uint8_t>((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBConfiguration)) & 0x3F);
 }
 
 /// <summary>
 /// Formats the register's current value for register dumps
 /// </summary>
 /// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBNumberOfDestinationNodes()
+DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBClusterInfo()
 {
 	auto form = CreateFormatter(DTC_Register_EVBConfiguration);
 	form.description = "EVB DTC Cluster Configuration";
@@ -2238,50 +2227,161 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBNumberOfDestinationNod
 	return form;
 }
 
-// SEREDES Oscillator Registers
-/// <summary>
-/// Read the current SERDES Oscillator reference frequency, in Hz
-/// </summary>
-/// <param name="device">Device to set oscillator for</param>
-/// <returns>Current SERDES Oscillator reference frequency, in Hz</returns>
-uint32_t DTCLib::DTC_Registers::ReadSERDESOscillatorReferenceFrequency(DTCLib::DTC_IICSERDESBusAddress device, std::optional<uint32_t> val)
+/// Hardware Event Building Packet Control Info Register
+void DTCLib::DTC_Registers::SetEVBPacketControlInfo(uint16_t idlePacketWordCount,
+													uint8_t interpacketGap, uint8_t loopbackCalibratedOffset)
 {
-	switch (device)
-	{
-		case DTC_IICSERDESBusAddress_CFO:
-			return val.has_value() ? *val : ReadRegister_(DTC_Register_SERDESTimingCardOscillatorFrequency);
-		case DTC_IICSERDESBusAddress_EVB:
-			return val.has_value() ? *val : ReadRegister_(DTC_Register_SERDESReferenceClockFrequency);
-		default: {
-			__SS__ << "Invalid device for SERDES ref frequency: " + std::to_string(device);
-			__SS_THROW__;
-		}
-	}
-	return 0;
+	uint32_t regVal = idlePacketWordCount << 16;
+	regVal |= interpacketGap << 8;
+	regVal |= loopbackCalibratedOffset;
+	WriteRegister_(regVal, DTC_Register_EVBPacketControl);
 }
-/// <summary>
-/// Set the SERDES Oscillator reference frequency
-/// </summary>
-/// <param name="device">Device to set oscillator for</param>
-/// <param name="freq">New reference frequency, in Hz</param>
-void DTCLib::DTC_Registers::SetSERDESOscillatorReferenceFrequency(DTCLib::DTC_IICSERDESBusAddress device,
-																  uint32_t freq)
+
+/// Read the number of words in EVB idle packets
+uint16_t DTCLib::DTC_Registers::ReadEVBIdlePacketWordCount(std::optional<uint32_t> val)
 {
-	switch (device)
-	{
-		case DTC_IICSERDESBusAddress_CFO:
-			WriteRegister_(freq, DTC_Register_SERDESTimingCardOscillatorFrequency);
-			break;
-		case DTC_IICSERDESBusAddress_EVB:
-			WriteRegister_(freq, DTC_Register_SERDESReferenceClockFrequency);
-			break;
-		default: {
-			__SS__ << "Invalid device for set SERDES ref frequency: " + std::to_string(device);
-			__SS_THROW__;
-		}
-	}
-	return;
+	return static_cast<uint16_t>((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBPacketControl)) >> 16);
 }
+/// Read the EVB interpacket gap in units of GbE transmit clocks
+uint8_t DTCLib::DTC_Registers::ReadEVBInterpacketGap(std::optional<uint32_t> val)
+{
+	return static_cast<uint8_t>((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBPacketControl)) >> 8);
+}
+/// Read the DTC's EVB delay offset in units of 200MHz CFO clocks, which should be calibrated by CFO-DTC loopback
+uint8_t DTCLib::DTC_Registers::ReadEVBLoopbackCalibratedOffset(std::optional<uint32_t> val)
+{
+	return static_cast<uint8_t>((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBPacketControl)) >> 0);
+}
+
+/// Formats the Hardware Event Building Packet Control Info Register's current value for register dumps
+DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBPacketControlInfo()
+{
+	auto form = CreateFormatter(DTC_Register_EVBConfiguration);
+	form.description = "EVB Packet Control Info";
+	form.vals.push_back("");  // translation
+	std::stringstream o;
+	o << "Idle Packet Word Count:                           " << std::dec << static_cast<int>(ReadEVBIdlePacketWordCount(form.value));
+	form.vals.push_back(o.str());
+	o.str("");
+	o.clear();
+	o << "Interpacket Gap [GbE tx clocks]:                  " << std::dec << static_cast<int>(ReadEVBInterpacketGap(form.value));
+	form.vals.push_back(o.str());
+	o.str("");
+	o.clear();
+	o << "DTC's Loopback Calibrated Offset [200MHz clocks]: " << std::dec << static_cast<int>(ReadEVBLoopbackCalibratedOffset(form.value));
+	form.vals.push_back(o.str());
+	return form;
+}
+
+/// Read theHardware Event Building Stats data based on type and DTC mac address
+uint32_t DTCLib::DTC_Registers::ReadEVBStats(DTC_EVBStatsType type, uint8_t dtc_mac, std::optional<uint32_t> val)
+{
+	if (val.has_value())                              // assum address is already setup when value is passed, and just read updated stat value
+		return ReadRegister_(DTC_Register_EVBStats);  //*val;
+
+	uint32_t t = static_cast<uint8_t>(type) << DTC_EVBStatsType_BRAM_TYPE_SIZE;
+	if (dtc_mac >= (1 << DTC_EVBStatsType_BRAM_TYPE_SIZE))
+	{
+		__SS__ << "Illegal DTC MAC adress value: " << (int)dtc_mac << " must be < 2^" << DTC_EVBStatsType_BRAM_TYPE_SIZE << __E__;
+		ss << otsStyleStackTrace() << __E__;
+		__SS_THROW__;
+	}
+	t |= dtc_mac;  // address fully built now
+	__COUTT__ << "Read EVB Stat address: 0x" << std::hex << t << __E__;
+
+	WriteRegister_(t, DTC_Register_EVBStats);
+
+	return ReadRegister_(DTC_Register_EVBStats);
+}  // end ReadEVBStats()
+
+/// Formats the Hardware Event Building Stats data for all DTC mac addresses, as specified by the EVB Info 'Number Of Destination Nodes'
+DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBStatsType type /*  = DTC_EVBStatsType::DTC_EVBStatsType_All */)
+{
+	uint8_t t = static_cast<uint8_t>(type);
+	if (type == DTC_EVBStatsType::DTC_EVBStatsType_All)
+		t = 0;
+	__COUTV__(t);
+
+	auto form = CreateFormatter(DTC_Register_EVBConfiguration, false /* getValue */);
+	form.description = "EVB Stats";
+	form.vals.push_back("");  // translation
+	std::stringstream o;
+
+	uint8_t baseDTCAddress = ReadEVBStartNode();
+	uint8_t numOfDTCs = ReadEVBNumberOfDestinationNodes();
+
+	__COUTV__(numOfDTCs);
+
+	for (; t < DTC_EVBStatsType_BRAM_TYPE_COUNT; ++t)
+	{
+		for (uint8_t d = 0; d < numOfDTCs; ++d)
+		{
+			uint32_t v = ReadEVBStats(DTC_EVBStatsType(t), d);
+
+			o << "BRAM Stat - ";
+			switch (DTC_EVBStatsType(t))
+			{
+				case DTC_EVBStatsType_RxCount:
+
+					if (v != 0 &&  // start time for rates as soon as there is non-zero data
+						EVB_startDataTime ==
+							std::chrono::steady_clock::time_point::min())
+						EVB_startDataTime = std::chrono::steady_clock::now();
+
+					EVB_endDataTime = std::chrono::steady_clock::now();
+
+					o << "Received Packet Rate:                  ";
+					o << "DTC_mac #" << (baseDTCAddress + d < 10 ? "0" : "") << std::dec << int(baseDTCAddress + d) << " = ";
+
+					{
+						long long ns =
+							std::chrono::duration_cast<std::chrono::nanoseconds>(
+								EVB_endDataTime - EVB_startDataTime)
+								.count();
+						if (ns > 1000)  // prevent divide by 0
+						{
+							// o << "Data Transfer Duration: " << ns / 1000.0 / 1000.0 << " ms"
+							// 		<< __E__;
+							o << ((double)v) /
+									 (ns / 1000.0)
+							  << " Packets/s" << __E__;
+						}
+						else
+							o << "Packet Transfer Duration too short to establish packet rate."
+							  << __E__;
+					}
+
+					o << "Received Packet Count:                 ";
+					break;
+				case DTC_EVBStatsType_RxLastSequenceTag:
+					o << "Last Received Sequence Tag:            ";
+					break;
+				case DTC_EVBStatsType_RxMissingPacketCount:
+					o << "Rx Missing Packet Count:               ";
+					break;
+				case DTC_EVBStatsType_RxByteCount:
+					o << "Received Byte Count:                   ";
+					break;
+				case DTC_EVBStatsType_RxLastPacketArrival:
+					o << "Rx Last Packet Arrival [10gbe clocks]: ";
+					break;
+				case DTC_EVBStatsType_TxLastSequenceTag:
+					o << "Last Transmitted Sequence Tag:         ";
+					break;
+				default:
+					__SS__ << "Invalid DTC EVB Stat type: " << t << __E__;
+					__SS_THROW__;
+			}
+			o << "DTC_mac #" << (baseDTCAddress + d < 10 ? "0" : "") << std::dec << int(baseDTCAddress + d) << " = " << std::hex << "0x" << std::setw(8) << v << "\t" << std::dec << v;
+			form.vals.push_back(o.str());
+			o.str("");
+			o.clear();
+		}  // end DTC mac address loop
+		if (type != DTC_EVBStatsType::DTC_EVBStatsType_All) break;
+	}  // end type loop
+
+	return form;
+}  // end FormatEVBStats()
 
 /// <summary>
 /// Read the Reset bit of the SERDES IIC Bus
@@ -2313,7 +2413,8 @@ void DTCLib::DTC_Registers::ResetSERDESOscillatorIICInterface()
 /// <returns>Current SERDES clock speed</returns>
 DTCLib::DTC_SerdesClockSpeed DTCLib::DTC_Registers::ReadSERDESOscillatorClock(std::optional<uint32_t> val)
 {
-	auto freq = ReadSERDESOscillatorReferenceFrequency(DTC_IICSERDESBusAddress_EVB, val);
+	// DTC register definition was removed, all DTC versions only were returning constant value
+	auto freq = 0x09502f90;  // 156.25mhz // ReadSERDESOscillatorReferenceFrequency(DTC_IICSERDESBusAddress_EVB, val);
 
 	// Clocks should be accurate to 30 ppm
 	if (freq > 156250000 - 4687.5 && freq < 156250000 + 4687.5) return DTC_SerdesClockSpeed_3125Gbps;
@@ -2364,33 +2465,33 @@ void DTCLib::DTC_Registers::SetTimingOscillatorClock(uint32_t freq)
 	}
 }
 
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatTimingSERDESOscillatorFrequency()
-{
-	auto form = CreateFormatter(DTC_Register_SERDESTimingCardOscillatorFrequency);
-	form.description = "SERDES Timing Card Oscillator Reference Frequency";
-	std::stringstream o;
-	o << std::dec << ReadSERDESOscillatorReferenceFrequency(DTC_IICSERDESBusAddress_CFO, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
+// /// <summary>
+// /// Formats the register's current value for register dumps
+// /// </summary>
+// /// <returns>RegisterFormatter object containing register information</returns>
+// DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatTimingSERDESOscillatorFrequency()
+// {
+// 	auto form = CreateFormatter(DTC_Register_SERDESTimingCardOscillatorFrequency);
+// 	form.description = "SERDES Timing Card Oscillator Reference Frequency";
+// 	std::stringstream o;
+// 	o << std::dec << ReadSERDESOscillatorReferenceFrequency(DTC_IICSERDESBusAddress_CFO, form.value);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
 
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatMainBoardSERDESOscillatorFrequency()
-{
-	auto form = CreateFormatter(DTC_Register_SERDESReferenceClockFrequency);
-	form.description = "SERDES Main Board Oscillator Reference Frequency";
-	std::stringstream o;
-	o << std::dec << ReadSERDESOscillatorReferenceFrequency(DTC_IICSERDESBusAddress_EVB, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
+// /// <summary>
+// /// Formats the register's current value for register dumps
+// /// </summary>
+// /// <returns>RegisterFormatter object containing register information</returns>
+// DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatMainBoardSERDESOscillatorFrequency()
+// {
+// 	auto form = CreateFormatter(DTC_Register_SERDESReferenceClockFrequency);
+// 	form.description = "SERDES Main Board Oscillator Reference Frequency";
+// 	std::stringstream o;
+// 	o << std::dec << ReadSERDESOscillatorReferenceFrequency(DTC_IICSERDESBusAddress_EVB, form.value);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
 /// <summary>
 /// Formats the register's current value for register dumps
 /// </summary>
@@ -2400,174 +2501,6 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatSERDESOscillatorControl()
 	auto form = CreateFormatter(DTC_Register_SERDESClock_IICBusControl);
 	form.description = "SERDES Oscillator IIC Bus Control";
 	form.vals.push_back(std::string("Reset:  [") + (ReadSERDESOscillatorIICInterfaceReset(form.value) ? "x" : " ") + "]");
-	return form;
-}
-
-// DDR Oscillator Registers
-/// <summary>
-/// Read the current DDR Oscillator frequency, in Hz
-/// </summary>
-/// <returns>Current DDR Oscillator frequency, in Hz</returns>
-uint32_t DTCLib::DTC_Registers::ReadDDROscillatorReferenceFrequency(std::optional<uint32_t> val)
-{
-	return val.has_value() ? *val : ReadRegister_(DTC_Register_DDRReferenceClockFrequency);
-}
-/// <summary>
-/// Set the DDR Oscillator frequency
-/// </summary>
-/// <param name="freq">New frequency, in Hz</param>
-void DTCLib::DTC_Registers::SetDDROscillatorReferenceFrequency(uint32_t freq)
-{
-	WriteRegister_(freq, DTC_Register_DDRReferenceClockFrequency);
-}
-/// <summary>
-/// Read the Reset bit of the DDR IIC Bus
-/// </summary>
-/// <returns>Reset bit value</returns>
-bool DTCLib::DTC_Registers::ReadDDROscillatorIICInterfaceReset(std::optional<uint32_t> val)
-{
-	auto dataSet = std::bitset<32>(val.has_value() ? *val : ReadRegister_(DTC_Register_DDRClock_IICBusControl));
-	return dataSet[31];
-}
-/// <summary>
-/// Reset the DDR IIC Bus
-/// </summary>
-void DTCLib::DTC_Registers::ResetDDROscillatorIICInterface()
-{
-	auto bs = std::bitset<32>();
-	bs[31] = 1;
-	WriteRegister_(bs.to_ulong(), DTC_Register_DDRClock_IICBusControl);
-	while (ReadDDROscillatorIICInterfaceReset())
-	{
-		usleep(1000);
-	}
-}
-/// <summary>
-/// Write a value to the DDR IIC Bus
-/// </summary>
-/// <param name="device">Device address</param>
-/// <param name="address">Register address</param>
-/// <param name="data">Data to write</param>
-void DTCLib::DTC_Registers::WriteDDRIICInterface(DTC_IICDDRBusAddress device, uint8_t address, uint8_t data)
-{
-	uint32_t reg_data = (static_cast<uint8_t>(device) << 24) + (address << 16) + (data << 8);
-	WriteRegister_(reg_data, DTC_Register_DDRClock_IICBusLow);
-	WriteRegister_(0x1, DTC_Register_DDRClock_IICBusHigh);
-	while (ReadRegister_(DTC_Register_DDRClock_IICBusHigh) == 0x1)
-	{
-		usleep(1000);
-	}
-}
-/// <summary>
-/// Read a value from the DDR IIC Bus
-/// </summary>
-/// <param name="device">Device address</param>
-/// <param name="address">Register address</param>
-/// <returns>Value of register</returns>
-uint8_t DTCLib::DTC_Registers::ReadDDRIICInterface(DTC_IICDDRBusAddress device, uint8_t address)
-{
-	uint32_t reg_data = (static_cast<uint8_t>(device) << 24) + (address << 16);
-	WriteRegister_(reg_data, DTC_Register_DDRClock_IICBusLow);
-	WriteRegister_(0x2, DTC_Register_DDRClock_IICBusHigh);
-	while (ReadRegister_(DTC_Register_DDRClock_IICBusHigh) == 0x2)
-	{
-		usleep(1000);
-	}
-	auto data = ReadRegister_(DTC_Register_DDRClock_IICBusLow);
-	return static_cast<uint8_t>(data);
-}
-
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDROscillatorFrequency()
-{
-	auto form = CreateFormatter(DTC_Register_DDRReferenceClockFrequency);
-	form.description = "DDR Oscillator Reference Frequency";
-	std::stringstream o;
-	o << std::dec << ReadDDROscillatorReferenceFrequency(form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDROscillatorControl()
-{
-	auto form = CreateFormatter(DTC_Register_DDRClock_IICBusControl);
-	form.description = "DDR Oscillator IIC Bus Control";
-	form.vals.push_back(std::string("Reset:  [") + (ReadDDROscillatorIICInterfaceReset(form.value) ? "x" : " ") + "]");
-	return form;
-}
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDROscillatorParameterLow()
-{
-	auto form = CreateFormatter(DTC_Register_DDRClock_IICBusLow);
-	form.description = "DDR Oscillator IIC Bus Low";
-	form.vals.push_back("");  // translation
-	auto data = form.value;
-	std::ostringstream s1, s2, s3, s4;
-	s1 << "Device:     " << std::showbase << std::hex << ((data & 0xFF000000) >> 24);
-	form.vals.push_back(s1.str());
-	s2 << "Address:    " << std::showbase << std::hex << ((data & 0xFF0000) >> 16);
-	form.vals.push_back(s2.str());
-	s3 << "Write Data: " << std::showbase << std::hex << ((data & 0xFF00) >> 8);
-	form.vals.push_back(s3.str());
-	s4 << "Read Data:  " << std::showbase << std::hex << (data & 0xFF);
-	form.vals.push_back(s4.str());
-	return form;
-}
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDDROscillatorParameterHigh()
-{
-	auto form = CreateFormatter(DTC_Register_DDRClock_IICBusHigh);
-	auto data = form.value;
-	form.description = "DDR Oscillator IIC Bus High";
-	form.vals.push_back("([ x = 1 (hi) ])");  // translation
-	form.vals.push_back(std::string("Write:  [") +
-						(data & 0x1 ? "x" : " ") + "]");
-	form.vals.push_back(std::string("Read:   [") +
-						(data & 0x2 ? "x" : " ") + "]");
-	return form;
-}
-
-// Data Pending Timer Register
-/// <summary>
-/// Set the timeout for waiting for a reply after sending a Data Request packet.
-/// Timeout is in SERDES clock ticks. Default value is 0x2000
-/// </summary>
-/// <param name="timer">New timeout</param>
-void DTCLib::DTC_Registers::SetDataPendingTimer(uint32_t timer)
-{
-	WriteRegister_(timer, DTC_Register_DataPendingTimer);
-}
-
-/// <summary>
-/// Read the timeout for waiting for a reply after sending a Data Request packet.
-/// Timeout is in SERDES clock ticks. Default value is 0x2000
-/// </summary>
-/// <returns>Current timeout</returns>
-uint32_t DTCLib::DTC_Registers::ReadDataPendingTimer(std::optional<uint32_t> val) { return val.has_value() ? *val : ReadRegister_(DTC_Register_DataPendingTimer); }
-
-/// <summary>
-/// Formats the register's current value for register dumps
-/// </summary>
-/// <returns>RegisterFormatter object containing register information</returns>
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDataPendingTimer()
-{
-	auto form = CreateFormatter(DTC_Register_DataPendingTimer);
-	form.description = "DMA Data Pending Timer";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadDataPendingTimer(form.value);
-	form.vals.push_back(o.str());
 	return form;
 }
 
@@ -2832,14 +2765,15 @@ uint32_t DTCLib::DTC_Registers::ReadCFOEmulationLoopbackDelayMeasure(std::option
 	uint32_t i = 0;
 	while (!(readVal >> 31))
 	{
-		usleep(100);
-		readVal = val.has_value() ? *val : ReadRegister_(DTC_Register_CFOEmulation_LoopbackDelayMeasure);
-		++i;
-		if (i > 10)
+		if (i > 1000)
 		{
-			__SS__ << "Timeout looking for the CFO Emulator Loopback Test to complete...";
+			__SS__ << "Timeout looking for the CFO Emulator Loopback Test to complete... readval: 0x" << std::hex << readVal << __E__;
 			__SS_THROW__;
 		}
+
+		usleep(10000);
+		readVal = ReadRegister_(DTC_Register_CFOEmulation_LoopbackDelayMeasure);
+		++i;
 	}
 	return readVal & (~(1 << 31));  // clear the Ready bit from return value
 }
@@ -2853,7 +2787,7 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatCFOEmulationLoopbackDelay
 	auto form = CreateFormatter(DTC_Register_CFOEmulation_LoopbackDelayMeasure);
 	form.description = "CFO Emu. Loopback Delay Measure";
 	std::stringstream o;
-	o << "0x" << std::hex << ReadCFOEmulationEventWindowInterval(form.value) << std::dec << "(" << double(1.0) * ReadCFOEmulationEventWindowInterval(form.value) * 5 /*ns for 200MHz period*/ / 8.0 /* for 8 samples */ << " ns)";
+	o << "0x" << std::hex << ReadCFOEmulationLoopbackDelayMeasure(form.value) << std::dec << "(" << double(1.0) * ReadCFOEmulationLoopbackDelayMeasure(form.value) * 5 /*ns for 200MHz period*/ / 8.0 /* for 8 samples */ << " ns)";
 	form.vals.push_back(o.str());
 	return form;
 }
@@ -5215,15 +5149,26 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatCFOLinkError()
 {
 	auto form = CreateFormatter(DTC_Register_CFOLinkErrorFlags);
 	form.description = "CFO Link Error Flags";
-	std::stringstream o;
-	o << "0x" << std::hex << form.value;
-	form.vals.push_back(o.str());
+	form.vals.push_back("([ x = 1 (hi) ])");  // translation
+
 	// bit 9 - Event Start marker tx error
 	// bit 10 - Clock marker tx error
 	form.vals.push_back(std::string("CFO Event Start Marker tx Error:     [") +
 						(((form.value >> 9) & 1) ? "x" : " ") + "]");
-	form.vals.push_back(std::string("CFO Clock Marker tx Error:     [") +
+	form.vals.push_back(std::string("CFO Clock Marker tx Error:           [") +
 						(((form.value >> 10) & 1) ? "x" : " ") + "]");
+
+	// also show link enables for CFO and EVB
+	uint32_t val = ReadRegister_(CFOandDTC_Register_LinkEnable);
+	form.vals.push_back(std::string("CFO Link Rx Enabled:                 [") +
+						(ReadLinkEnabled(DTC_Link_CFO, val).ReceiveEnable ? "x" : " ") + "]");
+	form.vals.push_back(std::string("CFO Link Tx Enabled:                 [") +
+						(ReadLinkEnabled(DTC_Link_CFO, val).TransmitEnable ? "x" : " ") + "]");
+	form.vals.push_back(std::string("EVB Link Rx Enabled:                 [") +
+						(ReadLinkEnabled(DTC_Link_EVB, val).ReceiveEnable ? "x" : " ") + "]");
+	form.vals.push_back(std::string("EVB Link Tx Enabled:                 [") +
+						(ReadLinkEnabled(DTC_Link_EVB, val).TransmitEnable ? "x" : " ") + "]");
+
 	return form;
 }
 
@@ -7540,7 +7485,7 @@ uint32_t DTCLib::DTC_Registers::ReadEventModeWord(uint8_t which)
 /// <returns>Whether the oscillator was changed (Will not reset if already set to desired frequency)</returns>
 bool DTCLib::DTC_Registers::SetNewOscillatorFrequency(DTC_OscillatorType oscillator, double targetFrequency)
 {
-	auto currentFrequency = ReadCurrentFrequency(oscillator);
+	auto currentFrequency = 0;  // As of 2023 DTCs, can not read frequency back (it was doing nothing, just a scratch register) // ReadCurrentFrequency(oscillator);
 	auto currentProgram = ReadCurrentProgram(oscillator);
 	__COUT__ << "Target Frequency: " << targetFrequency << ", Current Frequency: " << currentFrequency
 			 << ", Current Program: " << std::showbase << std::hex << currentProgram;
@@ -7559,27 +7504,8 @@ bool DTCLib::DTC_Registers::SetNewOscillatorFrequency(DTC_OscillatorType oscilla
 		return false;
 	}
 	WriteCurrentProgram(newParameters, oscillator);
-	WriteCurrentFrequency(targetFrequency, oscillator);
+	// WriteCurrentFrequency(targetFrequency, oscillator); //As of 2023 DTCs, can not write frequency back (it was doing nothing, just a scratch register)
 	return true;
-}
-
-/// <summary>
-/// Get the DTC's idea of the current frequency of the specified oscillator
-/// </summary>
-/// <param name="oscillator">Oscillator to program, either DDR or SERDES</param>
-/// <returns>Current frequency of oscillator, in Hz</returns>
-double DTCLib::DTC_Registers::ReadCurrentFrequency(DTC_OscillatorType oscillator)
-{
-	switch (oscillator)
-	{
-		case DTC_OscillatorType_SERDES:
-			return ReadSERDESOscillatorReferenceFrequency(DTC_IICSERDESBusAddress_EVB);
-		case DTC_OscillatorType_Timing:
-			return ReadSERDESOscillatorReferenceFrequency(DTC_IICSERDESBusAddress_CFO);
-		case DTC_OscillatorType_DDR:
-			return ReadDDROscillatorReferenceFrequency();
-	}
-	return 0;
 }
 
 /// <summary>
@@ -7595,32 +7521,15 @@ uint64_t DTCLib::DTC_Registers::ReadCurrentProgram(DTC_OscillatorType oscillator
 			return ReadSERDESOscillatorParameters_();
 		case DTC_OscillatorType_Timing:
 			return ReadTimingOscillatorParameters_();
-		case DTC_OscillatorType_DDR:
-			return ReadDDROscillatorParameters_();
+		// case DTC_OscillatorType_DDR:
+		// 	return ReadDDROscillatorParameters_();
+		default:
+			__SS__ << "Invalid DTC_OscillatorType to read: " + std::to_string(oscillator);
+			__SS_THROW__;
 	}
 	return 0;
 }
-/// <summary>
-/// Write the current frequency, in Hz to the frequency register
-/// </summary>
-/// <param name="freq">Frequency of oscillator</param>
-/// <param name="oscillator">Oscillator to program, either DDR or SERDES</param>
-void DTCLib::DTC_Registers::WriteCurrentFrequency(double freq, DTC_OscillatorType oscillator)
-{
-	auto newFreq = static_cast<uint32_t>(freq);
-	switch (oscillator)
-	{
-		case DTC_OscillatorType_SERDES:
-			SetSERDESOscillatorReferenceFrequency(DTC_IICSERDESBusAddress_EVB, newFreq);
-			break;
-		case DTC_OscillatorType_Timing:
-			SetSERDESOscillatorReferenceFrequency(DTC_IICSERDESBusAddress_CFO, newFreq);
-			break;
-		case DTC_OscillatorType_DDR:
-			SetDDROscillatorReferenceFrequency(newFreq);
-			break;
-	}
-}
+
 /// <summary>
 /// Writes a program for the given oscillator crystal. This function should be paired with a call to
 /// WriteCurrentFrequency so that subsequent programming attempts work as expected.
@@ -7637,9 +7546,12 @@ void DTCLib::DTC_Registers::WriteCurrentProgram(uint64_t program, DTC_Oscillator
 		case DTC_OscillatorType_Timing:
 			SetTimingOscillatorParameters_(program);
 			break;
-		case DTC_OscillatorType_DDR:
-			SetDDROscillatorParameters_(program);
-			break;
+		// case DTC_OscillatorType_DDR:
+		// 	SetDDROscillatorParameters_(program);
+		// 	break;
+		default:
+			__SS__ << "Invalid DTC_OscillatorType to program: " + std::to_string(oscillator);
+			__SS_THROW__;
 	}
 }
 
@@ -7676,6 +7588,8 @@ void DTCLib::DTC_Registers::VerifyRegisterWrite_(const CFOandDTC_Register& addre
 				readbackValue &= 0x0000ffff;
 				break;
 			case DTC_Register_DetEmulation_Control1:  // self clearing bit-1, so return immediately
+				return;
+			case DTC_Register_EVBStats:  // addrs for write, data on read
 				return;
 
 			default:;  // do direct comparison of each bit
@@ -7848,16 +7762,16 @@ uint64_t DTCLib::DTC_Registers::ReadTimingOscillatorParameters_()
 	return data;
 }
 
-uint64_t DTCLib::DTC_Registers::ReadDDROscillatorParameters_()
-{
-	uint64_t data = (static_cast<uint64_t>(ReadDDRIICInterface(DTC_IICDDRBusAddress_DDROscillator, 7)) << 40) +
-					(static_cast<uint64_t>(ReadDDRIICInterface(DTC_IICDDRBusAddress_DDROscillator, 8)) << 32) +
-					(static_cast<uint64_t>(ReadDDRIICInterface(DTC_IICDDRBusAddress_DDROscillator, 9)) << 24) +
-					(static_cast<uint64_t>(ReadDDRIICInterface(DTC_IICDDRBusAddress_DDROscillator, 10)) << 16) +
-					(static_cast<uint64_t>(ReadDDRIICInterface(DTC_IICDDRBusAddress_DDROscillator, 11)) << 8) +
-					static_cast<uint64_t>(ReadDDRIICInterface(DTC_IICDDRBusAddress_DDROscillator, 12));
-	return data;
-}
+// uint64_t DTCLib::DTC_Registers::ReadDDROscillatorParameters_()
+// {
+// 	uint64_t data = (static_cast<uint64_t>(ReadDDRIICInterface(DTC_IICDDRBusAddress_DDROscillator, 7)) << 40) +
+// 					(static_cast<uint64_t>(ReadDDRIICInterface(DTC_IICDDRBusAddress_DDROscillator, 8)) << 32) +
+// 					(static_cast<uint64_t>(ReadDDRIICInterface(DTC_IICDDRBusAddress_DDROscillator, 9)) << 24) +
+// 					(static_cast<uint64_t>(ReadDDRIICInterface(DTC_IICDDRBusAddress_DDROscillator, 10)) << 16) +
+// 					(static_cast<uint64_t>(ReadDDRIICInterface(DTC_IICDDRBusAddress_DDROscillator, 11)) << 8) +
+// 					static_cast<uint64_t>(ReadDDRIICInterface(DTC_IICDDRBusAddress_DDROscillator, 12));
+// 	return data;
+// }
 
 void DTCLib::DTC_Registers::SetSERDESOscillatorParameters_(uint64_t program)
 {
@@ -7889,20 +7803,20 @@ void DTCLib::DTC_Registers::SetTimingOscillatorParameters_(uint64_t program)
 	WriteSERDESIICInterface(DTC_IICSERDESBusAddress_CFO, 0x87, 0x40);
 }
 
-void DTCLib::DTC_Registers::SetDDROscillatorParameters_(uint64_t program)
-{
-	WriteDDRIICInterface(DTC_IICDDRBusAddress_DDROscillator, 0x89, 0x10);
+// void DTCLib::DTC_Registers::SetDDROscillatorParameters_(uint64_t program)
+// {
+// 	WriteDDRIICInterface(DTC_IICDDRBusAddress_DDROscillator, 0x89, 0x10);
 
-	WriteDDRIICInterface(DTC_IICDDRBusAddress_DDROscillator, 7, static_cast<uint8_t>(program >> 40));
-	WriteDDRIICInterface(DTC_IICDDRBusAddress_DDROscillator, 8, static_cast<uint8_t>(program >> 32));
-	WriteDDRIICInterface(DTC_IICDDRBusAddress_DDROscillator, 9, static_cast<uint8_t>(program >> 24));
-	WriteDDRIICInterface(DTC_IICDDRBusAddress_DDROscillator, 10, static_cast<uint8_t>(program >> 16));
-	WriteDDRIICInterface(DTC_IICDDRBusAddress_DDROscillator, 11, static_cast<uint8_t>(program >> 8));
-	WriteDDRIICInterface(DTC_IICDDRBusAddress_DDROscillator, 12, static_cast<uint8_t>(program));
+// 	WriteDDRIICInterface(DTC_IICDDRBusAddress_DDROscillator, 7, static_cast<uint8_t>(program >> 40));
+// 	WriteDDRIICInterface(DTC_IICDDRBusAddress_DDROscillator, 8, static_cast<uint8_t>(program >> 32));
+// 	WriteDDRIICInterface(DTC_IICDDRBusAddress_DDROscillator, 9, static_cast<uint8_t>(program >> 24));
+// 	WriteDDRIICInterface(DTC_IICDDRBusAddress_DDROscillator, 10, static_cast<uint8_t>(program >> 16));
+// 	WriteDDRIICInterface(DTC_IICDDRBusAddress_DDROscillator, 11, static_cast<uint8_t>(program >> 8));
+// 	WriteDDRIICInterface(DTC_IICDDRBusAddress_DDROscillator, 12, static_cast<uint8_t>(program));
 
-	WriteDDRIICInterface(DTC_IICDDRBusAddress_DDROscillator, 0x89, 0);
-	WriteDDRIICInterface(DTC_IICDDRBusAddress_DDROscillator, 0x87, 0x40);
-}
+// 	WriteDDRIICInterface(DTC_IICDDRBusAddress_DDROscillator, 0x89, 0);
+// 	WriteDDRIICInterface(DTC_IICDDRBusAddress_DDROscillator, 0x87, 0x40);
+// }
 
 bool DTCLib::DTC_Registers::WaitForLinkReady_(DTC_Link_ID const& link, size_t interval, double timeout /*seconds*/)
 {
