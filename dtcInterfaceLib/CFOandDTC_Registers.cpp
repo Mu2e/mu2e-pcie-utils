@@ -737,7 +737,7 @@ uint32_t DTCLib::CFOandDTC_Registers::ReadRegister_(const CFOandDTC_Register& ad
 		__SS_THROW__;
 	}
 
-	if(TTEST(1))
+	if (TTEST(1))
 	{  // trace seems to ignore the std::setfill, so using stringstream
 		std::stringstream o;
 		o << "read value 0x" << std::setw(8) << std::setfill('0') << std::setprecision(8) << std::hex << static_cast<uint32_t>(data)
