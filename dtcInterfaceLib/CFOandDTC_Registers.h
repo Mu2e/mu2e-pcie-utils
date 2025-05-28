@@ -324,12 +324,13 @@ protected:
 	/// </summary>
 	/// <param name="address">Address of register to format</param>
 	/// <returns>RegisterFormatter with address and raw value set</returns>
-	RegisterFormatter CreateFormatter(const CFOandDTC_Register& address)
+	RegisterFormatter CreateFormatter(const CFOandDTC_Register& address, bool getValue = true)
 	{
 		RegisterFormatter form;
 		form.descWidth = formatterWidth_;
 		form.address = address;
-		form.value = ReadRegister_(address);
+		if (getValue)
+			form.value = ReadRegister_(address);
 		return form;
 	}
 
