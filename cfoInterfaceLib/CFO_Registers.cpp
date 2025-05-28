@@ -2707,6 +2707,7 @@ uint32_t CFOLib::CFO_Registers::ReadCableDelayMeasurement(const CFO_Link_ID link
 	CFOandDTC_Register calcReg = CFO_Register_CableDelayValue_offset;
 	calcReg += 0x100 * roc;
 	calcReg += 0x4 * link;
+	__COUTT__ << "Delay Register 0x" << std::hex << calcReg << __E__;
 	uint32_t readVal = ReadRegister_(calcReg);
 	done = (readVal >> 31) & 1;
 	return readVal & (~(1 << 31));  // return 4-bit nibble at bit-16
