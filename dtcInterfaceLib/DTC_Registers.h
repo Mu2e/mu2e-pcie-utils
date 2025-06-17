@@ -600,27 +600,7 @@ public:
 	DTC_SerdesClockSpeed ReadSERDESOscillatorClock(std::optional<uint32_t> val = std::nullopt);
 	void SetSERDESOscillatorClock(DTC_SerdesClockSpeed speed);
 	void SetTimingOscillatorClock(uint32_t freq);
-	RegisterFormatter FormatTimingSERDESOscillatorFrequency();
-	RegisterFormatter FormatMainBoardSERDESOscillatorFrequency();
 	RegisterFormatter FormatSERDESOscillatorControl();
-
-	// DDR Oscillator Registers
-	uint32_t ReadDDROscillatorReferenceFrequency(std::optional<uint32_t> val = std::nullopt);
-	void SetDDROscillatorReferenceFrequency(uint32_t freq);
-	bool ReadDDROscillatorIICInterfaceReset(std::optional<uint32_t> val = std::nullopt);
-	void ResetDDROscillatorIICInterface();
-
-	void WriteDDRIICInterface(DTC_IICDDRBusAddress device, uint8_t address, uint8_t data);
-	uint8_t ReadDDRIICInterface(DTC_IICDDRBusAddress device, uint8_t address);
-	RegisterFormatter FormatDDROscillatorFrequency();
-	RegisterFormatter FormatDDROscillatorControl();
-	RegisterFormatter FormatDDROscillatorParameterLow();
-	RegisterFormatter FormatDDROscillatorParameterHigh();
-
-	// Data Pending Timer Register
-	void SetDataPendingTimer(uint32_t timer);
-	uint32_t ReadDataPendingTimer(std::optional<uint32_t> val = std::nullopt);
-	RegisterFormatter FormatDataPendingTimer();
 
 	// FIFO Full Error Flags Registers
 	void ClearFIFOFullErrorFlags(DTC_Link_ID const& link);
