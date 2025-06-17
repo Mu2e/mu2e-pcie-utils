@@ -136,10 +136,9 @@ int mu2esim::init(DTCLib::DTC_SimMode mode)
 	registers_[DTCLib::DTC_Register_ROCReplyTimeout] = 0x200000;                // ROC Timeout Preset
 	registers_[DTCLib::CFOandDTC_Register_SERDESClock_IICBusLow] = 0xFFFFFFFF;
 	registers_[DTCLib::CFOandDTC_Register_SERDESClock_IICBusHigh] = 0x77f3f;
-	registers_[DTCLib::DTC_Register_DDRReferenceClockFrequency] = 0xbebc200;
-	registers_[DTCLib::DTC_Register_DDRClock_IICBusLow] = 0x1074f43b;
-	registers_[DTCLib::DTC_Register_DDRClock_IICBusHigh] = 0x30303;
-	registers_[DTCLib::DTC_Register_DataPendingTimer] = 0x00002000;  // Data pending timeout preset
+	// registers_[DTCLib::DTC_Register_DDRReferenceClockFrequency] = 0xbebc200;
+	// registers_[DTCLib::DTC_Register_DDRClock_IICBusLow] = 0x1074f43b;
+	// registers_[DTCLib::DTC_Register_DDRClock_IICBusHigh] = 0x30303;
 	registers_[DTCLib::DTC_Register_EthernetFramePayloadSize] = 0x5D4;
 	registers_[DTCLib::DTC_Register_FPGAPROMProgramStatus] = 0x1;
 
