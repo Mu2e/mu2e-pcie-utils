@@ -7,6 +7,7 @@
 #include <vector>      // std::vector
 
 #include "CFOandDTC_Registers.h"
+#include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_EVBStatsType.h"
 
 namespace DTCLib {
 enum DTC_Register : uint16_t
@@ -23,16 +24,16 @@ enum DTC_Register : uint16_t
 	// 0x9150 Reserved
 	DTC_Register_EVBPartitionID = 0x9154,
 	DTC_Register_EVBConfiguration = 0x9158,
-	DTC_Register_SERDESTimingCardOscillatorFrequency = 0x915C,
-	DTC_Register_SERDESReferenceClockFrequency = 0x9160,
+	DTC_Register_EVBPacketControl = 0x915C,
+	DTC_Register_EVBStats = 0x9160,
 	DTC_Register_SERDESClock_IICBusControl = 0x9164,
-	DTC_Register_DDRReferenceClockFrequency = 0x9170,
-	DTC_Register_DDRClock_IICBusControl = 0x9174,
-	DTC_Register_DDRClock_IICBusLow = 0x9178,
-	DTC_Register_DDRClock_IICBusHigh = 0x917C,
-	DTC_Register_DDRWriteResponseTimer = 0x9180,
+	// DTC_Register_DDRReferenceClockFrequency = 0x9170,
+	// DTC_Register_DDRClock_IICBusControl = 0x9174,
+	// DTC_Register_DDRClock_IICBusLow = 0x9178,
+	// DTC_Register_DDRClock_IICBusHigh = 0x917C,
+	// Reserved - formerly... DTC_Register_DDRWriteResponseTimer = 0x9180,
 	DTC_Register_CFOEmulation_LoopbackDelayMeasure = 0x9184,
-	DTC_Register_DataPendingTimer = 0x9188,
+	// Reserved - formerly... DTC_Register_DataPendingTimer = 0x9188,
 	// 0x918C Reserved
 	DTC_Register_FIFOFullErrorFlag0 = 0x9190,
 	DTC_Register_FIFOFullErrorFlag1 = 0x9194,
@@ -553,6 +554,8 @@ public:
 	bool ReadROCTimeoutError(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
 	RegisterFormatter FormatROCReplyTimeoutError();
 
+	//----------------- Hardware Event Building configuration -----------------------
+
 	// EVB Network Partition ID / EVB Network Local MAC Index Register
 	void SetEVBInfo(uint8_t dtcid, uint8_t mode, uint8_t partitionId, uint8_t macByte);
 	void SetDTCID(uint8_t dtcid);
@@ -565,7 +568,7 @@ public:
 	uint8_t ReadEVBLocalMACAddress(std::optional<uint32_t> val = std::nullopt);
 	RegisterFormatter FormatEVBLocalParitionIDMACIndex();
 
-	// EVB Buffer Config
+	// EVB Cluster Config
 	void SetEVBClusterInfo(  // uint8_t bufferCount,
 		uint8_t baseDTCAddress, uint8_t numOfDTCs);
 	// void SetEVBNumberInputBuffers(uint8_t count);
@@ -574,12 +577,23 @@ public:
 	uint8_t ReadEVBStartNode(std::optional<uint32_t> val = std::nullopt);
 	void SetEVBNumberOfDestinationNodes(uint8_t number);
 	uint8_t ReadEVBNumberOfDestinationNodes(std::optional<uint32_t> val = std::nullopt);
-	RegisterFormatter FormatEVBNumberOfDestinationNodes();
+	RegisterFormatter FormatEVBClusterInfo();
+
+	// EVB Packet Control
+	void SetEVBPacketControlInfo(uint16_t idlePacketWordCount, uint8_t interpacketGap, uint8_t loopbackCalibratedOffset);
+	uint16_t ReadEVBIdlePacketWordCount(std::optional<uint32_t> val = std::nullopt);
+	uint8_t ReadEVBInterpacketGap(std::optional<uint32_t> val = std::nullopt);
+	uint8_t ReadEVBLoopbackCalibratedOffset(std::optional<uint32_t> val = std::nullopt);
+	RegisterFormatter FormatEVBPacketControlInfo();
+
+	// EVB Stats
+	uint32_t ReadEVBStats(DTC_EVBStatsType type, uint8_t dtc_mac, std::optional<uint32_t> val = std::nullopt);
+	RegisterFormatter FormatEVBStats(DTC_EVBStatsType type = DTC_EVBStatsType::DTC_EVBStatsType_All);
+	std::chrono::time_point<std::chrono::steady_clock> EVB_startDataTime, EVB_endDataTime;
+
+	//----------------- end Hardware Event Building configuration -----------------------
 
 	// SERDES Oscillator Registers
-	uint32_t ReadSERDESOscillatorReferenceFrequency(DTC_IICSERDESBusAddress device, std::optional<uint32_t> val = std::nullopt);
-	void SetSERDESOscillatorReferenceFrequency(DTC_IICSERDESBusAddress device, uint32_t freq);
-
 	bool ReadSERDESOscillatorIICInterfaceReset(std::optional<uint32_t> val = std::nullopt);
 	void ResetSERDESOscillatorIICInterface();
 
@@ -1157,9 +1171,7 @@ public:
 
 	// Oscillator Programming (DDR and SERDES)
 	bool SetNewOscillatorFrequency(DTC_OscillatorType oscillator, double targetFrequency);
-	double ReadCurrentFrequency(DTC_OscillatorType oscillator);
 	uint64_t ReadCurrentProgram(DTC_OscillatorType oscillator);
-	void WriteCurrentFrequency(double freq, DTC_OscillatorType oscillator);
 	void WriteCurrentProgram(uint64_t program, DTC_OscillatorType oscillator);
 
 private:
@@ -1176,10 +1188,10 @@ private:
 											   uint64_t currentProgram);
 	uint64_t ReadSERDESOscillatorParameters_();
 	uint64_t ReadTimingOscillatorParameters_();
-	uint64_t ReadDDROscillatorParameters_();
+	// uint64_t ReadDDROscillatorParameters_();
 	void SetSERDESOscillatorParameters_(uint64_t program);
 	void SetTimingOscillatorParameters_(uint64_t program);
-	void SetDDROscillatorParameters_(uint64_t program);
+	// void SetDDROscillatorParameters_(uint64_t program);
 
 	bool WaitForLinkReady_(DTC_Link_ID const& link, size_t interval, double timeout = 2.0 /*seconds*/);
 
@@ -1243,17 +1255,14 @@ public:
 		[this] { return this->FormatROCReplyTimeout(); },
 		[this] { return this->FormatROCReplyTimeoutError(); },
 		[this] { return this->FormatEVBLocalParitionIDMACIndex(); },
-		[this] { return this->FormatEVBNumberOfDestinationNodes(); },
-		[this] { return this->FormatTimingSERDESOscillatorFrequency(); },
-		[this] { return this->FormatMainBoardSERDESOscillatorFrequency(); },
+		[this] { return this->FormatEVBClusterInfo(); },
 		[this] { return this->FormatSERDESOscillatorControl(); },
 		[this] { return this->FormatSERDESOscillatorParameterLow(); },
 		[this] { return this->FormatSERDESOscillatorParameterHigh(); },
-		[this] { return this->FormatDDROscillatorFrequency(); },
-		[this] { return this->FormatDDROscillatorControl(); },
-		[this] { return this->FormatDDROscillatorParameterLow(); },
-		[this] { return this->FormatDDROscillatorParameterHigh(); },
-		[this] { return this->FormatDataPendingTimer(); },
+		// [this] { return this->FormatDDROscillatorFrequency(); },
+		// [this] { return this->FormatDDROscillatorControl(); },
+		// [this] { return this->FormatDDROscillatorParameterLow(); },
+		// [this] { return this->FormatDDROscillatorParameterHigh(); },
 		[this] { return this->FormatFIFOFullErrorFlag0(); },
 		[this] { return this->FormatFIFOFullErrorFlag1(); },
 		[this] { return this->FormatFIFOFullErrorFlag2(); },
@@ -1448,6 +1457,19 @@ public:
 		[this] { return this->FormatRXDataPacketCountLink(DTC_Link_3); },
 		[this] { return this->FormatRXDataPacketCountLink(DTC_Link_4); },
 		[this] { return this->FormatRXDataPacketCountLink(DTC_Link_5); }
+
+	};
+
+	const std::vector<std::function<RegisterFormatter()>> formattedHWEventBuildingFunctions_{
+
+		[this] { return this->FormatEVBLocalParitionIDMACIndex(); },
+		[this] { return this->FormatEVBClusterInfo(); },
+		[this] { return this->FormatCFOTXClockMarkerCountLink6(); },
+		[this] { return this->FormatTXEventWindowMarkerCountLink(DTC_Link_CFO); },
+		[this] { return this->FormatTXHeartbeatPacketCountLink(DTC_Link_CFO); },
+		[this] { return this->FormatCFOLinkError(); },
+		[this] { return this->FormatEVBPacketControlInfo(); },
+		[this] { return this->FormatEVBStats(); },
 
 	};
 };

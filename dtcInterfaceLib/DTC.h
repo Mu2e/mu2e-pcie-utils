@@ -35,6 +35,7 @@
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_FIFOFullErrorFlags.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_IICDDRBusAddress.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_IICSERDESBusAddress.h"
+#include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_EVBStatsType.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_LinkEnableMode.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_LinkStatus.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_Link_ID.h"
