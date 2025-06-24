@@ -2360,14 +2360,16 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 							// 		<< __E__;
 							o << ((double)v) /
 									 (ns / 1000.0)
-							  << " Packets/s" << __E__;
+							  << " Packets/s";
 						}
 						else
-							o << "Packet Transfer Duration too short to establish packet rate."
-							  << __E__;
+							o << "Packet Transfer Duration too short to establish packet rate.";
 					}
-
-					o << "Received Packet Count:                 ";
+					form.vals.push_back(o.str());
+					o.str("");
+					o.clear();
+					
+					o << "Received Packet Count:                             ";
 					break;
 				case DTC_EVBStatsType_RxLastSequenceTag:
 					o << "Last Received Sequence Tag:            ";
