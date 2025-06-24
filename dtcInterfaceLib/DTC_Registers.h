@@ -569,10 +569,9 @@ public:
 	RegisterFormatter FormatEVBLocalParitionIDMACIndex();
 
 	// EVB Cluster Config
-	void SetEVBClusterInfo(  // uint8_t bufferCount,
-		uint8_t baseDTCAddress, uint8_t numOfDTCs);
-	// void SetEVBNumberInputBuffers(uint8_t count);
-	// uint8_t ReadEVBNumberInputBuffers(std::optional<uint32_t> val = std::nullopt);
+	void SetEVBClusterInfo(uint16_t deadTime, uint8_t baseDTCAddress, uint8_t numOfDTCs);
+	void SetEVBDeadTime(uint16_t deadTime);
+	uint16_t ReadEVBDeadTime(std::optional<uint32_t> val = std::nullopt);
 	void SetEVBStartNode(uint8_t node);
 	uint8_t ReadEVBStartNode(std::optional<uint32_t> val = std::nullopt);
 	void SetEVBNumberOfDestinationNodes(uint8_t number);

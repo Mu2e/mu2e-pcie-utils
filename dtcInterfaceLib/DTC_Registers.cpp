@@ -2155,19 +2155,36 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBLocalParitionIDMACInde
 }
 
 /// EVB Number of Destination Nodes Register
-void DTCLib::DTC_Registers::SetEVBClusterInfo(  // uint8_t bufferCount,
+void DTCLib::DTC_Registers::SetEVBClusterInfo(uint16_t deadTime,
 	uint8_t baseDTCAddress, uint8_t numOfDTCs)
 {
-	uint32_t regVal = 0;            //(bufferCount & 0xFF) << 16;
-	regVal |= baseDTCAddress << 8;  //(startNode & 0x3F) << 8;
-	regVal |= numOfDTCs;            //(numOfNodes & 0x3F);
+	uint32_t regVal = (deadTime & 0xFFFF) << 16;
+	regVal |= baseDTCAddress << 8;  
+	regVal |= numOfDTCs;            
 	WriteRegister_(regVal, DTC_Register_EVBConfiguration);
+}
+
+/// <summary>
+/// Set the dead time (clocks at start of destination switch to block tx to avoid collissions with previous round-robin tx) of the EVB cluster
+/// </summary>
+void DTCLib::DTC_Registers::SetEVBDeadTime(uint16_t deadTime)
+{
+	auto regVal = ReadRegister_(DTC_Register_EVBConfiguration) & 0x0FFFF;
+	regVal += (deadTime & 0xFFFF) << 16;
+	WriteRegister_(regVal, DTC_Register_EVBConfiguration);
+}
+
+/// <summary>
+/// Read the dead time (clocks at start of destination switch to block tx to avoid collissions with previous round-robin tx) of the EVB cluster
+/// </summary>
+uint16_t DTCLib::DTC_Registers::ReadEVBDeadTime(std::optional<uint32_t> val)
+{
+	return static_cast<uint8_t>((((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBConfiguration)) & 0xFFFF0000)) >> 16);
 }
 
 /// <summary>
 /// Set the start node in the EVB cluster
 /// </summary>
-/// <param name="node">Node ID (MAC Address)</param>
 void DTCLib::DTC_Registers::SetEVBStartNode(uint8_t startNode)
 {
 	auto regVal = ReadRegister_(DTC_Register_EVBConfiguration) & 0xFFFFC0FF;
@@ -2178,7 +2195,6 @@ void DTCLib::DTC_Registers::SetEVBStartNode(uint8_t startNode)
 /// <summary>
 /// Read the start node in the EVB cluster
 /// </summary>
-/// <returns>Node ID (MAC Address)</returns>
 uint8_t DTCLib::DTC_Registers::ReadEVBStartNode(std::optional<uint32_t> val)
 {
 	return static_cast<uint8_t>((((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBConfiguration)) & 0x3F00)) >> 8);
@@ -2187,7 +2203,7 @@ uint8_t DTCLib::DTC_Registers::ReadEVBStartNode(std::optional<uint32_t> val)
 /// <summary>
 /// Set the number of destination nodes in the EVB cluster
 /// </summary>
-/// <param name="number">Number of nodes</param>
+/// <param name="numOfNodes">Number of nodes</param>
 void DTCLib::DTC_Registers::SetEVBNumberOfDestinationNodes(uint8_t numOfNodes)
 {
 	auto regVal = ReadRegister_(DTC_Register_EVBConfiguration) & 0xFFFFFFC0;
@@ -2214,8 +2230,8 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBClusterInfo()
 	form.description = "EVB DTC Cluster Configuration";
 	form.vals.push_back("");  // translation
 	std::stringstream o;
-	// o << "Input Buffer Count: " << std::dec << static_cast<int>(ReadEVBNumberInputBuffers(form.value));
-	// form.vals.push_back(o.str());
+	o << "EVB Dead Time: " << std::dec << static_cast<int>(ReadEVBDeadTime(form.value));
+	form.vals.push_back(o.str());
 	o.str("");
 	o.clear();
 	o << "EVB Start Node: " << std::dec << static_cast<int>(ReadEVBStartNode(form.value));
@@ -2256,7 +2272,7 @@ uint8_t DTCLib::DTC_Registers::ReadEVBLoopbackCalibratedOffset(std::optional<uin
 /// Formats the Hardware Event Building Packet Control Info Register's current value for register dumps
 DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBPacketControlInfo()
 {
-	auto form = CreateFormatter(DTC_Register_EVBConfiguration);
+	auto form = CreateFormatter(DTC_Register_EVBPacketControl);
 	form.description = "EVB Packet Control Info";
 	form.vals.push_back("");  // translation
 	std::stringstream o;
@@ -2302,7 +2318,7 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 		t = 0;
 	__COUTV__(t);
 
-	auto form = CreateFormatter(DTC_Register_EVBConfiguration, false /* getValue */);
+	auto form = CreateFormatter(DTC_Register_EVBStats, false /* getValue */);
 	form.description = "EVB Stats";
 	form.vals.push_back("");  // translation
 	std::stringstream o;
