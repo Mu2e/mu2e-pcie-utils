@@ -2338,8 +2338,7 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 			switch (DTC_EVBStatsType(t))
 			{
 				case DTC_EVBStatsType_RxCount:
-
-					if (v != 0 &&  // start time for rates as soon as there is non-zero data
+					if (v > 0 &&  // start time for rates as soon as there is non-zero data
 						EVB_startDataTime ==
 							std::chrono::steady_clock::time_point::min())
 						EVB_startDataTime = std::chrono::steady_clock::now();
@@ -2348,28 +2347,57 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 
 					o << "Received Packet Rate:                  ";
 					o << "DTC_mac #" << (baseDTCAddress + d < 10 ? "0" : "") << std::dec << int(baseDTCAddress + d) << " = ";
-
+					
 					{
-						long long ns =
-							std::chrono::duration_cast<std::chrono::nanoseconds>(
-								EVB_endDataTime - EVB_startDataTime)
-								.count();
-						if (ns > 1000)  // prevent divide by 0
+						// long long ns =
+						// 	std::chrono::duration_cast<std::chrono::nanoseconds>(
+						// 		EVB_endDataTime - EVB_startDataTime)
+						// 		.count();
+						static std::vector<int64_t> lastV;
+						static std::vector<std::chrono::steady_clock::time_point> lastTime;
+
+						if(d >= lastV.size())
 						{
-							// o << "Data Transfer Duration: " << ns / 1000.0 / 1000.0 << " ms"
-							// 		<< __E__;
-							o << ((double)v) /
-									 (ns / 1000.0)
-							  << " Packets/s";
+							lastV.resize(d + 1, 0);
+							lastTime.resize(d + 1, std::chrono::steady_clock::time_point::min());
+						}
+
+						auto now = std::chrono::steady_clock::now();
+
+						if(lastTime[d] == std::chrono::steady_clock::time_point::min())
+						{
+							lastTime[d] = now;
+							lastV[d] = v;
+							o << "Initializing";
 						}
 						else
-							o << "Packet Transfer Duration too short to establish packet rate.";
+						{
+							auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - lastTime[d]).count();
+						
+							if (ns > 1e6)  // prevent divide by 0
+							{
+								double rate = (v - lastV[d]) / (ns / 1e9);
+								// o << "Data Transfer Duration: " << ns / 1000.0 / 1000.0 << " ms"
+								// 		<< __E__;
+	
+								// o << ((double)v) /
+								// 		 (ns / 1e9)
+								//   << " Packets/s";
+	
+								o << rate << " Packets/s";
+	
+								lastV[d] = v;
+								lastTime[d] = std::chrono::steady_clock::now();
+							}
+							else
+								o << "dT too short.";
+						}
 					}
 					form.vals.push_back(o.str());
 					o.str("");
 					o.clear();
 					
-					o << "Received Packet Count:                             "; //Formatting changes made by alim@fnal.gov
+					o << "Received Packet Count:                             ";
 					break;
 				case DTC_EVBStatsType_RxLastSequenceTag:
 					o << "Last Received Sequence Tag:            ";
