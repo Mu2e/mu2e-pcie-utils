@@ -2369,7 +2369,7 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 					o.str("");
 					o.clear();
 					
-					o << "Received Packet Count:                             ";
+					o << "Received Packet Count:                             "; //Formatting changes made by alim@fnal.gov
 					break;
 				case DTC_EVBStatsType_RxLastSequenceTag:
 					o << "Last Received Sequence Tag:            ";
