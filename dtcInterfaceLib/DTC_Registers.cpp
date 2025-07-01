@@ -21,6 +21,9 @@
 #undef __COUT_HDR__
 #define __COUT_HDR__ "DTC " << this->getDeviceUID() << ": "
 
+std::vector<uint32_t> DTCLib::DTC_Registers::lastPacketCount;
+std::vector<std::chrono::steady_clock::time_point> DTCLib::DTC_Registers::lastPacketCountTimestamp;
+
 /// <summary>
 /// Construct an instance of the DTC register map
 /// </summary>
@@ -2310,6 +2313,8 @@ uint32_t DTCLib::DTC_Registers::ReadEVBStats(DTC_EVBStatsType type, uint8_t dtc_
 	return ReadRegister_(DTC_Register_EVBStats);
 }  // end ReadEVBStats()
 
+
+
 /// Formats the Hardware Event Building Stats data for all DTC mac addresses, as specified by the EVB Info 'Number Of Destination Nodes'
 DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBStatsType type /*  = DTC_EVBStatsType::DTC_EVBStatsType_All */)
 {
@@ -2356,34 +2361,32 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 					o << "DTC_mac #" << (baseDTCAddress + d < 10 ? "0" : "") << std::dec << int(baseDTCAddress + d) << " = ";
 
 					{
-						static std::vector<uint32_t> lastV;
-						static std::vector<std::chrono::steady_clock::time_point> lastTime;
-
-						if (d >= lastV.size())
+						
+						if (d >= lastPacketCount.size())
 						{
-							lastV.resize(d + 1, 0);
-							lastTime.resize(d + 1, std::chrono::steady_clock::time_point::min());
+							lastPacketCount.resize(d + 1, 0);
+							lastPacketCountTimestamp.resize(d + 1, std::chrono::steady_clock::time_point::min());
 						}
 
 						auto now = std::chrono::steady_clock::now();
 
-						if (lastTime[d] == std::chrono::steady_clock::time_point::min())
+						if (lastPacketCountTimestamp[d] == std::chrono::steady_clock::time_point::min())
 						{
-							lastTime[d] = now;
-							lastV[d] = v;
+							lastPacketCountTimestamp[d] = now;
+							lastPacketCount[d] = v;
 							o << "Initializing";
 						}
 						else
 						{
-							auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - lastTime[d]).count();
+							auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - lastPacketCountTimestamp[d]).count();
 
 							if (ns > 1e6)  // prevent divide by 0
 							{
-								double rate = (v - lastV[d]) / (ns / 1e9);
+								double rate = (v - lastPacketCount[d]) / (ns / 1e9);
 								o << rate << " Packets/s";
 
-								lastV[d] = v;
-								lastTime[d] = std::chrono::steady_clock::now();
+								lastPacketCount[d] = v;
+								lastPacketCountTimestamp[d] = std::chrono::steady_clock::now();
 
 								lastPacketRates[d] = rate;
 							}

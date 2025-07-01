@@ -1237,6 +1237,9 @@ private:
 
 	bool WaitForLinkReady_(DTC_Link_ID const& link, size_t interval, double timeout = 2.0 /*seconds*/);
 
+	static std::vector<uint32_t> lastPacketCount;
+	static std::vector<std::chrono::steady_clock::time_point> lastPacketCountTimestamp;
+
 protected:
 	DTC_SimMode simMode_;                ///< Simulation mode
 	bool usingDetectorEmulator_{false};  ///< Whether Detector Emulation mode is enabled
