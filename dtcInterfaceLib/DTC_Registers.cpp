@@ -2354,10 +2354,6 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 					o << "DTC_mac #" << (baseDTCAddress + d < 10 ? "0" : "") << std::dec << int(baseDTCAddress + d) << " = ";
 					
 					{
-						// long long ns =
-						// 	std::chrono::duration_cast<std::chrono::nanoseconds>(
-						// 		EVB_endDataTime - EVB_startDataTime)
-						// 		.count();
 						static std::vector<uint32_t> lastV;
 						static std::vector<std::chrono::steady_clock::time_point> lastTime;
 
@@ -2382,13 +2378,6 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 							if (ns > 1e6)  // prevent divide by 0
 							{
 								double rate = (v - lastV[d]) / (ns / 1e9);
-								// o << "Data Transfer Duration: " << ns / 1000.0 / 1000.0 << " ms"
-								// 		<< __E__;
-	
-								// o << ((double)v) /
-								// 		 (ns / 1e9)
-								//   << " Packets/s";
-	
 								o << rate << " Packets/s";
 	
 								lastV[d] = v;
@@ -2397,7 +2386,7 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 								lastPacketRates[d] = rate;
 							}
 							else
-								o << "dT too short.";
+								o << "T too short.";
 						}
 					}
 					form.vals.push_back(o.str());
@@ -2413,64 +2402,10 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 					o << "Rx Missing Packet Count:               ";
 					break;
 				case DTC_EVBStatsType_RxByteCount:
-					// o << "Received Byte Count:                   ";
-
-					if (v > 0 &&  // start time for rates as soon as there is non-zero data
-						EVB_startDataTime ==
-							std::chrono::steady_clock::time_point::min())
-						EVB_startDataTime = std::chrono::steady_clock::now();
-
-					EVB_endDataTime = std::chrono::steady_clock::now();
-
 					o << "Received Byte Rate:                    ";
 					o << "DTC_mac #" << (baseDTCAddress + d < 10 ? "0" : "") << std::dec << int(baseDTCAddress + d) << " = ";
 					
-					{
-						// long long ns =
-						// 	std::chrono::duration_cast<std::chrono::nanoseconds>(
-						// 		EVB_endDataTime - EVB_startDataTime)
-						// 		.count();
-						static std::vector<int64_t> lastV;
-						static std::vector<std::chrono::steady_clock::time_point> lastTime;
-
-						if(d >= lastV.size())
-						{
-							lastV.resize(d + 1, 0);
-							lastTime.resize(d + 1, std::chrono::steady_clock::time_point::min());
-						}
-
-						auto now = std::chrono::steady_clock::now();
-
-						if(lastTime[d] == std::chrono::steady_clock::time_point::min())
-						{
-							lastTime[d] = now;
-							lastV[d] = v;
-							o << "Initializing";
-						}
-						else
-						{
-							auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - lastTime[d]).count();
-						
-							if (ns > 1e6)  // prevent divide by 0
-							{
-								auto form = CreateFormatter(DTC_Register_EVBPacketControl);
-								// double rate = (v - lastV[d]) / (ns / 1e9);
-								// o << "Data Transfer Duration: " << ns / 1000.0 / 1000.0 << " ms"
-								// 		<< __E__;
-	
-								// o << ((double)v) /
-								// 		 (ns / 1e9)
-								//   << " Packets/s";
-	
-								o << lastPacketRates[d] * (static_cast<int>(ReadEVBIdlePacketWordCount(form.value))) * 2 << " Byte/s";
-	
-								lastV[d] = v;
-								lastTime[d] = std::chrono::steady_clock::now();
-							}
-							else
-								o << "dT too short.";
-						}
-					}
+					o << lastPacketRates[d] * (static_cast<uint32_t>(ReadRegister_(DTC_Register_EVBPacketControl)) >> 16) * 2 << " Byte/s";
 					form.vals.push_back(o.str());
 					o.str("");
 					o.clear();
