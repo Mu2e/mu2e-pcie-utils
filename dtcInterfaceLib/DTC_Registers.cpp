@@ -2156,11 +2156,11 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBLocalParitionIDMACInde
 
 /// EVB Number of Destination Nodes Register
 void DTCLib::DTC_Registers::SetEVBClusterInfo(uint16_t deadTime,
-	uint8_t baseDTCAddress, uint8_t numOfDTCs)
+											  uint8_t baseDTCAddress, uint8_t numOfDTCs)
 {
 	uint32_t regVal = (deadTime & 0xFFFF) << 16;
-	regVal |= baseDTCAddress << 8;  
-	regVal |= numOfDTCs;            
+	regVal |= baseDTCAddress << 8;
+	regVal |= numOfDTCs;
 	WriteRegister_(regVal, DTC_Register_EVBConfiguration);
 }
 
@@ -2354,12 +2354,12 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 
 					o << "Received Packet Rate:                  ";
 					o << "DTC_mac #" << (baseDTCAddress + d < 10 ? "0" : "") << std::dec << int(baseDTCAddress + d) << " = ";
-					
+
 					{
 						static std::vector<uint32_t> lastV;
 						static std::vector<std::chrono::steady_clock::time_point> lastTime;
 
-						if(d >= lastV.size())
+						if (d >= lastV.size())
 						{
 							lastV.resize(d + 1, 0);
 							lastTime.resize(d + 1, std::chrono::steady_clock::time_point::min());
@@ -2367,7 +2367,7 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 
 						auto now = std::chrono::steady_clock::now();
 
-						if(lastTime[d] == std::chrono::steady_clock::time_point::min())
+						if (lastTime[d] == std::chrono::steady_clock::time_point::min())
 						{
 							lastTime[d] = now;
 							lastV[d] = v;
@@ -2376,12 +2376,12 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 						else
 						{
 							auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - lastTime[d]).count();
-						
+
 							if (ns > 1e6)  // prevent divide by 0
 							{
 								double rate = (v - lastV[d]) / (ns / 1e9);
 								o << rate << " Packets/s";
-	
+
 								lastV[d] = v;
 								lastTime[d] = std::chrono::steady_clock::now();
 
@@ -2394,7 +2394,7 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 					form.vals.push_back(o.str());
 					o.str("");
 					o.clear();
-					
+
 					o << "Bram Stat - Received Packet Count:                 ";
 					break;
 				case DTC_EVBStatsType_RxLastSequenceTag:
@@ -2406,12 +2406,12 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 				case DTC_EVBStatsType_RxByteCount:
 					o << "Received Byte Rate:                    ";
 					o << "DTC_mac #" << (baseDTCAddress + d < 10 ? "0" : "") << std::dec << int(baseDTCAddress + d) << " = ";
-					
+
 					o << lastPacketRates[d] * idlePacketWordCount * 2 << " Byte/s";
 					form.vals.push_back(o.str());
 					o.str("");
 					o.clear();
-					
+
 					o << "Bram Stat - Received Byte Count:                   ";
 					break;
 				case DTC_EVBStatsType_RxLastPacketArrival:
