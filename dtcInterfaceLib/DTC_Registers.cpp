@@ -2313,8 +2313,6 @@ uint32_t DTCLib::DTC_Registers::ReadEVBStats(DTC_EVBStatsType type, uint8_t dtc_
 	return ReadRegister_(DTC_Register_EVBStats);
 }  // end ReadEVBStats()
 
-
-
 /// Formats the Hardware Event Building Stats data for all DTC mac addresses, as specified by the EVB Info 'Number Of Destination Nodes'
 DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBStatsType type /*  = DTC_EVBStatsType::DTC_EVBStatsType_All */)
 {
@@ -2361,7 +2359,6 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 					o << "DTC_mac #" << (baseDTCAddress + d < 10 ? "0" : "") << std::dec << int(baseDTCAddress + d) << " = ";
 
 					{
-						
 						if (d >= lastPacketCount.size())
 						{
 							lastPacketCount.resize(d + 1, 0);
