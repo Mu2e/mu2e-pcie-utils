@@ -2407,7 +2407,7 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 					o << "Received Byte Rate:                    ";
 					o << "DTC_mac #" << (baseDTCAddress + d < 10 ? "0" : "") << std::dec << int(baseDTCAddress + d) << " = ";
 
-					o << lastPacketRates[d] * idlePacketWordCount * 2 << " Byte/s";
+					o << lastPacketRates[d] * idlePacketWordCount * 8 << " Byte/s";
 					form.vals.push_back(o.str());
 					o.str("");
 					o.clear();
