@@ -2333,6 +2333,8 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 	for (uint8_t d = 0; d < numOfDTCs; ++d)
 		lastPacketRates.resize(d + 1, 0);
 
+	uint32_t idlePacketWordCount = (static_cast<uint32_t>(ReadRegister_(DTC_Register_EVBPacketControl)) >> 16);
+
 	for (; t < DTC_EVBStatsType_BRAM_TYPE_COUNT; ++t)
 	{
 		for (uint8_t d = 0; d < numOfDTCs; ++d)
@@ -2405,7 +2407,7 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 					o << "Received Byte Rate:                    ";
 					o << "DTC_mac #" << (baseDTCAddress + d < 10 ? "0" : "") << std::dec << int(baseDTCAddress + d) << " = ";
 					
-					o << lastPacketRates[d] * (static_cast<uint32_t>(ReadRegister_(DTC_Register_EVBPacketControl)) >> 16) * 2 << " Byte/s";
+					o << lastPacketRates[d] * idlePacketWordCount * 2 << " Byte/s";
 					form.vals.push_back(o.str());
 					o.str("");
 					o.clear();
