@@ -21,7 +21,6 @@
 #undef __COUT_HDR__
 #define __COUT_HDR__ "DTC " << this->getDeviceUID() << ": "
 
-
 /// <summary>
 /// Construct an instance of the DTC register map
 /// </summary>
@@ -2326,7 +2325,7 @@ void DTCLib::DTC_Registers::updatePacketCount(uint8_t dtc, uint32_t currentCount
 	auto now = std::chrono::steady_clock::now();
 
 	auto [lastCount, lastTime] = getPacketCountInfo(dtc);
-	if(lastTime == std::chrono::steady_clock::time_point::min())
+	if (lastTime == std::chrono::steady_clock::time_point::min())
 	{
 		lastPacketCount[dtc] = {currentCount, now};
 		return;
