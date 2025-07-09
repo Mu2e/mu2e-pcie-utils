@@ -1237,8 +1237,8 @@ private:
 
 	bool WaitForLinkReady_(DTC_Link_ID const& link, size_t interval, double timeout = 2.0 /*seconds*/);
 
-	static std::vector<uint32_t> lastPacketCount;
-	static std::vector<std::chrono::steady_clock::time_point> lastPacketCountTimestamp;
+	std::unordered_map<uint8_t, std::pair<uint32_t, std::chrono::steady_clock::time_point>> lastPacketCount;
+	std::unordered_map<uint8_t, double> lastPacketRate;
 
 protected:
 	DTC_SimMode simMode_;                ///< Simulation mode
@@ -1246,6 +1246,10 @@ protected:
 	uint16_t dmaSize_;                   ///< Size of DMAs, in bytes (default 32k)
 
 public:
+	std::pair<uint32_t, std::chrono::steady_clock::time_point> getPacketCountInfo(uint8_t dtc) const;
+	void updatePacketCount(uint8_t dtc, uint32_t currentCount);
+	double getLastPacketRate(uint8_t dtc) const;
+
 	bool WaitForLinkReady(DTC_Link_ID const& link, size_t interval, double timeout = 2.0) { return WaitForLinkReady_(link, interval, timeout); }
 	virtual const std::vector<std::function<RegisterFormatter()>>& getFormattedDumpFunctions() override { return formattedDumpFunctions_; };              // pure virtual
 	virtual const std::vector<std::function<RegisterFormatter()>>& getFormattedSimpleDumpFunctions() override { return formattedSimpleDumpFunctions_; };  // pure virtual

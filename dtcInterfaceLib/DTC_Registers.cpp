@@ -21,8 +21,6 @@
 #undef __COUT_HDR__
 #define __COUT_HDR__ "DTC " << this->getDeviceUID() << ": "
 
-std::vector<uint32_t> DTCLib::DTC_Registers::lastPacketCount;
-std::vector<std::chrono::steady_clock::time_point> DTCLib::DTC_Registers::lastPacketCountTimestamp;
 
 /// <summary>
 /// Construct an instance of the DTC register map
@@ -2313,6 +2311,43 @@ uint32_t DTCLib::DTC_Registers::ReadEVBStats(DTC_EVBStatsType type, uint8_t dtc_
 	return ReadRegister_(DTC_Register_EVBStats);
 }  // end ReadEVBStats()
 
+// Get the last packet count and its timestamp for a DTC
+std::pair<uint32_t, std::chrono::steady_clock::time_point> DTCLib::DTC_Registers::getPacketCountInfo(uint8_t dtc) const
+{
+	auto i = lastPacketCount.find(dtc);
+	if (i != lastPacketCount.end())
+		return i->second;
+	return {0, std::chrono::steady_clock::time_point::min()};
+}
+
+// Update the packet count and timestamp and calculate packet rate for a DTC
+void DTCLib::DTC_Registers::updatePacketCount(uint8_t dtc, uint32_t currentCount)
+{
+	auto now = std::chrono::steady_clock::now();
+
+	auto [lastCount, lastTime] = getPacketCountInfo(dtc);
+	if(lastTime == std::chrono::steady_clock::time_point::min())
+	{
+		lastPacketCount[dtc] = {currentCount, now};
+		return;
+	}
+
+	auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now - lastTime).count();
+	if (ns > 1e6)
+	{
+		double rate = (currentCount - lastCount) / (ns / 1e9);
+		lastPacketRate[dtc] = rate;
+		lastPacketCount[dtc] = {currentCount, now};
+	}
+}
+
+// Get the most recent packet rate for a DTC
+double DTCLib::DTC_Registers::getLastPacketRate(uint8_t dtc) const
+{
+	auto i = lastPacketRate.find(dtc);
+	return i != lastPacketRate.end() ? i->second : 0.0;
+}
+
 /// Formats the Hardware Event Building Stats data for all DTC mac addresses, as specified by the EVB Info 'Number Of Destination Nodes'
 DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBStatsType type /*  = DTC_EVBStatsType::DTC_EVBStatsType_All */)
 {
@@ -2330,11 +2365,6 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 	uint8_t numOfDTCs = ReadEVBNumberOfDestinationNodes();
 
 	__COUTV__(numOfDTCs);
-
-	std::vector<double> lastPacketRates;
-
-	for (uint8_t d = 0; d < numOfDTCs; ++d)
-		lastPacketRates.resize(d + 1, 0);
 
 	uint32_t idlePacketWordCount = (static_cast<uint32_t>(ReadRegister_(DTC_Register_EVBPacketControl)) >> 16);
 
@@ -2359,33 +2389,24 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 					o << "DTC_mac #" << (baseDTCAddress + d < 10 ? "0" : "") << std::dec << int(baseDTCAddress + d) << " = ";
 
 					{
-						if (d >= lastPacketCount.size())
-						{
-							lastPacketCount.resize(d + 1, 0);
-							lastPacketCountTimestamp.resize(d + 1, std::chrono::steady_clock::time_point::min());
-						}
-
 						auto now = std::chrono::steady_clock::now();
+						auto [lastCount, lastTime] = getPacketCountInfo(d);
 
-						if (lastPacketCountTimestamp[d] == std::chrono::steady_clock::time_point::min())
+						if (lastTime == std::chrono::steady_clock::time_point::min())
 						{
-							lastPacketCountTimestamp[d] = now;
-							lastPacketCount[d] = v;
+							updatePacketCount(d, v);
 							o << "Initializing";
 						}
 						else
 						{
-							auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - lastPacketCountTimestamp[d]).count();
+							auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now - lastTime).count();
 
 							if (ns > 1e6)  // prevent divide by 0
 							{
-								double rate = (v - lastPacketCount[d]) / (ns / 1e9);
+								double rate = (v - lastCount) / (ns / 1e9);
 								o << rate << " Packets/s";
 
-								lastPacketCount[d] = v;
-								lastPacketCountTimestamp[d] = std::chrono::steady_clock::now();
-
-								lastPacketRates[d] = rate;
+								updatePacketCount(d, v);
 							}
 							else
 								o << "T too short.";
@@ -2407,7 +2428,7 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 					o << "Received Byte Rate:                    ";
 					o << "DTC_mac #" << (baseDTCAddress + d < 10 ? "0" : "") << std::dec << int(baseDTCAddress + d) << " = ";
 
-					o << lastPacketRates[d] * idlePacketWordCount * 8 << " Byte/s";
+					o << getLastPacketRate(d) * idlePacketWordCount * 8 << " Byte/s";
 					form.vals.push_back(o.str());
 					o.str("");
 					o.clear();
