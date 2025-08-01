@@ -113,6 +113,7 @@ std::string DTCLib::CFOandDTC_Registers::ReadDesignDate(std::optional<uint32_t> 
 {
 	auto readData = val.has_value() ? *val : ReadRegister_(CFOandDTC_Register_DesignDate);
 	std::ostringstream o;
+	bool isCFO = false;
 	std::vector<std::string> months({"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"});
 	size_t mon = ((readData >> 20) & 0xF) * 10 + ((readData >> 16) & 0xF);
 	if (mon - 1 >= months.size())
@@ -124,7 +125,10 @@ std::string DTCLib::CFOandDTC_Registers::ReadDesignDate(std::optional<uint32_t> 
 	if (((readData >> 28) & 0xF) == 0xA)
 		o << "SIM-";
 	else if (((readData >> 28) & 0xF) == 0xC)
+	{
 		o << "CFO-";
+		isCFO = true;
+	}
 	else if (((readData >> 28) & 0xF) == 0xD)
 		o << "DTC-";
 	else if (((readData >> 28) & 0xF) == 0xE)
@@ -134,7 +138,12 @@ std::string DTCLib::CFOandDTC_Registers::ReadDesignDate(std::optional<uint32_t> 
 	o << months[mon - 1] << "/" << ((readData >> 12) & 0xF) << ((readData >> 8) & 0xF) << "/20" <<
 		// ((readData>>28)&0xF) <<
 		20 + ((readData >> 24) & 0xF) << " " <<  // year 2020 + hex nibble at bit-24
-		((readData >> 4) & 0x7) << ((readData >> 0) & 0xF) << ":00   " << (((readData >> 7) & 0x1) ? "6-ROC" : "3-ROC") << "  raw-data: 0x" << std::hex << readData;
+		((readData >> 4) & 0x7) << ((readData >> 0) & 0xF) << ":00   ";
+	if(isCFO)
+		o << "8-Links";
+	else
+		o << (((readData >> 7) & 0x1) ? "6-ROC" : "3-ROC");
+	o << "  raw-data: 0x" << std::hex << readData;
 	return o.str();
 }
 
