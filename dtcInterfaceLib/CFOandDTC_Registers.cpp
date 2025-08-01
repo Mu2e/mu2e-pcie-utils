@@ -139,7 +139,7 @@ std::string DTCLib::CFOandDTC_Registers::ReadDesignDate(std::optional<uint32_t> 
 		// ((readData>>28)&0xF) <<
 		20 + ((readData >> 24) & 0xF) << " " <<  // year 2020 + hex nibble at bit-24
 		((readData >> 4) & 0x7) << ((readData >> 0) & 0xF) << ":00   ";
-	if(isCFO)
+	if (isCFO)
 		o << "8-Links";
 	else
 		o << (((readData >> 7) & 0x1) ? "6-ROC" : "3-ROC");
