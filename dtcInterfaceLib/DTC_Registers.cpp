@@ -7240,7 +7240,7 @@ uint32_t DTCLib::DTC_Registers::ReadTXDataRequestPacketCount(DTC_Link_ID const& 
 
 DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatTXDataRequestPacketCountLink(DTC_Link_ID const& link)
 {
-	auto form = CreateFormatter(GetTXEventWindowMarkerCountLinkRegister(link));
+	auto form = CreateFormatter(GetTXDataRequestPacketCountLinkRegister(link));
 	form.description = "DRP TX Count on Link " +
 					   std::to_string((GetTXDataRequestPacketCountLinkRegister(link) -
 									   GetTXDataRequestPacketCountLinkRegister(DTC_Link_0)) /
