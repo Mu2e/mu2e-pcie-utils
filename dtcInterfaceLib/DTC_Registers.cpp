@@ -2155,19 +2155,36 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBLocalParitionIDMACInde
 }
 
 /// EVB Number of Destination Nodes Register
-void DTCLib::DTC_Registers::SetEVBClusterInfo(  // uint8_t bufferCount,
-	uint8_t baseDTCAddress, uint8_t numOfDTCs)
+void DTCLib::DTC_Registers::SetEVBClusterInfo(uint16_t deadTime,
+											  uint8_t baseDTCAddress, uint8_t numOfDTCs)
 {
-	uint32_t regVal = 0;            //(bufferCount & 0xFF) << 16;
-	regVal |= baseDTCAddress << 8;  //(startNode & 0x3F) << 8;
-	regVal |= numOfDTCs;            //(numOfNodes & 0x3F);
+	uint32_t regVal = (deadTime & 0xFFFF) << 16;
+	regVal |= baseDTCAddress << 8;
+	regVal |= numOfDTCs;
 	WriteRegister_(regVal, DTC_Register_EVBConfiguration);
+}
+
+/// <summary>
+/// Set the dead time (clocks at start of destination switch to block tx to avoid collissions with previous round-robin tx) of the EVB cluster
+/// </summary>
+void DTCLib::DTC_Registers::SetEVBDeadTime(uint16_t deadTime)
+{
+	auto regVal = ReadRegister_(DTC_Register_EVBConfiguration) & 0x0FFFF;
+	regVal += (deadTime & 0xFFFF) << 16;
+	WriteRegister_(regVal, DTC_Register_EVBConfiguration);
+}
+
+/// <summary>
+/// Read the dead time (clocks at start of destination switch to block tx to avoid collissions with previous round-robin tx) of the EVB cluster
+/// </summary>
+uint16_t DTCLib::DTC_Registers::ReadEVBDeadTime(std::optional<uint32_t> val)
+{
+	return static_cast<uint8_t>((((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBConfiguration)) & 0xFFFF0000)) >> 16);
 }
 
 /// <summary>
 /// Set the start node in the EVB cluster
 /// </summary>
-/// <param name="node">Node ID (MAC Address)</param>
 void DTCLib::DTC_Registers::SetEVBStartNode(uint8_t startNode)
 {
 	auto regVal = ReadRegister_(DTC_Register_EVBConfiguration) & 0xFFFFC0FF;
@@ -2178,7 +2195,6 @@ void DTCLib::DTC_Registers::SetEVBStartNode(uint8_t startNode)
 /// <summary>
 /// Read the start node in the EVB cluster
 /// </summary>
-/// <returns>Node ID (MAC Address)</returns>
 uint8_t DTCLib::DTC_Registers::ReadEVBStartNode(std::optional<uint32_t> val)
 {
 	return static_cast<uint8_t>((((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBConfiguration)) & 0x3F00)) >> 8);
@@ -2187,7 +2203,7 @@ uint8_t DTCLib::DTC_Registers::ReadEVBStartNode(std::optional<uint32_t> val)
 /// <summary>
 /// Set the number of destination nodes in the EVB cluster
 /// </summary>
-/// <param name="number">Number of nodes</param>
+/// <param name="numOfNodes">Number of nodes</param>
 void DTCLib::DTC_Registers::SetEVBNumberOfDestinationNodes(uint8_t numOfNodes)
 {
 	auto regVal = ReadRegister_(DTC_Register_EVBConfiguration) & 0xFFFFFFC0;
@@ -2214,8 +2230,8 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBClusterInfo()
 	form.description = "EVB DTC Cluster Configuration";
 	form.vals.push_back("");  // translation
 	std::stringstream o;
-	// o << "Input Buffer Count: " << std::dec << static_cast<int>(ReadEVBNumberInputBuffers(form.value));
-	// form.vals.push_back(o.str());
+	o << "EVB Dead Time: " << std::dec << static_cast<int>(ReadEVBDeadTime(form.value));
+	form.vals.push_back(o.str());
 	o.str("");
 	o.clear();
 	o << "EVB Start Node: " << std::dec << static_cast<int>(ReadEVBStartNode(form.value));
@@ -2256,7 +2272,7 @@ uint8_t DTCLib::DTC_Registers::ReadEVBLoopbackCalibratedOffset(std::optional<uin
 /// Formats the Hardware Event Building Packet Control Info Register's current value for register dumps
 DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBPacketControlInfo()
 {
-	auto form = CreateFormatter(DTC_Register_EVBConfiguration);
+	auto form = CreateFormatter(DTC_Register_EVBPacketControl);
 	form.description = "EVB Packet Control Info";
 	form.vals.push_back("");  // translation
 	std::stringstream o;
@@ -2294,6 +2310,43 @@ uint32_t DTCLib::DTC_Registers::ReadEVBStats(DTC_EVBStatsType type, uint8_t dtc_
 	return ReadRegister_(DTC_Register_EVBStats);
 }  // end ReadEVBStats()
 
+// Get the last packet count and its timestamp for a DTC
+std::pair<uint32_t, std::chrono::steady_clock::time_point> DTCLib::DTC_Registers::getPacketCountInfo(uint8_t dtc) const
+{
+	auto i = lastPacketCount.find(dtc);
+	if (i != lastPacketCount.end())
+		return i->second;
+	return {0, std::chrono::steady_clock::time_point::min()};
+}
+
+// Update the packet count and timestamp and calculate packet rate for a DTC
+void DTCLib::DTC_Registers::updatePacketCount(uint8_t dtc, uint32_t currentCount)
+{
+	auto now = std::chrono::steady_clock::now();
+
+	auto [lastCount, lastTime] = getPacketCountInfo(dtc);
+	if (lastTime == std::chrono::steady_clock::time_point::min())
+	{
+		lastPacketCount[dtc] = {currentCount, now};
+		return;
+	}
+
+	auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now - lastTime).count();
+	if (ns > 1e6)
+	{
+		double rate = (currentCount - lastCount) / (ns / 1e9);
+		lastPacketRate[dtc] = rate;
+		lastPacketCount[dtc] = {currentCount, now};
+	}
+}
+
+// Get the most recent packet rate for a DTC
+double DTCLib::DTC_Registers::getLastPacketRate(uint8_t dtc) const
+{
+	auto i = lastPacketRate.find(dtc);
+	return i != lastPacketRate.end() ? i->second : 0.0;
+}
+
 /// Formats the Hardware Event Building Stats data for all DTC mac addresses, as specified by the EVB Info 'Number Of Destination Nodes'
 DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBStatsType type /*  = DTC_EVBStatsType::DTC_EVBStatsType_All */)
 {
@@ -2302,7 +2355,7 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 		t = 0;
 	__COUTV__(t);
 
-	auto form = CreateFormatter(DTC_Register_EVBConfiguration, false /* getValue */);
+	auto form = CreateFormatter(DTC_Register_EVBStats, false /* getValue */);
 	form.description = "EVB Stats";
 	form.vals.push_back("");  // translation
 	std::stringstream o;
@@ -2311,6 +2364,8 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 	uint8_t numOfDTCs = ReadEVBNumberOfDestinationNodes();
 
 	__COUTV__(numOfDTCs);
+
+	uint32_t idlePacketWordCount = (static_cast<uint32_t>(ReadRegister_(DTC_Register_EVBPacketControl)) >> 16);
 
 	for (; t < DTC_EVBStatsType_BRAM_TYPE_COUNT; ++t)
 	{
@@ -2322,8 +2377,7 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 			switch (DTC_EVBStatsType(t))
 			{
 				case DTC_EVBStatsType_RxCount:
-
-					if (v != 0 &&  // start time for rates as soon as there is non-zero data
+					if (v > 0 &&  // start time for rates as soon as there is non-zero data
 						EVB_startDataTime ==
 							std::chrono::steady_clock::time_point::min())
 						EVB_startDataTime = std::chrono::steady_clock::now();
@@ -2334,24 +2388,34 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 					o << "DTC_mac #" << (baseDTCAddress + d < 10 ? "0" : "") << std::dec << int(baseDTCAddress + d) << " = ";
 
 					{
-						long long ns =
-							std::chrono::duration_cast<std::chrono::nanoseconds>(
-								EVB_endDataTime - EVB_startDataTime)
-								.count();
-						if (ns > 1000)  // prevent divide by 0
+						auto now = std::chrono::steady_clock::now();
+						auto [lastCount, lastTime] = getPacketCountInfo(d);
+
+						if (lastTime == std::chrono::steady_clock::time_point::min())
 						{
-							// o << "Data Transfer Duration: " << ns / 1000.0 / 1000.0 << " ms"
-							// 		<< __E__;
-							o << ((double)v) /
-									 (ns / 1000.0)
-							  << " Packets/s" << __E__;
+							updatePacketCount(d, v);
+							o << "Initializing";
 						}
 						else
-							o << "Packet Transfer Duration too short to establish packet rate."
-							  << __E__;
-					}
+						{
+							auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now - lastTime).count();
 
-					o << "Received Packet Count:                 ";
+							if (ns > 1e6)  // prevent divide by 0
+							{
+								double rate = (v - lastCount) / (ns / 1e9);
+								o << rate << " Packets/s";
+
+								updatePacketCount(d, v);
+							}
+							else
+								o << "T too short.";
+						}
+					}
+					form.vals.push_back(o.str());
+					o.str("");
+					o.clear();
+
+					o << "Bram Stat - Received Packet Count:                 ";
 					break;
 				case DTC_EVBStatsType_RxLastSequenceTag:
 					o << "Last Received Sequence Tag:            ";
@@ -2360,7 +2424,15 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 					o << "Rx Missing Packet Count:               ";
 					break;
 				case DTC_EVBStatsType_RxByteCount:
-					o << "Received Byte Count:                   ";
+					o << "Received Byte Rate:                    ";
+					o << "DTC_mac #" << (baseDTCAddress + d < 10 ? "0" : "") << std::dec << int(baseDTCAddress + d) << " = ";
+
+					o << getLastPacketRate(d) * idlePacketWordCount * 8 << " Byte/s";
+					form.vals.push_back(o.str());
+					o.str("");
+					o.clear();
+
+					o << "Bram Stat - Received Byte Count:                   ";
 					break;
 				case DTC_EVBStatsType_RxLastPacketArrival:
 					o << "Rx Last Packet Arrival [10gbe clocks]: ";
