@@ -451,6 +451,9 @@ public:
 	// Bit 0 Reserved
 	RegisterFormatter FormatDTCControl();
 
+	void SetCFOSamplePermanentOffset(int permanentOffset);
+	int ReadCFOSamplePermanentOffset(std::optional<uint32_t> val = std::nullopt);
+
 	// DMA Transfer Length Register
 	void SetTriggerDMATransferLength(uint16_t length);
 	uint16_t ReadTriggerDMATransferLength(std::optional<uint32_t> val = std::nullopt);
