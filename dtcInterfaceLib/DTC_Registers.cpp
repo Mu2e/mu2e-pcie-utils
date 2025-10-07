@@ -765,12 +765,12 @@ bool DTCLib::DTC_Registers::ReadPunchEnable(std::optional<uint32_t> val)
 	return data[9];
 }
 
-/// This offset should be set 'permanently' for the DTC in response to 
+/// This offset should be set 'permanently' for the DTC in response to
 ///		the sample measurement at bits [18:16] of DTC_Register_CFOLinkErrorFlags
 void DTCLib::DTC_Registers::SetCFOSamplePermanentOffset(int permanentOffset)
 {
-	//do not write more bits because high bits, in older versions were the error clear latch... ReadRegister_(DTC_Register_CFOLinkErrorFlags);
-	//set only 3-bits [2:0]
+	// do not write more bits because high bits, in older versions were the error clear latch... ReadRegister_(DTC_Register_CFOLinkErrorFlags);
+	// set only 3-bits [2:0]
 	WriteRegister_(permanentOffset & 7, DTC_Register_CFOLinkErrorFlags);
 }  // end SetCFOSamplePermanentOffset()
 
@@ -778,12 +778,12 @@ int DTCLib::DTC_Registers::ReadCFOSamplePermanentOffset(std::optional<uint32_t> 
 {
 	uint32_t setting = val.has_value() ? *val : ReadRegister_(DTC_Register_CFOLinkErrorFlags);
 	setting &= 7;
-	if(setting > 3)
+	if (setting > 3)
 		setting = -8 + setting;
-	return setting; //return 3-bit value handling of [-2,2]
+	return setting;  // return 3-bit value handling of [-2,2]
 }  // end ReadCFOSamplePermanentOffset()
 
-/// @brief Set edge selection of RTF clock and external CFO rx -> tx data 
+/// @brief Set edge selection of RTF clock and external CFO rx -> tx data
 /// @param forceCFOedge is a 2-bit value
 void DTCLib::DTC_Registers::SetExternalCFOSampleEdgeMode(int forceCFOedge)
 {
@@ -5263,13 +5263,13 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatCFOLinkError()
 	form.vals.push_back(std::string("CFO Rx-to-Tx Data Corruption Error:  [") +
 						(((form.value >> 13) & 1) ? "x" : " ") + "]");
 	int measuredPos = (form.value >> 16) & 7;
-	int impliedPos =  2 - measuredPos; // legal values are -2 -1 0 1 2 (if measured value is 4 3 2 1 0, respsectively)
- 	form.vals.push_back(std::string("CFO Measured Marker position {0,4}:  [") +
+	int impliedPos = 2 - measuredPos;  // legal values are -2 -1 0 1 2 (if measured value is 4 3 2 1 0, respsectively)
+	form.vals.push_back(std::string("CFO Measured Marker position {0,4}:  [") +
 						std::to_string(measuredPos) + "] ==> " + std::to_string(impliedPos));
 	form.vals.push_back(std::string("CFO Permanent Offset setting {-2,2}: [") +
 						std::to_string(ReadCFOSamplePermanentOffset(form.value)) + "]");
 
-	form.vals.push_back(""); //spacer
+	form.vals.push_back("");  // spacer
 
 	// also show link enables for CFO and EVB
 	uint32_t val = ReadRegister_(CFOandDTC_Register_LinkEnable);
@@ -7681,7 +7681,7 @@ void DTCLib::DTC_Registers::VerifyRegisterWrite_(const CFOandDTC_Register& addre
 		switch (address)  // handle special register checks by masking of DONT-CARE bits, or else check full 32 bits
 		{
 			//---------- DTC only registers
-			case DTC_Register_CFOLinkErrorFlags: // CFO Sample Permanent Offset 2:0
+			case DTC_Register_CFOLinkErrorFlags:  // CFO Sample Permanent Offset 2:0
 				dataToWrite &= 0x03;
 				readbackValue &= 0x03;
 				break;
