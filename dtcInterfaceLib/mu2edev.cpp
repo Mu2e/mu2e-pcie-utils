@@ -98,6 +98,10 @@ int mu2edev::init(DTCLib::DTC_SimMode simMode, int deviceIndex, std::string simM
 		activeDeviceIndex_ = deviceIndex;
 		initDMAEngine();
 	}
+
+	//init to free dcs locks
+	end_dcs_transaction(true /* force */); // force unlock
+
 	deviceTime_ += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start).count();
 	return simMode;
 }
