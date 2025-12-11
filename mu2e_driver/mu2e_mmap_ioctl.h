@@ -21,6 +21,9 @@
 
 #ifndef __CLING__
 #include "trace.h"
+#define _trace_hash(str) trace_name_hash(str)
+#else
+#define _trace_hash(x) x[0]
 #endif
 
 #endif
@@ -365,7 +368,6 @@ static inline uint32_t mu2e_host_hash(int dtc, char *hostname_in)
 	char *hostname = hostname_in;
 	uint16_t hostname_hash = 0;
 	uint32_t scratchVal;
-	unsigned ii;
 
 	if (hostname == NULL)
 	{
@@ -376,11 +378,7 @@ static inline uint32_t mu2e_host_hash(int dtc, char *hostname_in)
 		hostname = unameinfo.nodename;
 #endif
 	}
-	for (ii = 0; ii < strlen(hostname); ++ii)
-	{
-		if (hostname[ii] == '.') break;
-		hostname_hash += hostname[ii];
-	}
+	hostname_hash = _trace_hash(hostname);
 	scratchVal = ((uint32_t)hostname_hash << 16) + (uint16_t)dtc;
 
 	return scratchVal;
