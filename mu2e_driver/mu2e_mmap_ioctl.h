@@ -9,13 +9,15 @@
 #define MU2E_MMAP_IOCTL_H
 
 #ifdef __KERNEL__
-#include <asm/ioctl.h>  // _IOWR
+#include <asm/ioctl.h>     // _IOWR
+#include <linux/utsname.h> /* uname */
 #include "trace.h"
 #else
 #include <stdint.h>     // uint16_t
 #include <sys/ioctl.h>  // _IOWR
 #include <sys/types.h>
-#include <unistd.h>  // sysconf
+#include <sys/utsname.h> /* uname */
+#include <unistd.h>      // sysconf
 
 #ifndef __CLING__
 #include "trace.h"
@@ -353,6 +355,29 @@ static inline unsigned mu2e_chn_info_delta_(
 		  (*mu2e_channel_info_)[dtc][chn][dir].num_buffs, retval);
 #endif
 	return retval;
+}
+
+static inline uint32_t mu2e_host_hash(int dtc, char *hostname_in)
+{
+	struct utsname unameinfo;
+	char *hostname = hostname_in;
+	uint16_t hostname_hash = 0;
+	uint32_t scratchVal;
+	unsigned ii;
+
+	if (hostname == NULL)
+	{
+		uname(&unameinfo);
+		hostname = unameinfo.nodename;
+	}
+	for (ii = 0; ii < strlen(hostname); ++ii)
+	{
+		if (hostname[ii] == '.') break;
+		hostname_hash += hostname[ii];
+	}
+	scratchVal = ((uint32_t)hostname_hash << 16) + (uint16_t)dtc;
+
+	return scratchVal;
 }
 
 // stuff from obsolete include/xpmon_be.h

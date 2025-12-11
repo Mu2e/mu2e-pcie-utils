@@ -17,11 +17,11 @@ static char* rev = (char*)"$Revision: 1.23 $$Date: 2012/01/23 15:32:40 $";
 
 #define USAGE \
 	"\
-   usage: %s <start|stop|dump|spy>\n\
+   usage: %s <start|stop|dump|spy|hash>\n\
           %s read <offset>\n\
           %s write <offset> <val>\n\
-          %s write_loopback_data [-p<packet_cnt>] [data]...\n\
 		  %s spy [optsmask]  # see code for optsmask\n\
+          %s hash [hostname]\n\
 examples: %s start\n\
 options:\n\
  -d<dtvdevnum>     \n\
@@ -128,6 +128,17 @@ int main(int argc, char* argv[])
 	{
 		dev.init(DTCLib::DTC_SimMode_Disabled, dtc);
 	}
+	else if (strcmp(cmd, "hash") == 0) {
+		char* hostname = NULL;
+		uint32_t hash = 0;
+
+        if (argc - optind > 0) {
+			hostname = argv[optind];
+        }
+		hash = mu2e_host_hash(dtc, hostname);
+		printf("hash: %x\n", hash);
+		return (0);
+    }
 	else
 	{
 		printf("unknown cmd %s\n", cmd);
@@ -144,7 +155,7 @@ int main(int argc, char* argv[])
 	}
 	else if (strcmp(cmd, "read") == 0)
 	{
-		if (argc < 3)
+		if (argc - optind < 1)
 		{
 			printf(USAGE);
 			return (1);
@@ -187,7 +198,7 @@ int main(int argc, char* argv[])
 	}
 	else if (strcmp(cmd, "write") == 0)
 	{
-		if (argc < 4)
+		if (argc - optind < 2)
 		{
 			printf(USAGE);
 			return (1);
@@ -200,16 +211,6 @@ int main(int argc, char* argv[])
 								   &readbackValue);
 		if (writeValue != readbackValue)
 			printf("NOTE: Write value mismatch 0x%X vs readback 0x%X\n", writeValue, readbackValue);
-
-		// reg_access.reg_offset = strtoul(argv[optind++], NULL, 0);
-		// reg_access.access_type = 1;
-		// reg_access.val = strtoul(argv[optind++], NULL, 0);
-		// sts = ioctl(fd, M_IOC_REG_ACCESS, &reg_access);
-		// if (sts)
-		// {
-		// 	perror("ioctl M_IOC_REG_ACCESS write");
-		// 	return (1);
-		// }
 	}
 	else if (strcmp(cmd, "dump") == 0)
 	{
@@ -227,78 +228,6 @@ int main(int argc, char* argv[])
 		std::cout << "Calling dev.spy(chn) with optsmsk=" << optsmsk << "\n";
 		dev.spy(opt_chn, optsmsk);
 	}
-	// else if (strcmp(cmd,"write_loopback_data") == 0)
-	//   {
-	// 	  sts = dev.init();
-	// 	  printf("1dev.devfd_=%d\n", dev.get_devfd_() );
-	// 	  if (sts) { perror("dev.init"); return (1); }
-
-	// 	  int regs[]={0x9108,0x9168};  // loopback enable
-	// 	  for (unsigned ii=0; ii<(sizeof(regs)/sizeof(regs[0])); ++ii)
-	// 		{
-	// 		  reg_access.reg_offset  = regs[ii];
-	// 		  reg_access.access_type = 1;//wr
-	// 		  reg_access.val         = 0x1;
-	// 		  sts = ioctl( fd, M_IOC_REG_ACCESS, &reg_access );
-	// 		  if (sts) { perror("ioctl M_IOC_REG_ACCESS write"); return (1); }
-	// 		}
-	// 	  reg_access.reg_offset  = 0x9114;  // link enable register
-	// 	  reg_access.access_type = 1;//wr
-	// 	  reg_access.val         = 0x101; // Link 0 - both xmit and recv
-	// 	  sts = ioctl( fd, M_IOC_REG_ACCESS, &reg_access );
-	// 	  if (sts) { perror("ioctl M_IOC_REG_ACCESS write"); return (1); }
-
-	// 	  reg_access.reg_offset  = 0x2004;  // DMA channel-0 C2S control reg
-	// 	  reg_access.access_type = 1;//wr
-	// 	  reg_access.val         = 0x100; // bit 8 is DMA Enable (offset 0x2*** is for C2S chan 0)
-	// 	  sts = ioctl( fd, M_IOC_REG_ACCESS, &reg_access );
-	// 	  if (sts) { perror("ioctl M_IOC_REG_ACCESS write"); return (1); }
-
-	// 	  int chn=0;
-	// 	  struct
-	// 	  {   DataHeaderPacket hdr;
-	// 	    DataPacket       data[8];
-	// 	  } data={{{0}}};
-	// 	  printf("sizeof(hdr)=%lu\n", sizeof(data.hdr) );
-	// 	  printf("sizeof(data)=%lu\n", sizeof(data.hdr) );
-	// 	  data.hdr.s.TransferByteCount = 64;
-	// 	  if (argc > 2) data.hdr.s.TransferByteCount = strtoul( argv[optind++],NULL,0 );
-	// 	  data.hdr.s.Valid = 1;
-	// 	  data.hdr.s.PacketType = 5;  // could be overwritten below
-	// 	  data.hdr.s.LinkID = 0;
-	// 	  data.hdr.s.PacketCount = (data.hdr.s.TransferByteCount-16)/16;// minus header, / packet size
-	// 	  //data.hdr.s.ts10 = 0x3210;
-	// 	  data.hdr.s.ts32 = 0x7654;
-	// 	  data.hdr.s.ts54 = 0xba98;
-	// 	  data.hdr.s.data32 = 0xdead;
-	// 	  data.hdr.s.data54 = 0xbeef;
-	// 	  unsigned pcnt=opt_packets;
-	// 	  if (pcnt > (sizeof(data.data)/sizeof(data.data[0])))
-	// 		{   pcnt = (sizeof(data.data)/sizeof(data.data[0]));
-	// 		}
-	// 	  for (unsigned jj=0; jj<pcnt; ++jj)
-	// 		{
-	// 		  data.data[jj].data10 = (jj<<8)|1;
-	// 		  data.data[jj].data32 = (jj<<8)|2;
-	// 		  data.data[jj].data54 = (jj<<8)|3;
-	// 		  data.data[jj].data76 = (jj<<8)|4;
-	// 		  data.data[jj].data98 = (jj<<8)|5;
-	// 		  data.data[jj].dataBA = (jj<<8)|6;
-	// 		  data.data[jj].dataDC = (jj<<8)|7;
-	// 		  data.data[jj].dataFE = (jj<<8)|8;
-	// 		}
-	// 	  uint16_t *data_pointer = (uint16_t*)&data;
-	// 	  unsigned wrds=0;
-	// 	  for (int kk=optind; kk<argc; ++kk, ++wrds)
-	// 		{   printf("argv[kk]=%s\n",argv[kk] );
-	// 		  if (wrds > (sizeof(data.data)/sizeof(uint16_t))) goto out;
-	// 		  *data_pointer++ = (uint16_t)strtoul(argv[kk],NULL,0);
-	// 		}
-	// 	out:
-
-	// 	  printf("2dev.devfd_=%d\n", dev.get_devfd_() );
-	// 	  sts = dev.write_loopback_data( chn, &data,data.hdr.s.TransferByteCount );
-	//   }
 	else
 	{
 		printf("unknown cmd %s\n", cmd);

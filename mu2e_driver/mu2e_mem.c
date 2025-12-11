@@ -4,6 +4,7 @@
 #include <linux/kernel.h>  // KERN_INFO, printk
 #include <linux/module.h>  // module_param, THIS_MODULE
 #include <linux/pci.h>
+#include <time.h>
 
 #include "mu2e_mem.h"
 #include "mu2e_proto_globals.h"
@@ -59,6 +60,9 @@ int alloc_mem(int dtc)
 	TRACE(TLVL_INFO, "alloc_mem reset done bits: 0x%08x MU2E_NUM_RECV_CHANNELS=%d MU2E_NUM_RECV_BUFFS=%d MU2E_NUM_SEND_BUFFS=%d",
 		  Dma_mReadReg((unsigned long)mu2e_pcie_bar_info[dtc].baseVAddr, 0x9138), MU2E_NUM_RECV_CHANNELS,
 		  MU2E_NUM_RECV_BUFFS, MU2E_NUM_SEND_BUFFS);
+
+	Dma_mWriteReg((unsigned long)mu2e_pcie_bar_info[dtc].baseVAddr, 0x9030, mu2e_host_hash(dtc, NULL));  // DTC ID
+	Dma_mWriteReg((unsigned long)mu2e_pcie_bar_info[dtc].baseVAddr, 0x9188, time(0));              // Set time register
 
 	/* DMA Engine (channels) setup... (buffers and descriptors (and metadata)) */
 	dir = C2S;
