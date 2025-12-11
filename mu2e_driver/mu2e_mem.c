@@ -4,7 +4,7 @@
 #include <linux/kernel.h>  // KERN_INFO, printk
 #include <linux/module.h>  // module_param, THIS_MODULE
 #include <linux/pci.h>
-#include <time.h>
+#include <linux/time.h>
 
 #include "mu2e_mem.h"
 #include "mu2e_proto_globals.h"
