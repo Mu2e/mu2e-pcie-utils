@@ -359,7 +359,9 @@ static inline unsigned mu2e_chn_info_delta_(
 
 static inline uint32_t mu2e_host_hash(int dtc, char *hostname_in)
 {
+#ifndef __KERNEL__
 	struct utsname unameinfo;
+#endif
 	char *hostname = hostname_in;
 	uint16_t hostname_hash = 0;
 	uint32_t scratchVal;
@@ -367,8 +369,12 @@ static inline uint32_t mu2e_host_hash(int dtc, char *hostname_in)
 
 	if (hostname == NULL)
 	{
+#ifdef __KERNEL__
+		hostname = utsname()->nodename;
+#else
 		uname(&unameinfo);
 		hostname = unameinfo.nodename;
+#endif
 	}
 	for (ii = 0; ii < strlen(hostname); ++ii)
 	{
