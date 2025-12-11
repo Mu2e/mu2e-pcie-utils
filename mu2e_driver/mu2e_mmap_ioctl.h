@@ -12,6 +12,7 @@
 #include <asm/ioctl.h>     // _IOWR
 #include <linux/utsname.h> /* uname */
 #include "trace.h"
+#define _trace_hash(str) trace_name_hash(str)
 #else
 #include <stdint.h>     // uint16_t
 #include <sys/ioctl.h>  // _IOWR
