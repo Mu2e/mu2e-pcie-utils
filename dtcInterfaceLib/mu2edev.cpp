@@ -423,12 +423,13 @@ int mu2edev::write_register_checked(uint16_t address, int tmo_ms, uint32_t data,
 		reg.reg_offset = address;
 		reg.access_type = 2;
 		reg.val = data;
-		TRACE(TLVL_WRITE_REGISTER_CHECKED, UID_ + " - Writing value 0x%x to register 0x%x with readback", data, address);
 		if (debugFp_) fprintf(debugFp_, (UID_ + " - Writing value 0x%x to register 0x%x with readback - time delta %ld\n").c_str(), data, address,
 							  std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - lastWriteTime_).count());
 		retsts = ioctl(devfd_, M_IOC_REG_ACCESS, &reg);
 		*output = reg.val;
 		lastWriteTime_ = start;
+
+		TRACE(TLVL_WRITE_REGISTER_CHECKED, UID_ + " - Writing value 0x%x to register 0x%x with readback=0x%x", data, address, *output);		
 	}
 	deviceTime_ += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start).count();
 	return retsts;

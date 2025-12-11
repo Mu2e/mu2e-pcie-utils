@@ -1278,10 +1278,12 @@ std::unique_ptr<DTCLib::DTC_SubEvent> DTCLib::DTC::ReadNextDAQSubEventDMA(int tm
 
 	try
 	{
-		auto ok = res->SetupSubEvent();  // does setup of SubEvent header + all payload
+		std::string accumulatedErrors = "";
+		auto ok = res->SetupSubEvent(&accumulatedErrors);  // does setup of SubEvent header + all payload
 		if (!ok)
 		{
-			__SS__ << "Subsevent is corrupt!" << __E__;
+			__SS__ << "Subsevent is corrupt! EWT=" << res->GetEventWindowTag() <<
+				".\n\nAccumulated Errors: " << accumulatedErrors << __E__;
 			__SS_THROW__;
 		}
 	}

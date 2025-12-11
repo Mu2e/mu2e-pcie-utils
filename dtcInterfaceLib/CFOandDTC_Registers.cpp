@@ -12,7 +12,7 @@
 #include "dtcInterfaceLib/otsStyleCoutMacros.h"
 
 #undef __COUT_HDR__
-#define __COUT_HDR__ "core-CFO/DTC " << device_.getDeviceUID() << ": "
+#define __COUT_HDR__ "core-CFOandDTC " << device_.getDeviceUID() << ": "
 #define TLVL_ResetDTC TLVL_DEBUG + 5
 #define TLVL_AutogenDRP TLVL_DEBUG + 6
 #define TLVL_SERDESReset TLVL_DEBUG + 7
@@ -625,11 +625,15 @@ uint32_t DTCLib::CFOandDTC_Registers::WriteRegister_(uint32_t dataToWrite, const
 		// throw DTC_IOErrorException(errorCode);
 	}
 
+	if(TTEST(1))
 	{  // trace seems to ignore the std::setfill, so using stringstream
 		std::stringstream o;
 		o << "write value 0x" << std::setw(8) << std::setfill('0') << std::setprecision(8) << std::hex << static_cast<uint32_t>(dataToWrite)
-		  << " to register 0x" << std::setw(4) << std::setfill('0') << std::setprecision(4) << std::hex << static_cast<uint32_t>(address) << std::endl;
-		__COUT__ << o.str();
+		  << " to register 0x" << std::setw(4) << std::setfill('0') << std::setprecision(4) << std::hex << static_cast<uint32_t>(address) << 
+		  " needToVerify=" << needToVerify << std::endl;
+		if(needToVerify)
+			o << " ... readback 0x" << std::setw(8) << std::setfill('0') << std::setprecision(8) << std::hex << static_cast<uint32_t>(readbackValue) << std::endl;
+		__COUTT__ << o.str();
 	}
 
 	// verify register readback
@@ -686,11 +690,11 @@ bool DTCLib::CFOandDTC_Registers::CFOandDTCVerifyRegisterWrite_(const CFOandDTC_
 			// 	readbackValue 	&= 0x0000ffff;
 			// 	isCoreRegister = true;
 			// 	break;
-			case CFOandDTC_Register_Control:  // bit 0 and 31 are reset bits, and self-clear (effectively, write only)
+			case CFOandDTC_Register_Control:  // bit 0 and 31 are reset bits, and self-clear (effectively, write only), also bit-25 self-resets (mig reset)
 				if ((dataToWrite >> 0) & 1)
 					return true;  // ignore check if hard reset bit-0 high, because factory defaults are not maintained here
-				dataToWrite &= 0x7fffffff;
-				readbackValue &= 0x7fffffff;
+				dataToWrite &= 0x7dffffff; 
+				readbackValue &= 0x7dffffff;
 				isCoreRegister = true;
 				break;
 
@@ -703,7 +707,8 @@ bool DTCLib::CFOandDTC_Registers::CFOandDTCVerifyRegisterWrite_(const CFOandDTC_
 			{
 				__SS__ << "Write check mismatch - "
 					   << "write value 0x" << std::setw(8) << std::setfill('0') << std::setprecision(8) << std::hex << static_cast<uint32_t>(dataToWrite)
-					   << " to register 0x" << std::setw(4) << std::setfill('0') << std::setprecision(4) << std::hex << static_cast<uint32_t>(address) << "... read back 0x" << std::setw(8) << std::setfill('0') << std::setprecision(8) << std::hex << static_cast<uint32_t>(readbackValue) << std::endl
+					   << " to register 0x" << std::setw(4) << std::setfill('0') << std::setprecision(4) << std::hex << static_cast<uint32_t>(address) << 
+					   "... read back 0x" << std::setw(8) << std::setfill('0') << std::setprecision(8) << std::hex << static_cast<uint32_t>(readbackValue) << std::endl
 					   << std::endl
 					   << "If you do not understand this error, try checking the DTC firmware version: " << ReadDesignDate() << std::endl;
 				__SS_ONLY_THROW__;
