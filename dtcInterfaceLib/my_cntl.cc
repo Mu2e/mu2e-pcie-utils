@@ -128,17 +128,19 @@ int main(int argc, char* argv[])
 	{
 		dev.init(DTCLib::DTC_SimMode_Disabled, dtc);
 	}
-	else if (strcmp(cmd, "hash") == 0) {
+	else if (strcmp(cmd, "hash") == 0)
+	{
 		char* hostname = NULL;
 		uint32_t hash = 0;
 
-        if (argc - optind > 0) {
+		if (argc - optind > 0)
+		{
 			hostname = argv[optind];
-        }
+		}
 		hash = mu2e_host_hash(dtc, hostname);
 		printf("hash: %x\n", hash);
 		return (0);
-    }
+	}
 	else
 	{
 		printf("unknown cmd %s\n", cmd);

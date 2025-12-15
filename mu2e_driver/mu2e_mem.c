@@ -66,7 +66,7 @@ int alloc_mem(int dtc)
 	hostHash = mu2e_host_hash(dtc, NULL);
 	TRACE(TLVL_INFO, "alloc_mem setting DTC/Host hash in 0x9030: %x, timestamp in 0x9188: %x", hostHash, (uint32_t)tv.tv_sec);
 
-	Dma_mWriteReg((unsigned long)mu2e_pcie_bar_info[dtc].baseVAddr, 0x9030, hostHash);  // DTC ID
+	Dma_mWriteReg((unsigned long)mu2e_pcie_bar_info[dtc].baseVAddr, 0x9030, hostHash);             // DTC ID
 	Dma_mWriteReg((unsigned long)mu2e_pcie_bar_info[dtc].baseVAddr, 0x9188, (uint32_t)tv.tv_sec);  // Set time register
 
 	/* DMA Engine (channels) setup... (buffers and descriptors (and metadata)) */
