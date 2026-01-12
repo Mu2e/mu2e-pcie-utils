@@ -625,13 +625,12 @@ uint32_t DTCLib::CFOandDTC_Registers::WriteRegister_(uint32_t dataToWrite, const
 		// throw DTC_IOErrorException(errorCode);
 	}
 
-	if(TTEST(1))
+	if (TTEST(1))
 	{  // trace seems to ignore the std::setfill, so using stringstream
 		std::stringstream o;
 		o << "write value 0x" << std::setw(8) << std::setfill('0') << std::setprecision(8) << std::hex << static_cast<uint32_t>(dataToWrite)
-		  << " to register 0x" << std::setw(4) << std::setfill('0') << std::setprecision(4) << std::hex << static_cast<uint32_t>(address) << 
-		  " needToVerify=" << needToVerify << std::endl;
-		if(needToVerify)
+		  << " to register 0x" << std::setw(4) << std::setfill('0') << std::setprecision(4) << std::hex << static_cast<uint32_t>(address) << " needToVerify=" << needToVerify << std::endl;
+		if (needToVerify)
 			o << " ... readback 0x" << std::setw(8) << std::setfill('0') << std::setprecision(8) << std::hex << static_cast<uint32_t>(readbackValue) << std::endl;
 		__COUTT__ << o.str();
 	}
@@ -693,7 +692,7 @@ bool DTCLib::CFOandDTC_Registers::CFOandDTCVerifyRegisterWrite_(const CFOandDTC_
 			case CFOandDTC_Register_Control:  // bit 0 and 31 are reset bits, and self-clear (effectively, write only), also bit-25 self-resets (mig reset)
 				if ((dataToWrite >> 0) & 1)
 					return true;  // ignore check if hard reset bit-0 high, because factory defaults are not maintained here
-				dataToWrite &= 0x7dffffff; 
+				dataToWrite &= 0x7dffffff;
 				readbackValue &= 0x7dffffff;
 				isCoreRegister = true;
 				break;
@@ -707,8 +706,7 @@ bool DTCLib::CFOandDTC_Registers::CFOandDTCVerifyRegisterWrite_(const CFOandDTC_
 			{
 				__SS__ << "Write check mismatch - "
 					   << "write value 0x" << std::setw(8) << std::setfill('0') << std::setprecision(8) << std::hex << static_cast<uint32_t>(dataToWrite)
-					   << " to register 0x" << std::setw(4) << std::setfill('0') << std::setprecision(4) << std::hex << static_cast<uint32_t>(address) << 
-					   "... read back 0x" << std::setw(8) << std::setfill('0') << std::setprecision(8) << std::hex << static_cast<uint32_t>(readbackValue) << std::endl
+					   << " to register 0x" << std::setw(4) << std::setfill('0') << std::setprecision(4) << std::hex << static_cast<uint32_t>(address) << "... read back 0x" << std::setw(8) << std::setfill('0') << std::setprecision(8) << std::hex << static_cast<uint32_t>(readbackValue) << std::endl
 					   << std::endl
 					   << "If you do not understand this error, try checking the DTC firmware version: " << ReadDesignDate() << std::endl;
 				__SS_ONLY_THROW__;

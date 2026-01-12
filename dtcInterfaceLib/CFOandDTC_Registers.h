@@ -313,6 +313,7 @@ public:
 	RegisterFormatter FormatFireflyCSR();
 
 	uint32_t WriteRegister_(uint32_t data, const CFOandDTC_Register& address);
+
 protected:
 	uint32_t ReadRegister_(const CFOandDTC_Register& address);
 	virtual bool NeedToVerifyRegisterWrite_(const CFOandDTC_Register& address) = 0;

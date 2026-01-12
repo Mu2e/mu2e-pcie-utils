@@ -99,8 +99,8 @@ int mu2edev::init(DTCLib::DTC_SimMode simMode, int deviceIndex, std::string simM
 		initDMAEngine();
 	}
 
-	//init to free dcs locks
-	end_dcs_transaction(true /* force */); // force unlock
+	// init to free dcs locks
+	end_dcs_transaction(true /* force */);  // force unlock
 
 	deviceTime_ += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start).count();
 	return simMode;
@@ -429,7 +429,7 @@ int mu2edev::write_register_checked(uint16_t address, int tmo_ms, uint32_t data,
 		*output = reg.val;
 		lastWriteTime_ = start;
 
-		TRACE(TLVL_WRITE_REGISTER_CHECKED, UID_ + " - Writing value 0x%x to register 0x%x with readback=0x%x", data, address, *output);		
+		TRACE(TLVL_WRITE_REGISTER_CHECKED, UID_ + " - Writing value 0x%x to register 0x%x with readback=0x%x", data, address, *output);
 	}
 	deviceTime_ += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start).count();
 	return retsts;
