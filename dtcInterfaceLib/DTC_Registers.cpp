@@ -87,7 +87,8 @@ DTCLib::DTC_SimMode DTCLib::DTC_Registers::SetSimMode(std::string expectedDesign
 	TLOG(TLVL_INFO) << "Initializing DTC device, sim mode is " << DTC_SimModeConverter(simMode_).toString() << " for uid = " << uid << ", deviceIndex = " << dtc;
 
 	device_.init(simMode_, dtc, simMemoryFile, uid);
-	if (expectedDesignVersion != "" && expectedDesignVersion != ReadDesignVersion())
+	if (expectedDesignVersion != "" &&
+		static_cast<uint32_t>(std::stoul(expectedDesignVersion, nullptr, 16)) != ReadRegister_(CFOandDTC_Register_DesignVersion))
 	{
 		__SS__ << "Version mismatch! Expected DTC version is '" << expectedDesignVersion << "' while the readback version was '" << ReadDesignVersion() << ".'" << __E__;
 		__SS_THROW__;
@@ -1930,6 +1931,18 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatSERDESResetDone()
 bool DTCLib::DTC_Registers::ReadSERDESRXCDRLock(DTC_Link_ID const& link, std::optional<uint32_t> val)
 {
 	std::bitset<32> dataSet = val.has_value() ? *val : ReadRegister_(DTC_Register_SERDES_RXCDRLockStatus);
+
+	// read the lock value 20x because it might not be stable, consider unlocked if ever low
+	if (!val.has_value() && dataSet[link])
+	{
+		for (int i = 0; i < 20; ++i)
+		{
+			std::bitset<32> tmpDataSet = ReadRegister_(DTC_Register_SERDES_RXCDRLockStatus);
+			if (!tmpDataSet[link])  // override with any exception
+				return false;
+			usleep(10);
+		}
+	}
 	return dataSet[link];
 }
 
@@ -1945,14 +1958,14 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatRXCDRLockStatus()
 	for (auto r : DTC_ROC_Links)
 	{
 		form.vals.push_back(std::string("ROC Link ") + std::to_string(r) +
-							" CDR Lock:   [" + (ReadSERDESRXCDRLock(r, form.value) ? "x" : " ") + "]");
+							" CDR Lock:   [" + (ReadSERDESRXCDRLock(r) ? "x" : " ") + "]");  // do not use form.value to force multi reread in case of instability
 	}
-	// if(ReadCFOEmulationMode())
-	// 	form.vals.push_back(std::string("CFO Emulated CDR Lock: [") + (ReadSERDESRXCDRLock(DTC_Link_CFO, form.value) ? "x" : " ") + "]");
-	// else
-	form.vals.push_back(std::string("CFO CDR Lock:          [") + (ReadSERDESRXCDRLock(DTC_Link_CFO, form.value) ? "x" : " ") + "]");
+	if (ReadCFOEmulationMode())
+		form.vals.push_back(std::string("CFO Emulated CDR Lock: [") + (ReadSERDESRXCDRLock(DTC_Link_CFO, form.value) ? "x" : " ") + "]");
+	else
+		form.vals.push_back(std::string("CFO CDR Lock:          [") + (ReadSERDESRXCDRLock(DTC_Link_CFO) ? "x" : " ") + "]");  // do not use form.value to force multi reread in case of instability
 
-	form.vals.push_back(std::string("EVB CDR Lock:          [") + (ReadSERDESRXCDRLock(DTC_Link_EVB, form.value) ? "x" : " ") + "]");
+	form.vals.push_back(std::string("EVB CDR Lock:          [") + (ReadSERDESRXCDRLock(DTC_Link_EVB) ? "x" : " ") + "]");  // do not use form.value to force multi reread in case of instability
 	return form;
 }
 
