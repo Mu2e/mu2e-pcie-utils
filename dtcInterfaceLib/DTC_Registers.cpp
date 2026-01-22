@@ -87,7 +87,8 @@ DTCLib::DTC_SimMode DTCLib::DTC_Registers::SetSimMode(std::string expectedDesign
 	TLOG(TLVL_INFO) << "Initializing DTC device, sim mode is " << DTC_SimModeConverter(simMode_).toString() << " for uid = " << uid << ", deviceIndex = " << dtc;
 
 	device_.init(simMode_, dtc, simMemoryFile, uid);
-	if (expectedDesignVersion != "" && expectedDesignVersion != ReadDesignVersion())
+	if (expectedDesignVersion != "" &&
+		static_cast<uint32_t>(std::stoul(expectedDesignVersion, nullptr, 16)) != ReadRegister_(CFOandDTC_Register_DesignVersion))
 	{
 		__SS__ << "Version mismatch! Expected DTC version is '" << expectedDesignVersion << "' while the readback version was '" << ReadDesignVersion() << ".'" << __E__;
 		__SS_THROW__;
@@ -765,6 +766,26 @@ bool DTCLib::DTC_Registers::ReadPunchEnable(std::optional<uint32_t> val)
 	return data[9];
 }
 
+/// This offset should be set 'permanently' for the DTC in response to
+///		the sample measurement at bits [18:16] of DTC_Register_CFOLinkErrorFlags
+void DTCLib::DTC_Registers::SetCFOSamplePermanentOffset(int permanentOffset)
+{
+	// do not write more bits because high bits, in older versions were the error clear latch... ReadRegister_(DTC_Register_CFOLinkErrorFlags);
+	// set only 3-bits [2:0]
+	WriteRegister_(permanentOffset & 7, DTC_Register_CFOLinkErrorFlags);
+}  // end SetCFOSamplePermanentOffset()
+
+int DTCLib::DTC_Registers::ReadCFOSamplePermanentOffset(std::optional<uint32_t> val)
+{
+	uint32_t setting = val.has_value() ? *val : ReadRegister_(DTC_Register_CFOLinkErrorFlags);
+	setting &= 7;
+	if (setting > 3)
+		setting = -8 + setting;
+	return setting;  // return 3-bit value handling of [-2,2]
+}  // end ReadCFOSamplePermanentOffset()
+
+/// @brief Set edge selection of RTF clock and external CFO rx -> tx data
+/// @param forceCFOedge is a 2-bit value
 void DTCLib::DTC_Registers::SetExternalCFOSampleEdgeMode(int forceCFOedge)
 {
 	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_Control);
@@ -897,6 +918,10 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDTCControl()
 
 	form.vals.push_back(std::string("Bit-09 Punched Clock Enable:                 [") + (ReadPunchEnable(form.value) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("Bit-08 SERDES Global Reset:                  [") + (CFOandDTC_Registers::ReadResetSERDES(form.value) ? "x" : " ") + "]");
+
+	form.vals.push_back(std::string("Bit-06 Enable CFO-RTF Offset Control:        [") + (((ReadExternalCFOSampleEdgeMode(form.value) >> 1) & 1) ? "x" : " ") + "]");
+	form.vals.push_back(std::string("Bit-05 CFO-RTF Edge Select:                  [") + ((ReadExternalCFOSampleEdgeMode(form.value) & 1) ? "x" : " ") + "]");
+
 	// form.vals.push_back(std::string("Bit-31 RX Packet Error Feedback Enable: [") + (ReadRxPacketErrorFeedbackEnable(form.value) ? "x" : " ") + "]");
 	// form.vals.push_back(std::string("Bit-31 Comma Tolerance Enable:          [") + (ReadCommaToleranceEnable(form.value) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("Bit-04 Fanout Clock Input Select:            [") + (ReadFanoutClockInput(form.value) ? "FMC SFP Rx" : "FPGA") + "]");
@@ -1906,6 +1931,18 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatSERDESResetDone()
 bool DTCLib::DTC_Registers::ReadSERDESRXCDRLock(DTC_Link_ID const& link, std::optional<uint32_t> val)
 {
 	std::bitset<32> dataSet = val.has_value() ? *val : ReadRegister_(DTC_Register_SERDES_RXCDRLockStatus);
+
+	// read the lock value 20x because it might not be stable, consider unlocked if ever low
+	if (!val.has_value() && dataSet[link])
+	{
+		for (int i = 0; i < 20; ++i)
+		{
+			std::bitset<32> tmpDataSet = ReadRegister_(DTC_Register_SERDES_RXCDRLockStatus);
+			if (!tmpDataSet[link])  // override with any exception
+				return false;
+			usleep(10);
+		}
+	}
 	return dataSet[link];
 }
 
@@ -1921,14 +1958,14 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatRXCDRLockStatus()
 	for (auto r : DTC_ROC_Links)
 	{
 		form.vals.push_back(std::string("ROC Link ") + std::to_string(r) +
-							" CDR Lock:   [" + (ReadSERDESRXCDRLock(r, form.value) ? "x" : " ") + "]");
+							" CDR Lock:   [" + (ReadSERDESRXCDRLock(r) ? "x" : " ") + "]");  // do not use form.value to force multi reread in case of instability
 	}
-	// if(ReadCFOEmulationMode())
-	// 	form.vals.push_back(std::string("CFO Emulated CDR Lock: [") + (ReadSERDESRXCDRLock(DTC_Link_CFO, form.value) ? "x" : " ") + "]");
-	// else
-	form.vals.push_back(std::string("CFO CDR Lock:          [") + (ReadSERDESRXCDRLock(DTC_Link_CFO, form.value) ? "x" : " ") + "]");
+	if (ReadCFOEmulationMode())
+		form.vals.push_back(std::string("CFO Emulated CDR Lock: [") + (ReadSERDESRXCDRLock(DTC_Link_CFO, form.value) ? "x" : " ") + "]");
+	else
+		form.vals.push_back(std::string("CFO CDR Lock:          [") + (ReadSERDESRXCDRLock(DTC_Link_CFO) ? "x" : " ") + "]");  // do not use form.value to force multi reread in case of instability
 
-	form.vals.push_back(std::string("EVB CDR Lock:          [") + (ReadSERDESRXCDRLock(DTC_Link_EVB, form.value) ? "x" : " ") + "]");
+	form.vals.push_back(std::string("EVB CDR Lock:          [") + (ReadSERDESRXCDRLock(DTC_Link_EVB) ? "x" : " ") + "]");  // do not use form.value to force multi reread in case of instability
 	return form;
 }
 
@@ -5228,15 +5265,32 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatRocLink5Error()
 DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatCFOLinkError()
 {
 	auto form = CreateFormatter(DTC_Register_CFOLinkErrorFlags);
-	form.description = "CFO Link Error Flags";
+	form.description = "CFO Link Settings & Error Flags";
 	form.vals.push_back("([ x = 1 (hi) ])");  // translation
 
-	// bit 9 - Event Start marker tx error
-	// bit 10 - Clock marker tx error
+	// bit 9 - Event Start marker tx error at CFO Interface
+	// bit 10 - Clock marker tx error at CFO Interface
+	// bit 11 - RTF 40MHz clock phase has shifted
+	// bit 12 - Illegal marker timing in RTF 40MHz clock count
+	// bit 13 - Moving data from CFO rx to tx clock domain has marker corruption at "external" CFO Interface
 	form.vals.push_back(std::string("CFO Event Start Marker tx Error:     [") +
 						(((form.value >> 9) & 1) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("CFO Clock Marker tx Error:           [") +
 						(((form.value >> 10) & 1) ? "x" : " ") + "]");
+	form.vals.push_back(std::string("CFO RTF 40MHz Phase Shift Error:     [") +
+						(((form.value >> 11) & 1) ? "x" : " ") + "]");
+	form.vals.push_back(std::string("CFO Illegal Marker Over Link Timing: [") +
+						(((form.value >> 12) & 1) ? "x" : " ") + "]");
+	form.vals.push_back(std::string("CFO Rx-to-Tx Data Corruption Error:  [") +
+						(((form.value >> 13) & 1) ? "x" : " ") + "]");
+	int measuredPos = (form.value >> 16) & 7;
+	int impliedPos = 2 - measuredPos;  // legal values are -2 -1 0 1 2 (if measured value is 4 3 2 1 0, respsectively)
+	form.vals.push_back(std::string("CFO Measured Marker position {0,4}:  [") +
+						std::to_string(measuredPos) + "] ==> " + std::to_string(impliedPos));
+	form.vals.push_back(std::string("CFO Permanent Offset setting {-2,2}: [") +
+						std::to_string(ReadCFOSamplePermanentOffset(form.value)) + "]");
+
+	form.vals.push_back("");  // spacer
 
 	// also show link enables for CFO and EVB
 	uint32_t val = ReadRegister_(CFOandDTC_Register_LinkEnable);
@@ -7248,7 +7302,7 @@ uint32_t DTCLib::DTC_Registers::ReadTXDataRequestPacketCount(DTC_Link_ID const& 
 
 DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatTXDataRequestPacketCountLink(DTC_Link_ID const& link)
 {
-	auto form = CreateFormatter(GetTXEventWindowMarkerCountLinkRegister(link));
+	auto form = CreateFormatter(GetTXDataRequestPacketCountLinkRegister(link));
 	form.description = "DRP TX Count on Link " +
 					   std::to_string((GetTXDataRequestPacketCountLinkRegister(link) -
 									   GetTXDataRequestPacketCountLinkRegister(DTC_Link_0)) /
@@ -7648,6 +7702,10 @@ void DTCLib::DTC_Registers::VerifyRegisterWrite_(const CFOandDTC_Register& addre
 		switch (address)  // handle special register checks by masking of DONT-CARE bits, or else check full 32 bits
 		{
 			//---------- DTC only registers
+			case DTC_Register_CFOLinkErrorFlags:  // CFO Sample Permanent Offset 2:0
+				dataToWrite &= 0x03;
+				readbackValue &= 0x03;
+				break;
 			case DTC_Register_CFOMarkerEnables:  // CFO emulator marker enables: 5:0 enables clock marker, 13:8 is event
 												 // marker per ROC link for some reason, now event marker is not returned
 												 // (FIXME?)
