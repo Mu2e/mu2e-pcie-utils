@@ -137,7 +137,10 @@ std::string DTCLib::CFOandDTC_Registers::ReadDesignDate(std::optional<uint32_t> 
 		o << "TEMP-";
 	o << months[mon - 1] << "/" << ((readData >> 12) & 0xF) << ((readData >> 8) & 0xF) << "/20" <<
 		// ((readData>>28)&0xF) <<
-		20 + ((readData >> 24) & 0xF) << " " <<  // year 2020 + hex nibble at bit-24
+		(((readData >> 28) & 0xF) == 0x1 ?  // if 1, then old!!! firmware
+			 (10 + ((readData >> 24) & 0xF))
+										 : (20 + ((readData >> 24) & 0xF)))
+	  << " " <<  // year 2020 + hex nibble at bit-24
 		((readData >> 4) & 0x7) << ((readData >> 0) & 0xF) << ":00   ";
 	if (isCFO)
 		o << "8-Links";
