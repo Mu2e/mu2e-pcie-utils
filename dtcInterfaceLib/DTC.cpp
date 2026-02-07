@@ -574,7 +574,7 @@ uint16_t DTCLib::DTC::ReadROCRegister(const DTC_Link_ID& link, const uint16_t ad
 
 	// throw exception for no data after retries
 	__SS__ << "A timeout occurred attempting to read a ROC register at link " << static_cast<int>(link) << " address 0x" << std::hex << static_cast<int>(address) << ". No DCS reply packet received after " << std::dec << tmo_ms << " ms! "
-		   << "Restarting the DTC software instance may fix the problem and realign DMA pointers." << std::endl;
+		   << "Check the clocks and that the ROC link is enabled and locked. Restarting the DTC software instance may fix the problem and realign DMA pointers." << std::endl;
 
 	if (TTEST(20))
 	{
@@ -1304,7 +1304,7 @@ std::unique_ptr<DTCLib::DTC_DCSReplyPacket> DTCLib::DTC::ReadNextDCSPacket(int t
 		auto test = ReadNextPacket(DTC_DMA_Engine_DCS, tmo_ms);
 		if (test == nullptr) return nullptr;  // Couldn't read new block
 
-		__COUT__ << "If interpreting as a DTC_DataPacket, here is the data: " << test->toJSON();
+		__COUTT__ << "If interpreting as a DTC_DataPacket, here is the data: " << test->toJSON();
 
 		auto output = std::make_unique<DTC_DCSReplyPacket>(*test.get());
 		if (output->ROCIsCorrupt())
