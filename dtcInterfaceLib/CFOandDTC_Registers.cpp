@@ -89,7 +89,8 @@ std::string DTCLib::CFOandDTC_Registers::FormattedRegDump(int width,
 /// </summary>
 /// <returns>Design version, in VersionNumber_Date format</returns>
 std::string DTCLib::CFOandDTC_Registers::ReadDesignVersion() { return  // ReadDesignVersionNumber() + "_" +
-															   ReadDesignDate() + "_" + ReadVivadoVersionNumber() + "_" + ReadDesignLinkSpeed() + "_" + ReadDesignType(); }
+															   ReadDesignDate() + ", Vivado Version: " + ReadVivadoVersionNumber() + 
+															   ", Link Speed: " + ReadDesignLinkSpeed() + "_" + ReadDesignType(); }
 
 /// <summary>
 /// Formats the register's current value for register dumps

@@ -88,9 +88,13 @@ DTCLib::DTC_SimMode DTCLib::DTC_Registers::SetSimMode(std::string expectedDesign
 
 	device_.init(simMode_, dtc, simMemoryFile, uid);
 	if (expectedDesignVersion != "" &&
-		static_cast<uint32_t>(std::stoul(expectedDesignVersion, nullptr, 16)) != ReadRegister_(CFOandDTC_Register_DesignVersion))
+		static_cast<uint32_t>(std::stoul(expectedDesignVersion, nullptr, 16)) != ReadRegister_(CFOandDTC_Register_DesignDate))
 	{
-		__SS__ << "Version mismatch! Expected DTC version is '" << expectedDesignVersion << "' while the readback version was '" << ReadDesignVersion() << ".'" << __E__;
+		__SS__ << "Version mismatch! Expected DTC version is '" << expectedDesignVersion << 
+			"' (0x" << std::hex << static_cast<uint32_t>(std::stoul(expectedDesignVersion, nullptr, 16)) << 
+			" != 0x" << 
+			ReadRegister_(CFOandDTC_Register_DesignDate) <<
+			") while the readback version was '" << ReadDesignVersion() << ".'" << __E__;
 		__SS_THROW__;
 		// throw new DTC_WrongVersionException(expectedDesignVersion, ReadDesignVersion());
 	}
