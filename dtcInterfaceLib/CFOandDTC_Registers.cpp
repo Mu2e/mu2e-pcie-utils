@@ -89,7 +89,7 @@ std::string DTCLib::CFOandDTC_Registers::FormattedRegDump(int width,
 /// </summary>
 /// <returns>Design version, in VersionNumber_Date format</returns>
 std::string DTCLib::CFOandDTC_Registers::ReadDesignVersion() { return  // ReadDesignVersionNumber() + "_" +
-															   ReadDesignDate() + ", Vivado Version: " + ReadVivadoVersionNumber() + 
+															   ReadDesignDate() + ", Vivado Version: " + ReadVivadoVersionNumber() +
 															   ", Link Speed: " + ReadDesignLinkSpeed() + "_" + ReadDesignType(); }
 
 /// <summary>
