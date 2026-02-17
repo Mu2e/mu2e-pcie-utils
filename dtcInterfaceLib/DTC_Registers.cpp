@@ -1225,6 +1225,10 @@ DTCLib::DTC_LinkEnableMode DTCLib::DTC_Registers::ReadLinkEnabled(DTC_Link_ID co
 	std::bitset<32> dataSet = val.has_value() ? *val : ReadRegister_(CFOandDTC_Register_LinkEnable);
 	return DTC_LinkEnableMode(dataSet[link], dataSet[link + 8]);
 }
+uint32_t DTCLib::DTC_Registers::ReadLinkEnabledData()
+{
+	return ReadRegister_(CFOandDTC_Register_LinkEnable);
+}
 
 /// <summary>
 /// Formats the register's current value for register dumps
