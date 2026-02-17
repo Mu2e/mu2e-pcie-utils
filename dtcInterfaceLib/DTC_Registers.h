@@ -487,6 +487,7 @@ public:
 	void EnableLink(DTC_Link_ID const& link, const DTC_LinkEnableMode& mode = DTC_LinkEnableMode());
 	void DisableLink(DTC_Link_ID const& link, const DTC_LinkEnableMode& mode = DTC_LinkEnableMode());
 	DTC_LinkEnableMode ReadLinkEnabled(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
+	uint32_t ReadLinkEnabledData();
 	RegisterFormatter FormatLinkEnable();
 
 	// SERDES Reset Register
