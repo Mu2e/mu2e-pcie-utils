@@ -102,4 +102,3 @@ if( $ENV{OTS_DOXY} MATCHES "DOIT" )
 endif()
 
 cet_cmake_config()
-
