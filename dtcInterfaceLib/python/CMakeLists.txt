@@ -2,7 +2,7 @@
 find_package(Python COMPONENTS Interpreter Development REQUIRED)
 include_directories(${PYTHON_INCLUDE_PATH}
 					../
-				   )	
+				   )
 
 #set(CMAKE_SWIG_FLAGS "-v")
 set_source_files_properties(dtcInterfaceLib.i PROPERTIES CPLUSPLUS ON USE_TARGET_INCLUDE_DIRECTORIES ON)

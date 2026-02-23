@@ -17,4 +17,3 @@ if(DictCompileOptions)
 
 	set_target_properties(dtcInterfaceLib_root_dict PROPERTIES COMPILE_OPTIONS "${DictCompileOptions}")
 endif()
-
