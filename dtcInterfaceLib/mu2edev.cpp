@@ -155,6 +155,8 @@ void mu2edev::initDMAEngine()
 
 		ss << "Who owns it?\n"
 		   << exec("ls -l /dev/mu2e*") << __E__;
+		ss << "\nWhat process is using it (will onyl show if the same user)?\n"
+		   << exec("lsof /dev/mu2e* 2>/dev/null") << __E__;
 		perror(ss.str().c_str());
 		__SS_THROW__;
 		// exit(1);
