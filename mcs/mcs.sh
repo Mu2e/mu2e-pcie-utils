@@ -14,6 +14,7 @@ if type mcs >/dev/null;then :;else
     echo "ERROR - mcs and devl executables not found - setup mu2e_pcie_utils"
     exit
 fi
+test `whoami` != root && { echo "ERROR - must be root"; exit; }
 
 pids=`lsof -t /dev/mu2e* 2>/dev/null` && kill $pids
 
