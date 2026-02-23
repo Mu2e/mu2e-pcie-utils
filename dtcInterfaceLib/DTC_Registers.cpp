@@ -2481,14 +2481,6 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 				case DTC_EVBStatsType_TxLastSequenceTag:
 					o << "Last Transmitted Sequence Tag:         ";
 					break;
-				case DTC_EVBStatsType_RxTravelTime:
-					o << "Last Packet Travel Time [10gbe clocks]:         ";
-					o << "DTC_mac #" << (baseDTCAddress + d < 10 ? "0" : "") << std::dec << int(baseDTCAddress + d) << " = " << std::hex << "0x" << std::setw(8) << v << "\t" << std::dec << (int)v;
-					form.vals.push_back(o.str());
-					o.str("");
-					o.clear();
-					continue;  // skip default printing to allow negative numbers
-					break;
 				default:
 					__SS__ << "Invalid DTC EVB Stat type: " << t << __E__;
 					__SS_THROW__;
