@@ -73,8 +73,12 @@ enum CFO_Register : uint16_t
 
 	CFO_Register_RunPlan_Address = 0x9314,
 	CFO_Register_RunPlan_Data = 0x9318,
+	CFO_Register_RunPlan_EventMode0	= 0x931C,
+	CFO_Register_RunPlan_EventMode1	= 0x9320,
+	CFO_Register_RunPlan_EventTag0	= 0x9324,
+	CFO_Register_RunPlan_EventTag1	= 0x9328,
 
-	CFO_Register_FireflyCSRRegister = 0x9320,
+
 	CFO_Register_SERDESPRBSControlLink0 = 0x9330,
 	CFO_Register_SERDESPRBSControlLink1 = 0x9334,
 	CFO_Register_SERDESPRBSControlLink2 = 0x9338,
@@ -100,6 +104,9 @@ enum CFO_Register : uint16_t
 	// CFO_Register_CableDelayValueLink7 = 0x937C,
 
 	CFO_Register_CableDelayControlStatus = 0x9380,
+
+	CFO_Register_FireflyCSRRegister = 0x93A0,
+	
 	CFO_Register_FPGAProgramData = 0x9400,
 	CFO_Register_FPGAPROMProgramStatus = 0x9404,
 	CFO_Register_FPGACoreAccess = 0x9408,
@@ -465,7 +472,7 @@ public:
 	/// </summary>
 	/// <param name="link">Link to read</param>
 	/// <returns>Value of the Beam On Mode Enable bit</returns>
-	bool ReadBeamOnMode(const CFO_Link_ID& link, std::optional<uint32_t> val = std::nullopt);
+	bool ReadBeamOnMode(std::optional<uint32_t> val = std::nullopt);
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
@@ -488,7 +495,7 @@ public:
 	/// </summary>
 	/// <param name="link">Link to read</param>
 	/// <returns>Value of the Beam Off Mode Enable bit</returns>
-	bool ReadBeamOffMode(const CFO_Link_ID& link, std::optional<uint32_t> val = std::nullopt);
+	bool ReadBeamOffMode(std::optional<uint32_t> val = std::nullopt);
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
@@ -1046,6 +1053,10 @@ public:
 	/// <returns>RegisterFormatter object containing register information</returns>
 	RegisterFormatter FormatRunPlanBeamOffBaseAddress();
 	void SetRunPlanData(const std::string& inputData, const uint32_t& address);
+	uint64_t ReadRunPlanCurrentMode();
+	RegisterFormatter FormatRunPlanCurrentMode();
+	uint64_t ReadRunPlanCurrentTag();
+	RegisterFormatter FormatRunPlanCurrentTag();
 
 	// Firefly CSR Register
 	/// <summary>

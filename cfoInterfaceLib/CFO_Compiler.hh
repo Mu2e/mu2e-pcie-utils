@@ -64,6 +64,7 @@ public:
 	std::string processFile(const std::string& sourceCodeFile, const std::string& binaryOutputFile);
 	const std::deque<char>& getBinaryOutput() { return output_; }
 
+	static const uint64_t FPGAClock_; // period of FPGA clock in ns	
 private:
 	bool isComment(const std::string& line);
 
@@ -80,8 +81,6 @@ private:
 	uint64_t modeClearMask_;
 	bool hasRequiredPlanEndOp_ = false;  // require at least one END, REPEAT, or GOTO MAIN command to give a handle on switch Run Plan buffers to the CFO firmware
 	std::vector<std::string> opArguments_;
-
-	const uint64_t FPGAClock_ = (1e9 / (40e6) /* 40MHz FPGAClock for calculating delays */);  // period of FPGA clock in ns
 
 	size_t txtLineNumber_, binLineNumber_;
 	std::deque<char> output_;
