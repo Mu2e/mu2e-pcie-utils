@@ -88,9 +88,9 @@ DTCLib::DTC_SimMode DTCLib::DTC_Registers::SetSimMode(std::string expectedDesign
 
 	device_.init(simMode_, dtc, simMemoryFile, uid);
 	if (expectedDesignVersion != "" &&
-		static_cast<uint32_t>(std::stoul(expectedDesignVersion, nullptr, 16)) != ReadRegister_(CFOandDTC_Register_DesignVersion))
+		static_cast<uint32_t>(std::stoul(expectedDesignVersion, nullptr, 16)) != ReadRegister_(CFOandDTC_Register_DesignDate))
 	{
-		__SS__ << "Version mismatch! Expected DTC version is '" << expectedDesignVersion << "' while the readback version was '" << ReadDesignVersion() << ".'" << __E__;
+		__SS__ << "Version mismatch! Expected DTC version is '" << expectedDesignVersion << "' (0x" << std::hex << static_cast<uint32_t>(std::stoul(expectedDesignVersion, nullptr, 16)) << " != 0x" << ReadRegister_(CFOandDTC_Register_DesignDate) << ") while the readback version was '" << ReadDesignVersion() << ".'" << __E__;
 		__SS_THROW__;
 		// throw new DTC_WrongVersionException(expectedDesignVersion, ReadDesignVersion());
 	}
@@ -1224,6 +1224,10 @@ DTCLib::DTC_LinkEnableMode DTCLib::DTC_Registers::ReadLinkEnabled(DTC_Link_ID co
 {
 	std::bitset<32> dataSet = val.has_value() ? *val : ReadRegister_(CFOandDTC_Register_LinkEnable);
 	return DTC_LinkEnableMode(dataSet[link], dataSet[link + 8]);
+}
+uint32_t DTCLib::DTC_Registers::ReadLinkEnabledData()
+{
+	return ReadRegister_(CFOandDTC_Register_LinkEnable);
 }
 
 /// <summary>
