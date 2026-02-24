@@ -1911,6 +1911,9 @@ DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatRunPlanCurrentTag()
 {
 	auto form = CreateFormatter(CFO_Register_RunPlan_EventTag0, false /* getValue */);
 	form.description = "Run Plan Current Tag";
+	std::stringstream oss;
+	oss << "0x" << std::hex << std::setw(8) << std::setfill('0') << ReadRegister_(CFO_Register_RunPlan_EventTag0);
+	form.vals.push_back(oss.str()); //show hex format low 32-bits of tag
 	form.vals.push_back(std::to_string(ReadRunPlanCurrentTag()));
 	return form;
 } //end FormatRunPlanCurrentTag()
@@ -1953,7 +1956,11 @@ DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatRunPlanCurrentMode()
 	subsystemModeMap["ExtMon active"] = (subsystemModeMap["ExtMon"] >> 1) & 1;  // high Event Mode bit is active bit
 
 
-	form.vals.push_back("");  // translation
+	std::stringstream oss;
+	oss << "0x" << std::hex << std::setw(8) << std::setfill('0') << ReadRegister_(CFO_Register_RunPlan_EventMode0);
+	form.vals.push_back(oss.str()); //show hex format low 32-bits of mode
+	form.vals.push_back(std::to_string(mode)); //show decimal value
+	form.vals.push_back(""); // spacer for readability
 	for(auto pair : subsystemModeMap)
 	{
 		if(pair.first.find("active") != std::string::npos) continue;
