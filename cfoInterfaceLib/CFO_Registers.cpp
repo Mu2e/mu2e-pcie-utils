@@ -1882,7 +1882,26 @@ void CFOLib::CFO_Registers::SetRunPlanData(const std::string& inputData, const u
 		__COUTT__ << std::hex << std::setw(8) << std::setfill('0') << "addr 0x" << (runPlanBaseAddress + l / 4) << " data 0x" << *((uint32_t*)(&(dataPtr[l]))) << __E__;
 	}  // end primary run plan write loop
 
-	// now verify run plan w/readback
+	// now verify run plan w/readback (throws exception on mismatch)
+	CompareRunPlanData(inputData, runPlanBaseAddress);
+
+}  // end SetRunPlanData()
+
+/// @brief  Read back run plan data from BRAM and compare to input data for validation. 
+///		Note that the run plan BRAM read address auto-increments with each read, so we just need to set it once at the beginning of the function.
+///		If mismatches is not null, it will be filled with a map of mismatches instead of throwing an exception on first mismatch.
+///		Otherwise, an exception will be thrown on the first mismatch with details of the failure.
+/// @param inputData 
+/// @param runPlanBaseAddress 
+/// @param mismatches Optional pointer to a map that will be filled with any mismatches found, where the key is the
+///		address of the mismatch and the value is a pair of expected and actual data values. If nullptr, an exception will be thrown on the first mismatch instead.
+void CFOLib::CFO_Registers::CompareRunPlanData(const std::string& inputData, const uint32_t& runPlanBaseAddress,
+	std::map<uint32_t /* address */, 
+		std::pair<uint32_t /* expected */, 
+		uint32_t /* actual */> >* mismatches)
+{
+	auto dataPtr = reinterpret_cast<const uint8_t*>(&inputData[0]);
+	
 	WriteRegister_(runPlanBaseAddress, CFO_Register_RunPlan_Address);  // resets run plan BRAM write address
 	uint32_t val;
 	for (uint32_t l = 0; l < inputData.size(); l += 4)
@@ -1892,12 +1911,16 @@ void CFOLib::CFO_Registers::SetRunPlanData(const std::string& inputData, const u
 		__COUTT__ << std::hex << std::setw(8) << std::setfill('0') << "addr 0x" << (runPlanBaseAddress + l / 4) << " data 0x" << *((uint32_t*)(&(dataPtr[l]))) << " =? rdata 0x" << val << __E__;
 		if (val != *((uint32_t*)(&(dataPtr[l]))))
 		{
-			__SS__ << "Run plan write validation failed at " << std::hex << std::setw(8) << std::setfill('0') << "addr 0x" << (runPlanBaseAddress + l / 4) << " data 0x" << *((uint32_t*)(&(dataPtr[l]))) << " != rdata 0x" << val << __E__;
-			__SS_THROW__;
+			__SS__ << "Run plan validation failed at " << std::hex << std::setw(8) << std::setfill('0') << "addr 0x" << (runPlanBaseAddress + l / 4) << " data 0x" << *((uint32_t*)(&(dataPtr[l]))) << " != rdata 0x" << val << __E__;
+			if(!mismatches)						
+				__SS_THROW__;
+
+			__COUT__ << ss.str() << __E__;
+			(*mismatches)[runPlanBaseAddress + l / 4] = std::make_pair(*((uint32_t*)(&(dataPtr[l]))), val);
 		}
 	}  // end run plan validation
 
-}  // end SetRunPlanData()
+} //end CompareRunPlanData()
 
 /// Read current mode bits from two registers and concatenate the full 48-bit value
 uint64_t CFOLib::CFO_Registers::ReadRunPlanCurrentTag()

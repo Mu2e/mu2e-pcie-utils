@@ -1053,6 +1053,10 @@ public:
 	/// <returns>RegisterFormatter object containing register information</returns>
 	RegisterFormatter FormatRunPlanBeamOffBaseAddress();
 	void SetRunPlanData(const std::string& inputData, const uint32_t& address);
+	void CompareRunPlanData(const std::string& inputData, const uint32_t& address, 
+		std::map<uint32_t /* address */, 
+			std::pair<uint32_t /* expected */, 
+			uint32_t /* actual */> > *mismatches = nullptr);
 	uint64_t ReadRunPlanCurrentMode();
 	RegisterFormatter FormatRunPlanCurrentMode();
 	uint64_t ReadRunPlanCurrentTag();
