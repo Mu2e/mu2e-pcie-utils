@@ -1922,7 +1922,7 @@ void CFOLib::CFO_Registers::CompareRunPlanData(const std::string& inputData, con
 
 }  // end CompareRunPlanData()
 
-/// Read current mode bits from two registers and concatenate the full 48-bit value
+/// Read current tag bits from two registers and concatenate the full 48-bit value
 uint64_t CFOLib::CFO_Registers::ReadRunPlanCurrentTag()
 {
 	uint64_t val = ReadRegister_(CFO_Register_RunPlan_EventTag0);
