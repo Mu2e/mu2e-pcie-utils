@@ -95,7 +95,7 @@ DTCLib::DTC_SimMode CFOLib::CFO_Registers::SetSimMode(std::string expectedDesign
 	if (expectedDesignVersion != "" &&
 		static_cast<uint32_t>(std::stoul(expectedDesignVersion, nullptr, 16)) != ReadRegister_(CFOandDTC_Register_DesignDate))
 	{
-		__SS__ << "Version mismatch! Expected DTC version is '" << expectedDesignVersion << "' (0x" << std::hex << static_cast<uint32_t>(std::stoul(expectedDesignVersion, nullptr, 16)) << " != 0x" << ReadRegister_(CFOandDTC_Register_DesignDate) << ") while the readback version was '" << ReadDesignVersion() << ".'" << __E__;
+		__SS__ << "Version mismatch! Expected CFO version is '" << expectedDesignVersion << "' (0x" << std::hex << static_cast<uint32_t>(std::stoul(expectedDesignVersion, nullptr, 16)) << " != 0x" << ReadRegister_(CFOandDTC_Register_DesignDate) << ") while the readback version was '" << ReadDesignVersion() << ".'" << __E__;
 		__SS_THROW__;
 		// throw new DTC_WrongVersionException(expectedDesignVersion, ReadDesignVersion());
 	}
@@ -1922,7 +1922,7 @@ void CFOLib::CFO_Registers::CompareRunPlanData(const std::string& inputData, con
 
 }  // end CompareRunPlanData()
 
-/// Read current mode bits from two registers and concatenate the full 48-bit value
+/// Read current tag bits from two registers and concatenate the full 48-bit value
 uint64_t CFOLib::CFO_Registers::ReadRunPlanCurrentTag()
 {
 	uint64_t val = ReadRegister_(CFO_Register_RunPlan_EventTag0);
