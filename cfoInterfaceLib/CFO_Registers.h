@@ -73,11 +73,10 @@ enum CFO_Register : uint16_t
 
 	CFO_Register_RunPlan_Address = 0x9314,
 	CFO_Register_RunPlan_Data = 0x9318,
-	CFO_Register_RunPlan_EventMode0	= 0x931C,
-	CFO_Register_RunPlan_EventMode1	= 0x9320,
-	CFO_Register_RunPlan_EventTag0	= 0x9324,
-	CFO_Register_RunPlan_EventTag1	= 0x9328,
-
+	CFO_Register_RunPlan_EventMode0 = 0x931C,
+	CFO_Register_RunPlan_EventMode1 = 0x9320,
+	CFO_Register_RunPlan_EventTag0 = 0x9324,
+	CFO_Register_RunPlan_EventTag1 = 0x9328,
 
 	CFO_Register_SERDESPRBSControlLink0 = 0x9330,
 	CFO_Register_SERDESPRBSControlLink1 = 0x9334,
@@ -106,7 +105,7 @@ enum CFO_Register : uint16_t
 	CFO_Register_CableDelayControlStatus = 0x9380,
 
 	CFO_Register_FireflyCSRRegister = 0x93A0,
-	
+
 	CFO_Register_FPGAProgramData = 0x9400,
 	CFO_Register_FPGAPROMProgramStatus = 0x9404,
 	CFO_Register_FPGACoreAccess = 0x9408,
@@ -1053,10 +1052,10 @@ public:
 	/// <returns>RegisterFormatter object containing register information</returns>
 	RegisterFormatter FormatRunPlanBeamOffBaseAddress();
 	void SetRunPlanData(const std::string& inputData, const uint32_t& address);
-	void CompareRunPlanData(const std::string& inputData, const uint32_t& address, 
-		std::map<uint32_t /* address */, 
-			std::pair<uint32_t /* expected */, 
-			uint32_t /* actual */> > *mismatches = nullptr);
+	void CompareRunPlanData(const std::string& inputData, const uint32_t& address,
+							std::map<uint32_t /* address */,
+									 std::pair<uint32_t /* expected */,
+											   uint32_t /* actual */>>* mismatches = nullptr);
 	uint64_t ReadRunPlanCurrentMode();
 	RegisterFormatter FormatRunPlanCurrentMode();
 	uint64_t ReadRunPlanCurrentTag();

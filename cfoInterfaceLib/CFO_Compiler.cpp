@@ -26,7 +26,7 @@ bool getNumber(const std::string& s, T& retValue);
 
 const std::string CFOLib::CFO_Compiler::MAIN_GOTO_LABEL = "MAIN";
 
-const uint64_t CFOLib::CFO_Compiler::FPGAClock_ = (1e9 / (40e6) /* 40MHz FPGAClock for calculating delays */);  // period of FPGA clock in ns	
+const uint64_t CFOLib::CFO_Compiler::FPGAClock_ = (1e9 / (40e6) /* 40MHz FPGAClock for calculating delays */);  // period of FPGA clock in ns
 
 //========================================================================
 std::string CFOLib::CFO_Compiler::processFile(const std::string& sourceCodeFile,
@@ -116,7 +116,7 @@ try
 
 	std::stringstream resultSs;
 	resultSs << "Run plan text file: " << sourceCodeFile << __E__ << "was compiled to binary: " << binaryOutputFile << __E__;
-	resultSs << "\n\nBinary Result (Op count = " << output_.size()/8 << "):\n";
+	resultSs << "\n\nBinary Result (Op count = " << output_.size() / 8 << "):\n";
 	int cnt = 0;
 
 	// to view output file with 8-byte rows
@@ -693,10 +693,10 @@ uint64_t CFOLib::CFO_Compiler::calculateParameterAndErrorCheck(CFO_INSTR instruc
 				opArguments_[6][0] != '~')  // only if not an inverted value
 			{
 				__SS__ << "On Line (" << txtLineNumber_ << "), "
-					   << "the set value range is defined by bit_count, and so must be an integer between 0 and 2^" << 
-					   "(bit_count=" << bitCount << ") - 1. The value is " << value << " which is greater than or equal to max range = " << 
-					   (uint64_t(1) << bitCount) << __E__;
-				ss << "\n\n" << "If an inverted value is intended, use '~' before the number to indicate inversion, and the value will be masked to fit within the bit_count range.";
+					   << "the set value range is defined by bit_count, and so must be an integer between 0 and 2^"
+					   << "(bit_count=" << bitCount << ") - 1. The value is " << value << " which is greater than or equal to max range = " << (uint64_t(1) << bitCount) << __E__;
+				ss << "\n\n"
+				   << "If an inverted value is intended, use '~' before the number to indicate inversion, and the value will be masked to fit within the bit_count range.";
 				__SS_THROW__;
 			}
 

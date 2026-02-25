@@ -64,7 +64,7 @@ public:
 	std::string processFile(const std::string& sourceCodeFile, const std::string& binaryOutputFile);
 	const std::deque<char>& getBinaryOutput() { return output_; }
 
-	static const uint64_t FPGAClock_; // period of FPGA clock in ns	
+	static const uint64_t FPGAClock_;  // period of FPGA clock in ns
 private:
 	bool isComment(const std::string& line);
 
