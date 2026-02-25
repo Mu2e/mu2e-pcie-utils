@@ -467,9 +467,9 @@ public:
 	/// <param name="link">Link to disable</param>
 	void DisableBeamOnMode(const CFO_Link_ID& link);
 	/// <summary>
-	/// Read the Beam On Mode Enable bit for the given link
+	/// Read the global Beam On Mode Enable bit
 	/// </summary>
-	/// <param name="link">Link to read</param>
+	/// <param name="val">Optional register value to use instead of reading from hardware</param>
 	/// <returns>Value of the Beam On Mode Enable bit</returns>
 	bool ReadBeamOnMode(std::optional<uint32_t> val = std::nullopt);
 	/// <summary>
