@@ -93,11 +93,10 @@ DTCLib::DTC_SimMode CFOLib::CFO_Registers::SetSimMode(std::string expectedDesign
 
 	device_.init(simMode_, cfo, /* simMemoryFile */ "", uid);
 	if (expectedDesignVersion != "" &&
-		static_cast<uint32_t>(std::stoul(expectedDesignVersion, nullptr, 16)) != ReadRegister_(CFOandDTC_Register_DesignVersion))
+		static_cast<uint32_t>(std::stoul(expectedDesignVersion, nullptr, 16)) != ReadRegister_(CFOandDTC_Register_DesignDate))
 	{
-		__SS__ << "Version mismatch! Expected CFO version is '" << expectedDesignVersion << "' while the readback version was '" << ReadDesignVersion() << ".'" << __E__;
+		__SS__ << "Version mismatch! Expected CFO version is '" << expectedDesignVersion << "' (0x" << std::hex << static_cast<uint32_t>(std::stoul(expectedDesignVersion, nullptr, 16)) << " != 0x" << ReadRegister_(CFOandDTC_Register_DesignDate) << ") while the readback version was '" << ReadDesignVersion() << ".'" << __E__;
 		__SS_THROW__;
-
 		// throw new DTC_WrongVersionException(expectedDesignVersion, ReadDesignVersion());
 	}
 
@@ -689,7 +688,7 @@ void CFOLib::CFO_Registers::DisableBeamOnMode(const CFO_Link_ID& link)
 	WriteRegister_(data.to_ulong(), CFO_Register_EnableBeamOnMode);
 }
 
-bool CFOLib::CFO_Registers::ReadBeamOnMode(const CFO_Link_ID& link, std::optional<uint32_t> val)
+bool CFOLib::CFO_Registers::ReadBeamOnMode(std::optional<uint32_t> val)
 {
 	std::bitset<32> data = val.has_value() ? *val : ReadRegister_(CFO_Register_EnableBeamOnMode);
 	return data[0];  // Enable beam on processing a single global flag as of December 2023
@@ -701,7 +700,7 @@ DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatBeamOnMode()
 	form.description = "Enable Beam On Mode Register";
 	form.vals.push_back("[ x = 1 (hi) ]");  // translation
 											// Enable beam on processing a single global flag as of December 2023
-	form.vals.push_back(std::string("Beam On Processing ") + ": [" + (ReadBeamOnMode(CFO_Link_ALL) ? "x" : " ") + "]");
+	form.vals.push_back(std::string("Beam On Processing ") + ": [" + (ReadBeamOnMode(form.value) ? "x" : " ") + "]");
 	return form;
 }
 
@@ -719,7 +718,7 @@ void CFOLib::CFO_Registers::DisableBeamOffMode(const CFO_Link_ID& link)
 	WriteRegister_(data.to_ulong(), CFO_Register_EnableBeamOffMode);
 }
 
-bool CFOLib::CFO_Registers::ReadBeamOffMode(const CFO_Link_ID& link, std::optional<uint32_t> val)
+bool CFOLib::CFO_Registers::ReadBeamOffMode(std::optional<uint32_t> val)
 {
 	std::bitset<32> data = val.has_value() ? *val : ReadRegister_(CFO_Register_EnableBeamOffMode);
 	return data[0];  // Enable beam on processing a single global flag as of December 2023
@@ -731,7 +730,7 @@ DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatBeamOffMode()
 	form.description = "Enable Beam Off Mode Register";
 	form.vals.push_back("[ x = 1 (hi) ]");  // translation
 	// Enable off processing a single global flag as of December 2023
-	form.vals.push_back(std::string("Beam Off Processing ") + ": [" + (ReadBeamOffMode(CFO_Link_ALL) ? "x" : " ") + "]");
+	form.vals.push_back(std::string("Beam Off Processing ") + ": [" + (ReadBeamOffMode(form.value) ? "x" : " ") + "]");
 	return form;
 }
 
@@ -1883,7 +1882,26 @@ void CFOLib::CFO_Registers::SetRunPlanData(const std::string& inputData, const u
 		__COUTT__ << std::hex << std::setw(8) << std::setfill('0') << "addr 0x" << (runPlanBaseAddress + l / 4) << " data 0x" << *((uint32_t*)(&(dataPtr[l]))) << __E__;
 	}  // end primary run plan write loop
 
-	// now verify run plan w/readback
+	// now verify run plan w/readback (throws exception on mismatch)
+	CompareRunPlanData(inputData, runPlanBaseAddress);
+
+}  // end SetRunPlanData()
+
+/// @brief  Read back run plan data from BRAM and compare to input data for validation.
+///		Note that the run plan BRAM read address auto-increments with each read, so we just need to set it once at the beginning of the function.
+///		If mismatches is not null, it will be filled with a map of mismatches instead of throwing an exception on first mismatch.
+///		Otherwise, an exception will be thrown on the first mismatch with details of the failure.
+/// @param inputData
+/// @param runPlanBaseAddress
+/// @param mismatches Optional pointer to a map that will be filled with any mismatches found, where the key is the
+///		address of the mismatch and the value is a pair of expected and actual data values. If nullptr, an exception will be thrown on the first mismatch instead.
+void CFOLib::CFO_Registers::CompareRunPlanData(const std::string& inputData, const uint32_t& runPlanBaseAddress,
+											   std::map<uint32_t /* address */,
+														std::pair<uint32_t /* expected */,
+																  uint32_t /* actual */>>* mismatches)
+{
+	auto dataPtr = reinterpret_cast<const uint8_t*>(&inputData[0]);
+
 	WriteRegister_(runPlanBaseAddress, CFO_Register_RunPlan_Address);  // resets run plan BRAM write address
 	uint32_t val;
 	for (uint32_t l = 0; l < inputData.size(); l += 4)
@@ -1893,12 +1911,93 @@ void CFOLib::CFO_Registers::SetRunPlanData(const std::string& inputData, const u
 		__COUTT__ << std::hex << std::setw(8) << std::setfill('0') << "addr 0x" << (runPlanBaseAddress + l / 4) << " data 0x" << *((uint32_t*)(&(dataPtr[l]))) << " =? rdata 0x" << val << __E__;
 		if (val != *((uint32_t*)(&(dataPtr[l]))))
 		{
-			__SS__ << "Run plan write validation failed at " << std::hex << std::setw(8) << std::setfill('0') << "addr 0x" << (runPlanBaseAddress + l / 4) << " data 0x" << *((uint32_t*)(&(dataPtr[l]))) << " != rdata 0x" << val << __E__;
-			__SS_THROW__;
+			__SS__ << "Run plan validation failed at " << std::hex << std::setw(8) << std::setfill('0') << "addr 0x" << (runPlanBaseAddress + l / 4) << " data 0x" << *((uint32_t*)(&(dataPtr[l]))) << " != rdata 0x" << val << __E__;
+			if (!mismatches)
+				__SS_THROW__;
+
+			__COUT__ << ss.str() << __E__;
+			(*mismatches)[runPlanBaseAddress + l / 4] = std::make_pair(*((uint32_t*)(&(dataPtr[l]))), val);
 		}
 	}  // end run plan validation
 
-}  // end SetRunPlanData()
+}  // end CompareRunPlanData()
+
+/// Read current tag bits from two registers and concatenate the full 48-bit value
+uint64_t CFOLib::CFO_Registers::ReadRunPlanCurrentTag()
+{
+	uint64_t val = ReadRegister_(CFO_Register_RunPlan_EventTag0);
+	val |= (uint64_t(ReadRegister_(CFO_Register_RunPlan_EventTag1))) << 32;
+	return val;
+}  // end ReadRunPlanCurrentTag()
+
+DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatRunPlanCurrentTag()
+{
+	auto form = CreateFormatter(CFO_Register_RunPlan_EventTag0, false /* getValue */);
+	form.description = "Run Plan Current Tag";
+	std::stringstream oss;
+	oss << "0x" << std::hex << std::setw(8) << std::setfill('0') << ReadRegister_(CFO_Register_RunPlan_EventTag0);
+	form.vals.push_back(oss.str());  // show hex format low 32-bits of tag
+	form.vals.push_back(std::to_string(ReadRunPlanCurrentTag()));
+	return form;
+}  // end FormatRunPlanCurrentTag()
+
+/// Read current mode bits from two registers and concatenate the full 48-bit value
+uint64_t CFOLib::CFO_Registers::ReadRunPlanCurrentMode()
+{
+	uint64_t val = ReadRegister_(CFO_Register_RunPlan_EventMode0);
+	val |= (uint64_t(ReadRegister_(CFO_Register_RunPlan_EventMode1))) << 32;
+	return val;
+}  // end ReadRunPlanCurrentMode()
+
+DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatRunPlanCurrentMode()
+{
+	auto form = CreateFormatter(CFO_Register_RunPlan_EventMode0, false /* getValue */);
+	form.description = "Run Plan Current Mode";
+
+	uint64_t mode = ReadRunPlanCurrentMode();
+
+	// -- parse for each subsystem according docdb 4914 --
+	// Mode Packet Definition:
+	// Event Mode Byte 1 (Resrv’d Trk)	Event Mode Byte 0 [7:3] 	Pattern Mode [2:1]	Injection Data Source [0]
+	// Event Mode Byte 3 (Resrv’d CRV)	Event Mode Byte 2 (Resrv’d Calo) [7:1]	Calo Laser Injection [0]
+	// Delivery Ring RF-0 Marker TDC [15:8]	Resrv’d (TEM) [7:6] (STM) [5:4] 	Subrun Handling [3:1]	On-spill Flag [0]
+	//
+	// The high Event Mode bit, for example bit index 7 of a subsystem’s mode byte (or bit 1 of a subsystem’s 2-bit mode,
+	// is considered the active bit.  If set, the corresponding subsystem is expected to record data for that Event Window.
+
+	std::map<std::string, uint16_t> subsystemModeMap;
+	subsystemModeMap["Tracker"] = (mode >> 8) & 0xFF;  // bits [7:0] of Event Mode Byte-1
+	subsystemModeMap["Calo"] = (mode >> 16) & 0xFF;    // bits [7:0] of Event Mode Byte-2
+	subsystemModeMap["CRV"] = (mode >> 32) & 0xFF;     // bits [7:0] of Event Mode Byte-3
+	subsystemModeMap["STM"] = (mode >> 36) & 0x3;      // bits [1:0] of Event Mode Byte-4 upper nibble
+	subsystemModeMap["ExtMon"] = (mode >> 38) & 0x3;   // bits [3:2] of Event Mode Byte-4 upper nibble
+
+	subsystemModeMap["Tracker active"] = (subsystemModeMap["Tracker"] >> 7) & 1;  // high Event Mode bit is active bit
+	subsystemModeMap["Calo active"] = (subsystemModeMap["Calo"] >> 7) & 1;        // high Event Mode bit is active bit
+	subsystemModeMap["CRV active"] = (subsystemModeMap["CRV"] >> 7) & 1;          // high Event Mode bit is active bit
+	subsystemModeMap["STM active"] = (subsystemModeMap["STM"] >> 1) & 1;          // high Event Mode bit is active bit
+	subsystemModeMap["ExtMon active"] = (subsystemModeMap["ExtMon"] >> 1) & 1;    // high Event Mode bit is active bit
+
+	std::stringstream oss;
+	oss << "0x" << std::hex << std::setw(8) << std::setfill('0') << ReadRegister_(CFO_Register_RunPlan_EventMode0);
+	form.vals.push_back(oss.str());             // show hex format low 32-bits of mode
+	form.vals.push_back(std::to_string(mode));  // show decimal value
+	form.vals.push_back("");                    // spacer for readability
+	for (auto pair : subsystemModeMap)
+	{
+		if (pair.first.find("active") != std::string::npos) continue;
+
+		std::stringstream o;
+		if (pair.first.find("STM") != std::string::npos || pair.first.find("ExtMon") != std::string::npos)
+			o << pair.first + ": " << std::string(12 - pair.first.size(), ' ') <<  // pad for alignment
+				"b" << std::bitset<2>(pair.second) << std::string(6, ' ') << " (0x" << std::hex << pair.second << ")" << (subsystemModeMap[pair.first + " active"] ? " in" : " out");
+		else
+			o << pair.first + ": " << std::string(12 - pair.first.size(), ' ') <<  // pad for alignment
+				"b" << std::bitset<8>(pair.second) << " (0x" << std::hex << pair.second << ")" << (subsystemModeMap[pair.first + " active"] ? " in" : " out");
+		form.vals.push_back(o.str());
+	}
+	return form;
+}  // end FormatRunPlanCurrentMode()
 
 // Firefly CSR Register
 bool CFOLib::CFO_Registers::ReadFireflyTXRXPresent(std::optional<uint32_t> val)

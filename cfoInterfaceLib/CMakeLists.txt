@@ -23,7 +23,7 @@ if(${BUILD_PYTHON_INTERFACE})
     message(-- mu2e_pcie_utils/cfoInterfaceLib: BUILD_PYTHON_INTERFACE=${BUILD_PYTHON_INTERFACE})
    find_package(SWIG REQUIRED)
    include(${SWIG_USE_FILE})
-    add_subdirectory(python)
+#     add_subdirectory(python)
 endif()
 
 if(${BUILD_ROOT_INTERFACE})
