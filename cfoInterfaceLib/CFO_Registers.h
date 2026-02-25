@@ -1051,14 +1051,44 @@ public:
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
 	RegisterFormatter FormatRunPlanBeamOffBaseAddress();
+	/// <summary>
+	/// Write run plan data to the specified DDR memory address.
+	/// </summary>
+	/// <param name="inputData">Serialized run plan data to be written.</param>
+	/// <param name="address">DDR memory address where the run plan data should be stored.</param>
 	void SetRunPlanData(const std::string& inputData, const uint32_t& address);
+	/// <summary>
+	/// Compare the provided run plan data with the data stored at the specified DDR memory address.
+	/// </summary>
+	/// <param name="inputData">Serialized run plan data expected at the given address.</param>
+	/// <param name="address">DDR memory address from which the current run plan data is read.</param>
+	/// <param name="mismatches">
+	/// Optional pointer to a map that will be populated with any mismatching words,
+	/// keyed by address and containing expected/actual value pairs.
+	/// </param>
 	void CompareRunPlanData(const std::string& inputData, const uint32_t& address,
 							std::map<uint32_t /* address */,
 									 std::pair<uint32_t /* expected */,
 											   uint32_t /* actual */>>* mismatches = nullptr);
+	/// <summary>
+	/// Read the current run plan mode as reported by the firmware.
+	/// </summary>
+	/// <returns>The current run plan mode value.</returns>
 	uint64_t ReadRunPlanCurrentMode();
+	/// <summary>
+	/// Format the current run plan mode value for inclusion in register dumps.
+	/// </summary>
+	/// <returns>RegisterFormatter object containing the current mode information.</returns>
 	RegisterFormatter FormatRunPlanCurrentMode();
+	/// <summary>
+	/// Read the current run plan tag as reported by the firmware.
+	/// </summary>
+	/// <returns>The current run plan tag value.</returns>
 	uint64_t ReadRunPlanCurrentTag();
+	/// <summary>
+	/// Format the current run plan tag value for inclusion in register dumps.
+	/// </summary>
+	/// <returns>RegisterFormatter object containing the current tag information.</returns>
 	RegisterFormatter FormatRunPlanCurrentTag();
 
 	// Firefly CSR Register
