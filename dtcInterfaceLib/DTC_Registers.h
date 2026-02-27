@@ -451,6 +451,9 @@ public:
 	// Bit 0 Reserved
 	RegisterFormatter FormatDTCControl();
 
+	void SetCFOSamplePermanentOffset(int permanentOffset);
+	int ReadCFOSamplePermanentOffset(std::optional<uint32_t> val = std::nullopt);
+
 	// DMA Transfer Length Register
 	void SetTriggerDMATransferLength(uint16_t length);
 	uint16_t ReadTriggerDMATransferLength(std::optional<uint32_t> val = std::nullopt);
@@ -484,6 +487,7 @@ public:
 	void EnableLink(DTC_Link_ID const& link, const DTC_LinkEnableMode& mode = DTC_LinkEnableMode());
 	void DisableLink(DTC_Link_ID const& link, const DTC_LinkEnableMode& mode = DTC_LinkEnableMode());
 	DTC_LinkEnableMode ReadLinkEnabled(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
+	uint32_t ReadLinkEnabledData();
 	RegisterFormatter FormatLinkEnable();
 
 	// SERDES Reset Register
@@ -569,10 +573,9 @@ public:
 	RegisterFormatter FormatEVBLocalParitionIDMACIndex();
 
 	// EVB Cluster Config
-	void SetEVBClusterInfo(  // uint8_t bufferCount,
-		uint8_t baseDTCAddress, uint8_t numOfDTCs);
-	// void SetEVBNumberInputBuffers(uint8_t count);
-	// uint8_t ReadEVBNumberInputBuffers(std::optional<uint32_t> val = std::nullopt);
+	void SetEVBClusterInfo(uint16_t deadTime, uint8_t baseDTCAddress, uint8_t numOfDTCs);
+	void SetEVBDeadTime(uint16_t deadTime);
+	uint16_t ReadEVBDeadTime(std::optional<uint32_t> val = std::nullopt);
 	void SetEVBStartNode(uint8_t node);
 	uint8_t ReadEVBStartNode(std::optional<uint32_t> val = std::nullopt);
 	void SetEVBNumberOfDestinationNodes(uint8_t number);
@@ -600,27 +603,7 @@ public:
 	DTC_SerdesClockSpeed ReadSERDESOscillatorClock(std::optional<uint32_t> val = std::nullopt);
 	void SetSERDESOscillatorClock(DTC_SerdesClockSpeed speed);
 	void SetTimingOscillatorClock(uint32_t freq);
-	// RegisterFormatter FormatTimingSERDESOscillatorFrequency();
-	// RegisterFormatter FormatMainBoardSERDESOscillatorFrequency();
 	RegisterFormatter FormatSERDESOscillatorControl();
-
-	// DDR Oscillator Registers
-	// uint32_t ReadDDROscillatorReferenceFrequency(std::optional<uint32_t> val = std::nullopt);
-	// void SetDDROscillatorReferenceFrequency(uint32_t freq);
-	// bool ReadDDROscillatorIICInterfaceReset(std::optional<uint32_t> val = std::nullopt);
-	// void ResetDDROscillatorIICInterface();
-
-	// void WriteDDRIICInterface(DTC_IICDDRBusAddress device, uint8_t address, uint8_t data);
-	// uint8_t ReadDDRIICInterface(DTC_IICDDRBusAddress device, uint8_t address);
-	// RegisterFormatter FormatDDROscillatorFrequency();
-	// RegisterFormatter FormatDDROscillatorControl();
-	// RegisterFormatter FormatDDROscillatorParameterLow();
-	// RegisterFormatter FormatDDROscillatorParameterHigh();
-
-	// Data Pending Timer Register
-	// void SetDataPendingTimer(uint32_t timer);
-	// uint32_t ReadDataPendingTimer(std::optional<uint32_t> val = std::nullopt);
-	// RegisterFormatter FormatDataPendingTimer();
 
 	// FIFO Full Error Flags Registers
 	void ClearFIFOFullErrorFlags(DTC_Link_ID const& link);
@@ -762,44 +745,6 @@ public:
 	uint8_t ReadROCCommaLimit(std::optional<uint32_t> val = std::nullopt);
 	void SetROCCommaLimit(uint8_t limit);
 	RegisterFormatter FormatROCFinishThreshold();
-
-	// SERDES Counter Registers
-	// PM	void ClearReceiveByteCount(DTC_Link_ID const& link);
-	// PM	uint32_t ReadReceiveByteCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
-	// PM	void ClearReceivePacketCount(DTC_Link_ID const& link);
-	// PM	uint32_t ReadReceivePacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
-	// PM	void ClearTransmitByteCount(DTC_Link_ID const& link);
-	// PM	uint32_t ReadTransmitByteCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
-	// PM	void ClearTransmitPacketCount(DTC_Link_ID const& link);
-	// PM	uint32_t ReadTransmitPacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
-	//  RegisterFormatter FormatReceiveByteCountLink0();
-	//  RegisterFormatter FormatReceiveByteCountLink1();
-	//  RegisterFormatter FormatReceiveByteCountLink2();
-	//  RegisterFormatter FormatReceiveByteCountLink3();
-	//  RegisterFormatter FormatReceiveByteCountLink4();
-	//  RegisterFormatter FormatReceiveByteCountLink5();
-	//  RegisterFormatter FormatReceiveByteCountCFO();
-	//  RegisterFormatter FormatReceivePacketCountLink0();
-	//  RegisterFormatter FormatReceivePacketCountLink1();
-	//  RegisterFormatter FormatReceivePacketCountLink2();
-	//  RegisterFormatter FormatReceivePacketCountLink3();
-	//  RegisterFormatter FormatReceivePacketCountLink4();
-	//  RegisterFormatter FormatReceivePacketCountLink5();
-	//  RegisterFormatter FormatReceivePacketCountCFO();
-	//  RegisterFormatter FormatTramsitByteCountLink0();
-	//  RegisterFormatter FormatTramsitByteCountLink1();
-	//  RegisterFormatter FormatTramsitByteCountLink2();
-	//  RegisterFormatter FormatTramsitByteCountLink3();
-	//  RegisterFormatter FormatTramsitByteCountLink4();
-	//  RegisterFormatter FormatTramsitByteCountLink5();
-	//  RegisterFormatter FormatTramsitByteCountCFO();
-	//  RegisterFormatter FormatTransmitPacketCountLink0();
-	//  RegisterFormatter FormatTransmitPacketCountLink1();
-	//  RegisterFormatter FormatTransmitPacketCountLink2();
-	//  RegisterFormatter FormatTransmitPacketCountLink3();
-	//  RegisterFormatter FormatTransmitPacketCountLink4();
-	//  RegisterFormatter FormatTransmitPacketCountLink5();
-	//  RegisterFormatter FormatTransmitPacketCountCFO();
 
 	// SERDES TX PRBS Control
 	bool ReadTXPRBSForceError(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
@@ -1168,11 +1113,6 @@ public:
 	uint32_t ReadROCEmulatorInterpacketDelay(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
 	void SetROCEmulatorInterpacketDelay(DTC_Link_ID const& link, uint32_t delay);
 	RegisterFormatter FormatROCEmulatorInterpacketDelayLink0();
-	// RegisterFormatter FormatROCEmulatorInterpacketDelayLink1();
-	// RegisterFormatter FormatROCEmulatorInterpacketDelayLink2();
-	// RegisterFormatter FormatROCEmulatorInterpacketDelayLink3();
-	// RegisterFormatter FormatROCEmulatorInterpacketDelayLink4();
-	// RegisterFormatter FormatROCEmulatorInterpacketDelayLink5();
 
 	// TX Data Request Packet Count
 	uint32_t ReadTXDataRequestPacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
@@ -1238,12 +1178,19 @@ private:
 
 	bool WaitForLinkReady_(DTC_Link_ID const& link, size_t interval, double timeout = 2.0 /*seconds*/);
 
+	std::unordered_map<uint8_t, std::pair<uint32_t, std::chrono::steady_clock::time_point>> lastPacketCount;
+	std::unordered_map<uint8_t, double> lastPacketRate;
+
 protected:
 	DTC_SimMode simMode_;                ///< Simulation mode
 	bool usingDetectorEmulator_{false};  ///< Whether Detector Emulation mode is enabled
 	uint16_t dmaSize_;                   ///< Size of DMAs, in bytes (default 32k)
 
 public:
+	std::pair<uint32_t, std::chrono::steady_clock::time_point> getPacketCountInfo(uint8_t dtc) const;
+	void updatePacketCount(uint8_t dtc, uint32_t currentCount);
+	double getLastPacketRate(uint8_t dtc) const;
+
 	bool WaitForLinkReady(DTC_Link_ID const& link, size_t interval, double timeout = 2.0) { return WaitForLinkReady_(link, interval, timeout); }
 	virtual const std::vector<std::function<RegisterFormatter()>>& getFormattedDumpFunctions() override { return formattedDumpFunctions_; };              // pure virtual
 	virtual const std::vector<std::function<RegisterFormatter()>>& getFormattedSimpleDumpFunctions() override { return formattedSimpleDumpFunctions_; };  // pure virtual

@@ -12,7 +12,7 @@
 #include "dtcInterfaceLib/otsStyleCoutMacros.h"
 
 #undef __COUT_HDR__
-#define __COUT_HDR__ "core-CFO/DTC " << device_.getDeviceUID() << ": "
+#define __COUT_HDR__ "core-CFOandDTC " << device_.getDeviceUID() << ": "
 #define TLVL_ResetDTC TLVL_DEBUG + 5
 #define TLVL_AutogenDRP TLVL_DEBUG + 6
 #define TLVL_SERDESReset TLVL_DEBUG + 7
@@ -89,7 +89,8 @@ std::string DTCLib::CFOandDTC_Registers::FormattedRegDump(int width,
 /// </summary>
 /// <returns>Design version, in VersionNumber_Date format</returns>
 std::string DTCLib::CFOandDTC_Registers::ReadDesignVersion() { return  // ReadDesignVersionNumber() + "_" +
-															   ReadDesignDate() + "_" + ReadVivadoVersionNumber() + "_" + ReadDesignLinkSpeed() + "_" + ReadDesignType(); }
+															   ReadDesignDate() + ", Vivado Version: " + ReadVivadoVersionNumber() +
+															   ", Link Speed: " + ReadDesignLinkSpeed() + "_" + ReadDesignType(); }
 
 /// <summary>
 /// Formats the register's current value for register dumps
@@ -113,6 +114,7 @@ std::string DTCLib::CFOandDTC_Registers::ReadDesignDate(std::optional<uint32_t> 
 {
 	auto readData = val.has_value() ? *val : ReadRegister_(CFOandDTC_Register_DesignDate);
 	std::ostringstream o;
+	bool isCFO = false;
 	std::vector<std::string> months({"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"});
 	size_t mon = ((readData >> 20) & 0xF) * 10 + ((readData >> 16) & 0xF);
 	if (mon - 1 >= months.size())
@@ -124,7 +126,10 @@ std::string DTCLib::CFOandDTC_Registers::ReadDesignDate(std::optional<uint32_t> 
 	if (((readData >> 28) & 0xF) == 0xA)
 		o << "SIM-";
 	else if (((readData >> 28) & 0xF) == 0xC)
+	{
 		o << "CFO-";
+		isCFO = true;
+	}
 	else if (((readData >> 28) & 0xF) == 0xD)
 		o << "DTC-";
 	else if (((readData >> 28) & 0xF) == 0xE)
@@ -133,8 +138,16 @@ std::string DTCLib::CFOandDTC_Registers::ReadDesignDate(std::optional<uint32_t> 
 		o << "TEMP-";
 	o << months[mon - 1] << "/" << ((readData >> 12) & 0xF) << ((readData >> 8) & 0xF) << "/20" <<
 		// ((readData>>28)&0xF) <<
-		20 + ((readData >> 24) & 0xF) << " " <<  // year 2020 + hex nibble at bit-24
-		((readData >> 4) & 0x7) << ((readData >> 0) & 0xF) << ":00   " << (((readData >> 7) & 0x1) ? "6-ROC" : "3-ROC") << "  raw-data: 0x" << std::hex << readData;
+		(((readData >> 28) & 0xF) == 0x1 ?  // if 1, then old!!! firmware
+			 (10 + ((readData >> 24) & 0xF))
+										 : (20 + ((readData >> 24) & 0xF)))
+	  << " " <<  // year 2020 + hex nibble at bit-24
+		((readData >> 4) & 0x7) << ((readData >> 0) & 0xF) << ":00   ";
+	if (isCFO)
+		o << "8-Links";
+	else
+		o << (((readData >> 7) & 0x1) ? "6-ROC" : "3-ROC");
+	o << "  raw-data: 0x" << std::hex << readData;
 	return o.str();
 }
 
@@ -616,11 +629,14 @@ uint32_t DTCLib::CFOandDTC_Registers::WriteRegister_(uint32_t dataToWrite, const
 		// throw DTC_IOErrorException(errorCode);
 	}
 
+	if (TTEST(1))
 	{  // trace seems to ignore the std::setfill, so using stringstream
 		std::stringstream o;
 		o << "write value 0x" << std::setw(8) << std::setfill('0') << std::setprecision(8) << std::hex << static_cast<uint32_t>(dataToWrite)
-		  << " to register 0x" << std::setw(4) << std::setfill('0') << std::setprecision(4) << std::hex << static_cast<uint32_t>(address) << std::endl;
-		__COUT__ << o.str();
+		  << " to register 0x" << std::setw(4) << std::setfill('0') << std::setprecision(4) << std::hex << static_cast<uint32_t>(address) << " needToVerify=" << needToVerify << std::endl;
+		if (needToVerify)
+			o << " ... readback 0x" << std::setw(8) << std::setfill('0') << std::setprecision(8) << std::hex << static_cast<uint32_t>(readbackValue) << std::endl;
+		__COUTT__ << o.str();
 	}
 
 	// verify register readback
@@ -677,11 +693,11 @@ bool DTCLib::CFOandDTC_Registers::CFOandDTCVerifyRegisterWrite_(const CFOandDTC_
 			// 	readbackValue 	&= 0x0000ffff;
 			// 	isCoreRegister = true;
 			// 	break;
-			case CFOandDTC_Register_Control:  // bit 0 and 31 are reset bits, and self-clear (effectively, write only)
+			case CFOandDTC_Register_Control:  // bit 0 and 31 are reset bits, and self-clear (effectively, write only), also bit-25 self-resets (mig reset)
 				if ((dataToWrite >> 0) & 1)
 					return true;  // ignore check if hard reset bit-0 high, because factory defaults are not maintained here
-				dataToWrite &= 0x7fffffff;
-				readbackValue &= 0x7fffffff;
+				dataToWrite &= 0x7dffffff;
+				readbackValue &= 0x7dffffff;
 				isCoreRegister = true;
 				break;
 

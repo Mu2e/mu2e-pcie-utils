@@ -73,8 +73,11 @@ enum CFO_Register : uint16_t
 
 	CFO_Register_RunPlan_Address = 0x9314,
 	CFO_Register_RunPlan_Data = 0x9318,
+	CFO_Register_RunPlan_EventMode0 = 0x931C,
+	CFO_Register_RunPlan_EventMode1 = 0x9320,
+	CFO_Register_RunPlan_EventTag0 = 0x9324,
+	CFO_Register_RunPlan_EventTag1 = 0x9328,
 
-	CFO_Register_FireflyCSRRegister = 0x9320,
 	CFO_Register_SERDESPRBSControlLink0 = 0x9330,
 	CFO_Register_SERDESPRBSControlLink1 = 0x9334,
 	CFO_Register_SERDESPRBSControlLink2 = 0x9338,
@@ -100,6 +103,9 @@ enum CFO_Register : uint16_t
 	// CFO_Register_CableDelayValueLink7 = 0x937C,
 
 	CFO_Register_CableDelayControlStatus = 0x9380,
+
+	CFO_Register_FireflyCSRRegister = 0x93A0,
+
 	CFO_Register_FPGAProgramData = 0x9400,
 	CFO_Register_FPGAPROMProgramStatus = 0x9404,
 	CFO_Register_FPGACoreAccess = 0x9408,
@@ -461,11 +467,11 @@ public:
 	/// <param name="link">Link to disable</param>
 	void DisableBeamOnMode(const CFO_Link_ID& link);
 	/// <summary>
-	/// Read the Beam On Mode Enable bit for the given link
+	/// Read the global Beam On Mode Enable bit
 	/// </summary>
-	/// <param name="link">Link to read</param>
+	/// <param name="val">Optional register value to use instead of reading from hardware</param>
 	/// <returns>Value of the Beam On Mode Enable bit</returns>
-	bool ReadBeamOnMode(const CFO_Link_ID& link, std::optional<uint32_t> val = std::nullopt);
+	bool ReadBeamOnMode(std::optional<uint32_t> val = std::nullopt);
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
@@ -484,11 +490,10 @@ public:
 	/// <param name="link">Link to disable</param>
 	void DisableBeamOffMode(const CFO_Link_ID& link);
 	/// <summary>
-	/// Read the Beam Off Mode Enable bit for the given link
+	/// Read the global Beam Off Mode Enable bit
 	/// </summary>
-	/// <param name="link">Link to read</param>
-	/// <returns>Value of the Beam Off Mode Enable bit</returns>
-	bool ReadBeamOffMode(const CFO_Link_ID& link, std::optional<uint32_t> val = std::nullopt);
+	/// <returns>Value of the global Beam Off Mode Enable bit</returns>
+	bool ReadBeamOffMode(std::optional<uint32_t> val = std::nullopt);
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
@@ -1045,7 +1050,45 @@ public:
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
 	RegisterFormatter FormatRunPlanBeamOffBaseAddress();
+	/// <summary>
+	/// Write run plan data to the specified DDR memory address.
+	/// </summary>
+	/// <param name="inputData">Serialized run plan data to be written.</param>
+	/// <param name="address">DDR memory address where the run plan data should be stored.</param>
 	void SetRunPlanData(const std::string& inputData, const uint32_t& address);
+	/// <summary>
+	/// Compare the provided run plan data with the data stored at the specified DDR memory address.
+	/// </summary>
+	/// <param name="inputData">Serialized run plan data expected at the given address.</param>
+	/// <param name="address">DDR memory address from which the current run plan data is read.</param>
+	/// <param name="mismatches">
+	/// Optional pointer to a map that will be populated with any mismatching words,
+	/// keyed by address and containing expected/actual value pairs.
+	/// </param>
+	void CompareRunPlanData(const std::string& inputData, const uint32_t& address,
+							std::map<uint32_t /* address */,
+									 std::pair<uint32_t /* expected */,
+											   uint32_t /* actual */>>* mismatches = nullptr);
+	/// <summary>
+	/// Read the current run plan mode as reported by the firmware.
+	/// </summary>
+	/// <returns>The current run plan mode value.</returns>
+	uint64_t ReadRunPlanCurrentMode();
+	/// <summary>
+	/// Format the current run plan mode value for inclusion in register dumps.
+	/// </summary>
+	/// <returns>RegisterFormatter object containing the current mode information.</returns>
+	RegisterFormatter FormatRunPlanCurrentMode();
+	/// <summary>
+	/// Read the current run plan tag as reported by the firmware.
+	/// </summary>
+	/// <returns>The current run plan tag value.</returns>
+	uint64_t ReadRunPlanCurrentTag();
+	/// <summary>
+	/// Format the current run plan tag value for inclusion in register dumps.
+	/// </summary>
+	/// <returns>RegisterFormatter object containing the current tag information.</returns>
+	RegisterFormatter FormatRunPlanCurrentTag();
 
 	// Firefly CSR Register
 	/// <summary>
@@ -1456,108 +1499,108 @@ public:
 		[this] { return this->FormatJitterAttenuatorCSR(); },
 		[this] { return this->FormatSERDESPLLLocked(); },
 		[this] { return this->FormatLinkEnable(); },
-		// [this] { return this->FormatRXCDRLockStatus(); },
+		[this] { return this->FormatSERDESRXCDRLock(); },
 		[this] { return this->FormatSERDESResetDone(); },
 		[this] { return this->FormatSERDESReset(); },
 	};
 
 	const std::vector<std::function<RegisterFormatter()>> formattedDumpFunctions_{
-		[this]() { return this->FormatDesignVersion(); },
-		[this]() { return this->FormatDesignDate(); },
-		[this]() { return this->FormatDesignStatus(); },
-		[this]() { return this->FormatVivadoVersion(); },
-		[this]() { return this->FormatCFOControl(); },
-		[this]() { return this->FormatDMATransferLength(); },
-		[this]() { return this->FormatSERDESLoopbackEnable(); },
-		[this]() { return this->FormatClockOscillatorStatus(); },
-		[this]() { return this->FormatLinkEnable(); },
-		[this]() { return this->FormatSERDESReset(); },
-		[this]() { return this->FormatSERDESRXDisparityError(); },
-		[this]() { return this->FormatSERDESRXCharacterNotInTableError(); },
-		[this]() { return this->FormatSERDESUnlockError(); },
-		[this]() { return this->FormatSERDESPLLLocked(); },
-		[this]() { return this->FormatSERDESRXStatus(); },
-		[this]() { return this->FormatSERDESResetDone(); },
-		[this]() { return this->FormatSERDESRXCDRLock(); },
-		[this]() { return this->FormatBeamOnTimerPreset(); },
-		[this]() { return this->FormatBeamOnMode(); },
-		[this]() { return this->FormatBeamOffMode(); },
-		[this]() { return this->FormatClockMarkerIntervalCount(); },
-		[this]() { return this->FormatSERDESOscillatorFrequency(); },
-		[this]() { return this->FormatSERDESOscillatorControl(); },
-		[this]() { return this->FormatSERDESOscillatorParameterLow(); },
-		[this]() { return this->FormatSERDESOscillatorParameterHigh(); },
-		[this]() { return this->FormatTimestampPreset0(); },
-		[this]() { return this->FormatTimestampPreset1(); },
-		[this]() { return this->FormatNUMDTCs(); },
-		[this]() { return this->FormatFIFOFullErrorFlag0(); },
-		[this]() { return this->FormatReceivePacketError(); },
-		// [this]() { return this->FormatEventWindowEmulatorIntervalTime(); },
-		[this]() { return this->FormatEventWindowHoldoffTime(); },
-		[this]() { return this->FormatEventWindowTimeoutError(); },
-		[this]() { return this->FormatEventWindowTimeoutInterval(); },
-		[this]() { return this->FormatDMAWriteStartAddress(); },
-		[this]() { return this->FormatDMAReadStartAddress(); },
-		[this]() { return this->FormatDMAReadByteCount(); },
-		[this]() { return this->FormatRunPlanBeamOnBaseAddress(); },
-		[this]() { return this->FormatRunPlanBeamOffBaseAddress(); },
-		[this]() { return this->FormatFireflyCSR(); },
-		[this]() { return this->FormatSERDESPRBSControlLink0(); },
-		[this]() { return this->FormatSERDESPRBSControlLink1(); },
-		[this]() { return this->FormatSERDESPRBSControlLink2(); },
-		[this]() { return this->FormatSERDESPRBSControlLink3(); },
-		[this]() { return this->FormatSERDESPRBSControlLink4(); },
-		[this]() { return this->FormatSERDESPRBSControlLink5(); },
-		[this]() { return this->FormatSERDESPRBSControlLink6(); },
-		[this]() { return this->FormatSERDESPRBSControlLink7(); },
-		// [this]() { return this->FormatCableDelayValueLink0(); },
-		// [this]() { return this->FormatCableDelayValueLink1(); },
-		// [this]() { return this->FormatCableDelayValueLink2(); },
-		// [this]() { return this->FormatCableDelayValueLink3(); },
-		// [this]() { return this->FormatCableDelayValueLink4(); },
-		// [this]() { return this->FormatCableDelayValueLink5(); },
-		// [this]() { return this->FormatCableDelayValueLink6(); },
-		// [this]() { return this->FormatCableDelayValueLink7(); },
-		// [this]() { return this->FormatCableDelayControl(); },
-		[this]() { return this->FormatFPGAPROMProgramStatus(); },
-		[this]() { return this->FormatFPGACoreAccess(); }};
+		[this] { return this->FormatDesignVersion(); },
+		[this] { return this->FormatDesignDate(); },
+		[this] { return this->FormatDesignStatus(); },
+		[this] { return this->FormatVivadoVersion(); },
+		[this] { return this->FormatCFOControl(); },
+		[this] { return this->FormatDMATransferLength(); },
+		[this] { return this->FormatSERDESLoopbackEnable(); },
+		[this] { return this->FormatClockOscillatorStatus(); },
+		[this] { return this->FormatLinkEnable(); },
+		[this] { return this->FormatSERDESReset(); },
+		[this] { return this->FormatSERDESRXDisparityError(); },
+		[this] { return this->FormatSERDESRXCharacterNotInTableError(); },
+		[this] { return this->FormatSERDESUnlockError(); },
+		[this] { return this->FormatSERDESPLLLocked(); },
+		[this] { return this->FormatSERDESRXStatus(); },
+		[this] { return this->FormatSERDESResetDone(); },
+		[this] { return this->FormatSERDESRXCDRLock(); },
+		[this] { return this->FormatBeamOnTimerPreset(); },
+		[this] { return this->FormatBeamOnMode(); },
+		[this] { return this->FormatBeamOffMode(); },
+		[this] { return this->FormatClockMarkerIntervalCount(); },
+		[this] { return this->FormatSERDESOscillatorFrequency(); },
+		[this] { return this->FormatSERDESOscillatorControl(); },
+		[this] { return this->FormatSERDESOscillatorParameterLow(); },
+		[this] { return this->FormatSERDESOscillatorParameterHigh(); },
+		[this] { return this->FormatTimestampPreset0(); },
+		[this] { return this->FormatTimestampPreset1(); },
+		[this] { return this->FormatNUMDTCs(); },
+		[this] { return this->FormatFIFOFullErrorFlag0(); },
+		[this] { return this->FormatReceivePacketError(); },
+		// [this] { return this->FormatEventWindowEmulatorIntervalTime(); },
+		[this] { return this->FormatEventWindowHoldoffTime(); },
+		[this] { return this->FormatEventWindowTimeoutError(); },
+		[this] { return this->FormatEventWindowTimeoutInterval(); },
+		[this] { return this->FormatDMAWriteStartAddress(); },
+		[this] { return this->FormatDMAReadStartAddress(); },
+		[this] { return this->FormatDMAReadByteCount(); },
+		[this] { return this->FormatRunPlanBeamOnBaseAddress(); },
+		[this] { return this->FormatRunPlanBeamOffBaseAddress(); },
+		[this] { return this->FormatFireflyCSR(); },
+		[this] { return this->FormatSERDESPRBSControlLink0(); },
+		[this] { return this->FormatSERDESPRBSControlLink1(); },
+		[this] { return this->FormatSERDESPRBSControlLink2(); },
+		[this] { return this->FormatSERDESPRBSControlLink3(); },
+		[this] { return this->FormatSERDESPRBSControlLink4(); },
+		[this] { return this->FormatSERDESPRBSControlLink5(); },
+		[this] { return this->FormatSERDESPRBSControlLink6(); },
+		[this] { return this->FormatSERDESPRBSControlLink7(); },
+		// [this] { return this->FormatCableDelayValueLink0(); },
+		// [this] { return this->FormatCableDelayValueLink1(); },
+		// [this] { return this->FormatCableDelayValueLink2(); },
+		// [this] { return this->FormatCableDelayValueLink3(); },
+		// [this] { return this->FormatCableDelayValueLink4(); },
+		// [this] { return this->FormatCableDelayValueLink5(); },
+		// [this] { return this->FormatCableDelayValueLink6(); },
+		// [this] { return this->FormatCableDelayValueLink7(); },
+		// [this] { return this->FormatCableDelayControl(); },
+		[this] { return this->FormatFPGAPROMProgramStatus(); },
+		[this] { return this->FormatFPGACoreAccess(); }};
 
 	/// <summary>
 	/// Dump Byte/Packet Counter Registers
 	/// </summary>
 	const std::vector<std::function<RegisterFormatter()>> formattedCounterFunctions_{
-		[this]() { return this->FormatReceiveByteCountLink0(); },
-		[this]() { return this->FormatReceiveByteCountLink1(); },
-		[this]() { return this->FormatReceiveByteCountLink2(); },
-		[this]() { return this->FormatReceiveByteCountLink3(); },
-		[this]() { return this->FormatReceiveByteCountLink4(); },
-		[this]() { return this->FormatReceiveByteCountLink5(); },
-		[this]() { return this->FormatReceiveByteCountLink6(); },
-		[this]() { return this->FormatReceiveByteCountLink7(); },
-		[this]() { return this->FormatReceivePacketCountLink0(); },
-		[this]() { return this->FormatReceivePacketCountLink1(); },
-		[this]() { return this->FormatReceivePacketCountLink2(); },
-		[this]() { return this->FormatReceivePacketCountLink3(); },
-		[this]() { return this->FormatReceivePacketCountLink4(); },
-		[this]() { return this->FormatReceivePacketCountLink5(); },
-		[this]() { return this->FormatReceivePacketCountLink6(); },
-		[this]() { return this->FormatReceivePacketCountLink7(); },
-		[this]() { return this->FormatTramsitByteCountLink0(); },
-		[this]() { return this->FormatTramsitByteCountLink1(); },
-		[this]() { return this->FormatTramsitByteCountLink2(); },
-		[this]() { return this->FormatTramsitByteCountLink3(); },
-		[this]() { return this->FormatTramsitByteCountLink4(); },
-		[this]() { return this->FormatTramsitByteCountLink5(); },
-		[this]() { return this->FormatTramsitByteCountLink6(); },
-		[this]() { return this->FormatTramsitByteCountLink7(); },
-		[this]() { return this->FormatTransmitPacketCountLink0(); },
-		[this]() { return this->FormatTransmitPacketCountLink1(); },
-		[this]() { return this->FormatTransmitPacketCountLink2(); },
-		[this]() { return this->FormatTransmitPacketCountLink3(); },
-		[this]() { return this->FormatTransmitPacketCountLink4(); },
-		[this]() { return this->FormatTransmitPacketCountLink5(); },
-		[this]() { return this->FormatTransmitPacketCountLink6(); },
-		[this]() { return this->FormatTransmitPacketCountLink7(); }};
+		[this] { return this->FormatReceiveByteCountLink0(); },
+		[this] { return this->FormatReceiveByteCountLink1(); },
+		[this] { return this->FormatReceiveByteCountLink2(); },
+		[this] { return this->FormatReceiveByteCountLink3(); },
+		[this] { return this->FormatReceiveByteCountLink4(); },
+		[this] { return this->FormatReceiveByteCountLink5(); },
+		[this] { return this->FormatReceiveByteCountLink6(); },
+		[this] { return this->FormatReceiveByteCountLink7(); },
+		[this] { return this->FormatReceivePacketCountLink0(); },
+		[this] { return this->FormatReceivePacketCountLink1(); },
+		[this] { return this->FormatReceivePacketCountLink2(); },
+		[this] { return this->FormatReceivePacketCountLink3(); },
+		[this] { return this->FormatReceivePacketCountLink4(); },
+		[this] { return this->FormatReceivePacketCountLink5(); },
+		[this] { return this->FormatReceivePacketCountLink6(); },
+		[this] { return this->FormatReceivePacketCountLink7(); },
+		[this] { return this->FormatTramsitByteCountLink0(); },
+		[this] { return this->FormatTramsitByteCountLink1(); },
+		[this] { return this->FormatTramsitByteCountLink2(); },
+		[this] { return this->FormatTramsitByteCountLink3(); },
+		[this] { return this->FormatTramsitByteCountLink4(); },
+		[this] { return this->FormatTramsitByteCountLink5(); },
+		[this] { return this->FormatTramsitByteCountLink6(); },
+		[this] { return this->FormatTramsitByteCountLink7(); },
+		[this] { return this->FormatTransmitPacketCountLink0(); },
+		[this] { return this->FormatTransmitPacketCountLink1(); },
+		[this] { return this->FormatTransmitPacketCountLink2(); },
+		[this] { return this->FormatTransmitPacketCountLink3(); },
+		[this] { return this->FormatTransmitPacketCountLink4(); },
+		[this] { return this->FormatTransmitPacketCountLink5(); },
+		[this] { return this->FormatTransmitPacketCountLink6(); },
+		[this] { return this->FormatTransmitPacketCountLink7(); }};
 };
 }  // namespace CFOLib
 

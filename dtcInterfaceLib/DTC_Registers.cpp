@@ -87,9 +87,10 @@ DTCLib::DTC_SimMode DTCLib::DTC_Registers::SetSimMode(std::string expectedDesign
 	TLOG(TLVL_INFO) << "Initializing DTC device, sim mode is " << DTC_SimModeConverter(simMode_).toString() << " for uid = " << uid << ", deviceIndex = " << dtc;
 
 	device_.init(simMode_, dtc, simMemoryFile, uid);
-	if (expectedDesignVersion != "" && expectedDesignVersion != ReadDesignVersion())
+	if (expectedDesignVersion != "" &&
+		static_cast<uint32_t>(std::stoul(expectedDesignVersion, nullptr, 16)) != ReadRegister_(CFOandDTC_Register_DesignDate))
 	{
-		__SS__ << "Version mismatch! Expected DTC version is '" << expectedDesignVersion << "' while the readback version was '" << ReadDesignVersion() << ".'" << __E__;
+		__SS__ << "Version mismatch! Expected DTC version is '" << expectedDesignVersion << "' (0x" << std::hex << static_cast<uint32_t>(std::stoul(expectedDesignVersion, nullptr, 16)) << " != 0x" << ReadRegister_(CFOandDTC_Register_DesignDate) << ") while the readback version was '" << ReadDesignVersion() << ".'" << __E__;
 		__SS_THROW__;
 		// throw new DTC_WrongVersionException(expectedDesignVersion, ReadDesignVersion());
 	}
@@ -765,6 +766,26 @@ bool DTCLib::DTC_Registers::ReadPunchEnable(std::optional<uint32_t> val)
 	return data[9];
 }
 
+/// This offset should be set 'permanently' for the DTC in response to
+///		the sample measurement at bits [18:16] of DTC_Register_CFOLinkErrorFlags
+void DTCLib::DTC_Registers::SetCFOSamplePermanentOffset(int permanentOffset)
+{
+	// do not write more bits because high bits, in older versions were the error clear latch... ReadRegister_(DTC_Register_CFOLinkErrorFlags);
+	// set only 3-bits [2:0]
+	WriteRegister_(permanentOffset & 7, DTC_Register_CFOLinkErrorFlags);
+}  // end SetCFOSamplePermanentOffset()
+
+int DTCLib::DTC_Registers::ReadCFOSamplePermanentOffset(std::optional<uint32_t> val)
+{
+	uint32_t setting = val.has_value() ? *val : ReadRegister_(DTC_Register_CFOLinkErrorFlags);
+	setting &= 7;
+	if (setting > 3)
+		setting = -8 + setting;
+	return setting;  // return 3-bit value handling of [-2,2]
+}  // end ReadCFOSamplePermanentOffset()
+
+/// @brief Set edge selection of RTF clock and external CFO rx -> tx data
+/// @param forceCFOedge is a 2-bit value
 void DTCLib::DTC_Registers::SetExternalCFOSampleEdgeMode(int forceCFOedge)
 {
 	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_Control);
@@ -897,6 +918,10 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDTCControl()
 
 	form.vals.push_back(std::string("Bit-09 Punched Clock Enable:                 [") + (ReadPunchEnable(form.value) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("Bit-08 SERDES Global Reset:                  [") + (CFOandDTC_Registers::ReadResetSERDES(form.value) ? "x" : " ") + "]");
+
+	form.vals.push_back(std::string("Bit-06 Enable CFO-RTF Offset Control:        [") + (((ReadExternalCFOSampleEdgeMode(form.value) >> 1) & 1) ? "x" : " ") + "]");
+	form.vals.push_back(std::string("Bit-05 CFO-RTF Edge Select:                  [") + ((ReadExternalCFOSampleEdgeMode(form.value) & 1) ? "x" : " ") + "]");
+
 	// form.vals.push_back(std::string("Bit-31 RX Packet Error Feedback Enable: [") + (ReadRxPacketErrorFeedbackEnable(form.value) ? "x" : " ") + "]");
 	// form.vals.push_back(std::string("Bit-31 Comma Tolerance Enable:          [") + (ReadCommaToleranceEnable(form.value) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("Bit-04 Fanout Clock Input Select:            [") + (ReadFanoutClockInput(form.value) ? "FMC SFP Rx" : "FPGA") + "]");
@@ -1199,6 +1224,10 @@ DTCLib::DTC_LinkEnableMode DTCLib::DTC_Registers::ReadLinkEnabled(DTC_Link_ID co
 {
 	std::bitset<32> dataSet = val.has_value() ? *val : ReadRegister_(CFOandDTC_Register_LinkEnable);
 	return DTC_LinkEnableMode(dataSet[link], dataSet[link + 8]);
+}
+uint32_t DTCLib::DTC_Registers::ReadLinkEnabledData()
+{
+	return ReadRegister_(CFOandDTC_Register_LinkEnable);
 }
 
 /// <summary>
@@ -1906,6 +1935,18 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatSERDESResetDone()
 bool DTCLib::DTC_Registers::ReadSERDESRXCDRLock(DTC_Link_ID const& link, std::optional<uint32_t> val)
 {
 	std::bitset<32> dataSet = val.has_value() ? *val : ReadRegister_(DTC_Register_SERDES_RXCDRLockStatus);
+
+	// read the lock value 20x because it might not be stable, consider unlocked if ever low
+	if (!val.has_value() && dataSet[link])
+	{
+		for (int i = 0; i < 20; ++i)
+		{
+			std::bitset<32> tmpDataSet = ReadRegister_(DTC_Register_SERDES_RXCDRLockStatus);
+			if (!tmpDataSet[link])  // override with any exception
+				return false;
+			usleep(10);
+		}
+	}
 	return dataSet[link];
 }
 
@@ -1921,14 +1962,14 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatRXCDRLockStatus()
 	for (auto r : DTC_ROC_Links)
 	{
 		form.vals.push_back(std::string("ROC Link ") + std::to_string(r) +
-							" CDR Lock:   [" + (ReadSERDESRXCDRLock(r, form.value) ? "x" : " ") + "]");
+							" CDR Lock:   [" + (ReadSERDESRXCDRLock(r) ? "x" : " ") + "]");  // do not use form.value to force multi reread in case of instability
 	}
-	// if(ReadCFOEmulationMode())
-	// 	form.vals.push_back(std::string("CFO Emulated CDR Lock: [") + (ReadSERDESRXCDRLock(DTC_Link_CFO, form.value) ? "x" : " ") + "]");
-	// else
-	form.vals.push_back(std::string("CFO CDR Lock:          [") + (ReadSERDESRXCDRLock(DTC_Link_CFO, form.value) ? "x" : " ") + "]");
+	if (ReadCFOEmulationMode())
+		form.vals.push_back(std::string("CFO Emulated CDR Lock: [") + (ReadSERDESRXCDRLock(DTC_Link_CFO, form.value) ? "x" : " ") + "]");
+	else
+		form.vals.push_back(std::string("CFO CDR Lock:          [") + (ReadSERDESRXCDRLock(DTC_Link_CFO) ? "x" : " ") + "]");  // do not use form.value to force multi reread in case of instability
 
-	form.vals.push_back(std::string("EVB CDR Lock:          [") + (ReadSERDESRXCDRLock(DTC_Link_EVB, form.value) ? "x" : " ") + "]");
+	form.vals.push_back(std::string("EVB CDR Lock:          [") + (ReadSERDESRXCDRLock(DTC_Link_EVB) ? "x" : " ") + "]");  // do not use form.value to force multi reread in case of instability
 	return form;
 }
 
@@ -2155,19 +2196,36 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBLocalParitionIDMACInde
 }
 
 /// EVB Number of Destination Nodes Register
-void DTCLib::DTC_Registers::SetEVBClusterInfo(  // uint8_t bufferCount,
-	uint8_t baseDTCAddress, uint8_t numOfDTCs)
+void DTCLib::DTC_Registers::SetEVBClusterInfo(uint16_t deadTime,
+											  uint8_t baseDTCAddress, uint8_t numOfDTCs)
 {
-	uint32_t regVal = 0;            //(bufferCount & 0xFF) << 16;
-	regVal |= baseDTCAddress << 8;  //(startNode & 0x3F) << 8;
-	regVal |= numOfDTCs;            //(numOfNodes & 0x3F);
+	uint32_t regVal = (deadTime & 0xFFFF) << 16;
+	regVal |= baseDTCAddress << 8;
+	regVal |= numOfDTCs;
 	WriteRegister_(regVal, DTC_Register_EVBConfiguration);
+}
+
+/// <summary>
+/// Set the dead time (clocks at start of destination switch to block tx to avoid collissions with previous round-robin tx) of the EVB cluster
+/// </summary>
+void DTCLib::DTC_Registers::SetEVBDeadTime(uint16_t deadTime)
+{
+	auto regVal = ReadRegister_(DTC_Register_EVBConfiguration) & 0x0FFFF;
+	regVal += (deadTime & 0xFFFF) << 16;
+	WriteRegister_(regVal, DTC_Register_EVBConfiguration);
+}
+
+/// <summary>
+/// Read the dead time (clocks at start of destination switch to block tx to avoid collissions with previous round-robin tx) of the EVB cluster
+/// </summary>
+uint16_t DTCLib::DTC_Registers::ReadEVBDeadTime(std::optional<uint32_t> val)
+{
+	return static_cast<uint8_t>((((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBConfiguration)) & 0xFFFF0000)) >> 16);
 }
 
 /// <summary>
 /// Set the start node in the EVB cluster
 /// </summary>
-/// <param name="node">Node ID (MAC Address)</param>
 void DTCLib::DTC_Registers::SetEVBStartNode(uint8_t startNode)
 {
 	auto regVal = ReadRegister_(DTC_Register_EVBConfiguration) & 0xFFFFC0FF;
@@ -2178,7 +2236,6 @@ void DTCLib::DTC_Registers::SetEVBStartNode(uint8_t startNode)
 /// <summary>
 /// Read the start node in the EVB cluster
 /// </summary>
-/// <returns>Node ID (MAC Address)</returns>
 uint8_t DTCLib::DTC_Registers::ReadEVBStartNode(std::optional<uint32_t> val)
 {
 	return static_cast<uint8_t>((((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBConfiguration)) & 0x3F00)) >> 8);
@@ -2187,7 +2244,7 @@ uint8_t DTCLib::DTC_Registers::ReadEVBStartNode(std::optional<uint32_t> val)
 /// <summary>
 /// Set the number of destination nodes in the EVB cluster
 /// </summary>
-/// <param name="number">Number of nodes</param>
+/// <param name="numOfNodes">Number of nodes</param>
 void DTCLib::DTC_Registers::SetEVBNumberOfDestinationNodes(uint8_t numOfNodes)
 {
 	auto regVal = ReadRegister_(DTC_Register_EVBConfiguration) & 0xFFFFFFC0;
@@ -2214,8 +2271,8 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBClusterInfo()
 	form.description = "EVB DTC Cluster Configuration";
 	form.vals.push_back("");  // translation
 	std::stringstream o;
-	// o << "Input Buffer Count: " << std::dec << static_cast<int>(ReadEVBNumberInputBuffers(form.value));
-	// form.vals.push_back(o.str());
+	o << "EVB Dead Time: " << std::dec << static_cast<int>(ReadEVBDeadTime(form.value));
+	form.vals.push_back(o.str());
 	o.str("");
 	o.clear();
 	o << "EVB Start Node: " << std::dec << static_cast<int>(ReadEVBStartNode(form.value));
@@ -2256,7 +2313,7 @@ uint8_t DTCLib::DTC_Registers::ReadEVBLoopbackCalibratedOffset(std::optional<uin
 /// Formats the Hardware Event Building Packet Control Info Register's current value for register dumps
 DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBPacketControlInfo()
 {
-	auto form = CreateFormatter(DTC_Register_EVBConfiguration);
+	auto form = CreateFormatter(DTC_Register_EVBPacketControl);
 	form.description = "EVB Packet Control Info";
 	form.vals.push_back("");  // translation
 	std::stringstream o;
@@ -2294,6 +2351,43 @@ uint32_t DTCLib::DTC_Registers::ReadEVBStats(DTC_EVBStatsType type, uint8_t dtc_
 	return ReadRegister_(DTC_Register_EVBStats);
 }  // end ReadEVBStats()
 
+// Get the last packet count and its timestamp for a DTC
+std::pair<uint32_t, std::chrono::steady_clock::time_point> DTCLib::DTC_Registers::getPacketCountInfo(uint8_t dtc) const
+{
+	auto i = lastPacketCount.find(dtc);
+	if (i != lastPacketCount.end())
+		return i->second;
+	return {0, std::chrono::steady_clock::time_point::min()};
+}
+
+// Update the packet count and timestamp and calculate packet rate for a DTC
+void DTCLib::DTC_Registers::updatePacketCount(uint8_t dtc, uint32_t currentCount)
+{
+	auto now = std::chrono::steady_clock::now();
+
+	auto [lastCount, lastTime] = getPacketCountInfo(dtc);
+	if (lastTime == std::chrono::steady_clock::time_point::min())
+	{
+		lastPacketCount[dtc] = {currentCount, now};
+		return;
+	}
+
+	auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now - lastTime).count();
+	if (ns > 1e6)
+	{
+		double rate = (currentCount - lastCount) / (ns / 1e9);
+		lastPacketRate[dtc] = rate;
+		lastPacketCount[dtc] = {currentCount, now};
+	}
+}
+
+// Get the most recent packet rate for a DTC
+double DTCLib::DTC_Registers::getLastPacketRate(uint8_t dtc) const
+{
+	auto i = lastPacketRate.find(dtc);
+	return i != lastPacketRate.end() ? i->second : 0.0;
+}
+
 /// Formats the Hardware Event Building Stats data for all DTC mac addresses, as specified by the EVB Info 'Number Of Destination Nodes'
 DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBStatsType type /*  = DTC_EVBStatsType::DTC_EVBStatsType_All */)
 {
@@ -2302,7 +2396,7 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 		t = 0;
 	__COUTV__(t);
 
-	auto form = CreateFormatter(DTC_Register_EVBConfiguration, false /* getValue */);
+	auto form = CreateFormatter(DTC_Register_EVBStats, false /* getValue */);
 	form.description = "EVB Stats";
 	form.vals.push_back("");  // translation
 	std::stringstream o;
@@ -2311,6 +2405,8 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 	uint8_t numOfDTCs = ReadEVBNumberOfDestinationNodes();
 
 	__COUTV__(numOfDTCs);
+
+	uint32_t idlePacketWordCount = (static_cast<uint32_t>(ReadRegister_(DTC_Register_EVBPacketControl)) >> 16);
 
 	for (; t < DTC_EVBStatsType_BRAM_TYPE_COUNT; ++t)
 	{
@@ -2322,8 +2418,7 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 			switch (DTC_EVBStatsType(t))
 			{
 				case DTC_EVBStatsType_RxCount:
-
-					if (v != 0 &&  // start time for rates as soon as there is non-zero data
+					if (v > 0 &&  // start time for rates as soon as there is non-zero data
 						EVB_startDataTime ==
 							std::chrono::steady_clock::time_point::min())
 						EVB_startDataTime = std::chrono::steady_clock::now();
@@ -2334,24 +2429,34 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 					o << "DTC_mac #" << (baseDTCAddress + d < 10 ? "0" : "") << std::dec << int(baseDTCAddress + d) << " = ";
 
 					{
-						long long ns =
-							std::chrono::duration_cast<std::chrono::nanoseconds>(
-								EVB_endDataTime - EVB_startDataTime)
-								.count();
-						if (ns > 1000)  // prevent divide by 0
+						auto now = std::chrono::steady_clock::now();
+						auto [lastCount, lastTime] = getPacketCountInfo(d);
+
+						if (lastTime == std::chrono::steady_clock::time_point::min())
 						{
-							// o << "Data Transfer Duration: " << ns / 1000.0 / 1000.0 << " ms"
-							// 		<< __E__;
-							o << ((double)v) /
-									 (ns / 1000.0)
-							  << " Packets/s" << __E__;
+							updatePacketCount(d, v);
+							o << "Initializing";
 						}
 						else
-							o << "Packet Transfer Duration too short to establish packet rate."
-							  << __E__;
-					}
+						{
+							auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now - lastTime).count();
 
-					o << "Received Packet Count:                 ";
+							if (ns > 1e6)  // prevent divide by 0
+							{
+								double rate = (v - lastCount) / (ns / 1e9);
+								o << rate << " Packets/s";
+
+								updatePacketCount(d, v);
+							}
+							else
+								o << "T too short.";
+						}
+					}
+					form.vals.push_back(o.str());
+					o.str("");
+					o.clear();
+
+					o << "Bram Stat - Received Packet Count:                 ";
 					break;
 				case DTC_EVBStatsType_RxLastSequenceTag:
 					o << "Last Received Sequence Tag:            ";
@@ -2360,7 +2465,15 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 					o << "Rx Missing Packet Count:               ";
 					break;
 				case DTC_EVBStatsType_RxByteCount:
-					o << "Received Byte Count:                   ";
+					o << "Received Byte Rate:                    ";
+					o << "DTC_mac #" << (baseDTCAddress + d < 10 ? "0" : "") << std::dec << int(baseDTCAddress + d) << " = ";
+
+					o << getLastPacketRate(d) * idlePacketWordCount * 8 << " Byte/s";
+					form.vals.push_back(o.str());
+					o.str("");
+					o.clear();
+
+					o << "Bram Stat - Received Byte Count:                   ";
 					break;
 				case DTC_EVBStatsType_RxLastPacketArrival:
 					o << "Rx Last Packet Arrival [10gbe clocks]: ";
@@ -5148,15 +5261,32 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatRocLink5Error()
 DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatCFOLinkError()
 {
 	auto form = CreateFormatter(DTC_Register_CFOLinkErrorFlags);
-	form.description = "CFO Link Error Flags";
+	form.description = "CFO Link Settings & Error Flags";
 	form.vals.push_back("([ x = 1 (hi) ])");  // translation
 
-	// bit 9 - Event Start marker tx error
-	// bit 10 - Clock marker tx error
+	// bit 9 - Event Start marker tx error at CFO Interface
+	// bit 10 - Clock marker tx error at CFO Interface
+	// bit 11 - RTF 40MHz clock phase has shifted
+	// bit 12 - Illegal marker timing in RTF 40MHz clock count
+	// bit 13 - Moving data from CFO rx to tx clock domain has marker corruption at "external" CFO Interface
 	form.vals.push_back(std::string("CFO Event Start Marker tx Error:     [") +
 						(((form.value >> 9) & 1) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("CFO Clock Marker tx Error:           [") +
 						(((form.value >> 10) & 1) ? "x" : " ") + "]");
+	form.vals.push_back(std::string("CFO RTF 40MHz Phase Shift Error:     [") +
+						(((form.value >> 11) & 1) ? "x" : " ") + "]");
+	form.vals.push_back(std::string("CFO Illegal Marker Over Link Timing: [") +
+						(((form.value >> 12) & 1) ? "x" : " ") + "]");
+	form.vals.push_back(std::string("CFO Rx-to-Tx Data Corruption Error:  [") +
+						(((form.value >> 13) & 1) ? "x" : " ") + "]");
+	int measuredPos = (form.value >> 16) & 7;
+	int impliedPos = 2 - measuredPos;  // legal values are -2 -1 0 1 2 (if measured value is 4 3 2 1 0, respsectively)
+	form.vals.push_back(std::string("CFO Measured Marker position {0,4}:  [") +
+						std::to_string(measuredPos) + "] ==> " + std::to_string(impliedPos));
+	form.vals.push_back(std::string("CFO Permanent Offset setting {-2,2}: [") +
+						std::to_string(ReadCFOSamplePermanentOffset(form.value)) + "]");
+
+	form.vals.push_back("");  // spacer
 
 	// also show link enables for CFO and EVB
 	uint32_t val = ReadRegister_(CFOandDTC_Register_LinkEnable);
@@ -7168,7 +7298,7 @@ uint32_t DTCLib::DTC_Registers::ReadTXDataRequestPacketCount(DTC_Link_ID const& 
 
 DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatTXDataRequestPacketCountLink(DTC_Link_ID const& link)
 {
-	auto form = CreateFormatter(GetTXEventWindowMarkerCountLinkRegister(link));
+	auto form = CreateFormatter(GetTXDataRequestPacketCountLinkRegister(link));
 	form.description = "DRP TX Count on Link " +
 					   std::to_string((GetTXDataRequestPacketCountLinkRegister(link) -
 									   GetTXDataRequestPacketCountLinkRegister(DTC_Link_0)) /
@@ -7568,6 +7698,10 @@ void DTCLib::DTC_Registers::VerifyRegisterWrite_(const CFOandDTC_Register& addre
 		switch (address)  // handle special register checks by masking of DONT-CARE bits, or else check full 32 bits
 		{
 			//---------- DTC only registers
+			case DTC_Register_CFOLinkErrorFlags:  // CFO Sample Permanent Offset 2:0
+				dataToWrite &= 0x03;
+				readbackValue &= 0x03;
+				break;
 			case DTC_Register_CFOMarkerEnables:  // CFO emulator marker enables: 5:0 enables clock marker, 13:8 is event
 												 // marker per ROC link for some reason, now event marker is not returned
 												 // (FIXME?)

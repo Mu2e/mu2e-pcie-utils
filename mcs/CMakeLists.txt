@@ -10,4 +10,3 @@ cet_script( ALWAYS_COPY mcs.sh )
 
 install_headers()
 install_source()
-

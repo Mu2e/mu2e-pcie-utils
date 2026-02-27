@@ -312,8 +312,9 @@ public:
 	void ResetRXFirefly();
 	RegisterFormatter FormatFireflyCSR();
 
-protected:
 	uint32_t WriteRegister_(uint32_t data, const CFOandDTC_Register& address);
+
+protected:
 	uint32_t ReadRegister_(const CFOandDTC_Register& address);
 	virtual bool NeedToVerifyRegisterWrite_(const CFOandDTC_Register& address) = 0;
 	virtual void VerifyRegisterWrite_(const CFOandDTC_Register& address, uint32_t readbackValue, uint32_t dataToWrite) = 0;
