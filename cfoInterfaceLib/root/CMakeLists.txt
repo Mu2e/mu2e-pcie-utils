@@ -16,4 +16,3 @@ if(DictCompileOptions)
 
 	set_target_properties(cfoInterfaceLib_root_dict PROPERTIES COMPILE_OPTIONS "${DictCompileOptions}")
 endif()
-

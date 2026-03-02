@@ -2,7 +2,7 @@ set(NODEJS_ADDON_NAME "DTC")
 
 #set(CMAKE_VERBOSE_MAKEFILE ON)
 
-cet_make_library(LIBRARY_NAME DTCInterface 
+cet_make_library(LIBRARY_NAME DTCInterface
     SOURCE
       DTC.cpp
       DTCLibTest.cpp
@@ -13,7 +13,7 @@ cet_make_library(LIBRARY_NAME DTCInterface
       mu2edev.cpp
       mu2esim.cpp
       otsStyleCoutMacros.cpp
-    LIBRARIES PUBLIC 
+    LIBRARIES PUBLIC
       TRACE::MF
       artdaq-core-mu2e::Overlays
       Threads::Threads
