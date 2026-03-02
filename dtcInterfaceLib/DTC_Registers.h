@@ -49,7 +49,7 @@ enum DTC_Register : uint16_t
 	DTC_Register_CFOEmulation_NumNullHeartbeats = 0x91BC,
 	DTC_Register_CFOEmulation_EventMode1 = 0x91C0,
 	DTC_Register_CFOEmulation_EventMode2 = 0x91C4,
-	DTC_Register_DebugPacketType = 0x91C8,
+	DTC_Register_CFOEventModeRequiredMask = 0x91C8,
 	DTC_Register_RXPacketCountErrorFlags = 0x91CC,
 	DTC_Register_DetEmulation_DMACount = 0x91D0,
 	DTC_Register_DetEmulation_DelayCount = 0x91D4,
@@ -397,8 +397,8 @@ public:
 	void DisableAutogenDRP();                                                   // B23
 	bool ReadAutogenDRP(std::optional<uint32_t> val = std::nullopt);            // B23
 	void EnableSoftwareDRP();                                                   // alias to  DisableAutogenDRP()
-	// void DisableSoftwareDRP();        // B22
-	bool ReadSoftwareDRP(std::optional<uint32_t> val = std::nullopt);  // B22
+	void DisableSoftwareDRP();                                                  // alias to  EnableAutogenDRP()
+	bool ReadSoftwareDRP(std::optional<uint32_t> val = std::nullopt);
 	virtual void ResetPCIe() override;                                 // B21
 	bool ReadResetPCIe(std::optional<uint32_t> val = std::nullopt);    // B21
 	// Bit 20 Reserved
@@ -651,6 +651,14 @@ public:
 	uint32_t ReadCFOEmulationNumNullHeartbeats(std::optional<uint32_t> val = std::nullopt);
 	RegisterFormatter FormatCFOEmulationNumNullHeartbeats();
 
+    // CFO Event Mode Required Mask (required bits in event mode for CFO emulation to send a heartbeat. 1 uses them)  
+    // Rhe bits that are required. If a mask-bit is 0, its accepted anyways. 
+    // If a mask-bit is 1, then the eventMode-bit also needs to be 1 to be accepted.  
+	void SetCFOEventModeRequiredMask(const uint32_t& mask);
+	uint32_t ReadCFOEventModeRequiredMask(std::optional<uint32_t> val = std::nullopt);
+	RegisterFormatter FormatCFOEventModeRequiredMask();
+    
+
 	// CFO Emulation Event Mode Bytes Registers
 	void SetCFOEmulationEventMode(const uint64_t& eventMode);
 	uint64_t ReadCFOEmulationEventMode();
@@ -660,12 +668,12 @@ public:
 	RegisterFormatter FormatCFOEmulationModeBytes45();
 
 	// CFO Emulation Debug Packet Type Register
-	void EnableDebugPacketMode();
-	void DisableDebugPacketMode();
-	bool ReadDebugPacketMode(std::optional<uint32_t> val = std::nullopt);
-	void SetCFOEmulationDebugType(DTC_DebugType type);
-	DTC_DebugType ReadCFOEmulationDebugType(std::optional<uint32_t> val = std::nullopt);
-	RegisterFormatter FormatCFOEmulationDebugPacketType();
+	// void EnableDebugPacketMode();
+	// void DisableDebugPacketMode();
+	// bool ReadDebugPacketMode(std::optional<uint32_t> val = std::nullopt);
+	// void SetCFOEmulationDebugType(DTC_DebugType type);
+	// DTC_DebugType ReadCFOEmulationDebugType(std::optional<uint32_t> val = std::nullopt);
+	// RegisterFormatter FormatCFOEmulationDebugPacketType();
 
 	// RX Packet Count Error Flags Register
 	bool ReadRXPacketCountErrorFlags(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
@@ -1267,7 +1275,7 @@ public:
 		[this] { return this->FormatCFOEmulationNumNullHeartbeats(); },
 		[this] { return this->FormatCFOEmulationModeBytes03(); },
 		[this] { return this->FormatCFOEmulationModeBytes45(); },
-		[this] { return this->FormatCFOEmulationDebugPacketType(); },
+		//[this] { return this->FormatCFOEmulationDebugPacketType(); },
 		[this] { return this->FormatRXPacketCountErrorFlags(); },
 		[this] { return this->FormatDetectorEmulationDMACount(); },
 		[this] { return this->FormatDetectorEmulationDMADelayCount(); },
