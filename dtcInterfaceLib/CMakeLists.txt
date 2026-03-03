@@ -51,7 +51,7 @@ if (${BUILD_PYTHON_INTERFACE})
 
    find_package(SWIG REQUIRED)
    include(${SWIG_USE_FILE})
-   add_subdirectory(python)
+   # add_subdirectory(python)
 endif()
 
 if(${BUILD_ROOT_INTERFACE})

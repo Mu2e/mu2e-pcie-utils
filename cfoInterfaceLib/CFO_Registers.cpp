@@ -676,6 +676,7 @@ DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatBeamOnTimerPreset()
 
 void CFOLib::CFO_Registers::EnableBeamOnMode(const CFO_Link_ID& link)
 {
+	SetLinuxTimestampPreset();
 	std::bitset<32> data = ReadRegister_(CFO_Register_EnableBeamOnMode);
 	data[0] = 1;  // Enable beam on processing a single global flag as of December 2023
 	WriteRegister_(data.to_ulong(), CFO_Register_EnableBeamOnMode);
@@ -706,6 +707,7 @@ DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatBeamOnMode()
 
 void CFOLib::CFO_Registers::EnableBeamOffMode(const CFO_Link_ID& link)
 {
+	SetLinuxTimestampPreset();
 	std::bitset<32> data = ReadRegister_(CFO_Register_EnableBeamOffMode);
 	data[0] = 1;  // Enable beam off processing a single global flag as of December 2023
 	WriteRegister_(data.to_ulong(), CFO_Register_EnableBeamOffMode);
@@ -888,7 +890,7 @@ DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatSERDESOscillatorControl()
 	return form;
 }
 
-// Timestamp Preset Registers
+/// Timestamp Preset Registers
 void CFOLib::CFO_Registers::SetEventWindowTagPreset(const DTC_EventWindowTag& preset)
 {
 	auto timestamp = preset.GetEventWindowTag();
@@ -926,6 +928,18 @@ DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTimestampPreset1()
 	o << "0x" << std::hex << ReadRegister_(CFO_Register_TimestampPreset1);
 	form.vals.push_back(o.str());
 	return form;
+}
+
+/// Linux Timestamp Register
+void CFOLib::CFO_Registers::SetLinuxTimestampPreset()
+{
+	WriteRegister_(time(0), CFO_Register_LinuxTimestamp);
+}
+
+time_t CFOLib::CFO_Registers::ReadLinuxTimestamp()
+{
+	auto val = ReadRegister_(CFO_Register_LinuxTimestamp);
+	return val;
 }
 
 // NUMDTCs Register
