@@ -1,6 +1,7 @@
 #ifndef CFO_REGISTERS_H
 #define CFO_REGISTERS_H
 
+#include <ctime>       // time_t
 #include <functional>  // std::bind, std::function
 #include <vector>      // std::vector
 
@@ -597,7 +598,14 @@ class CFO_Registers : public DTCLib::CFOandDTC_Registers
 	/// <returns>RegisterFormatter object containing register information</returns>
 	RegisterFormatter FormatTimestampPreset1();
 
-	void   SetLinuxTimestampPreset();
+	/// <summary>
+	/// Writes the current Linux time (seconds since the Unix epoch) to the LinuxTimestamp register.
+	/// </summary>
+	void SetLinuxTimestampPreset();
+	/// <summary>
+	/// Reads the LinuxTimestamp register.
+	/// </summary>
+	/// <returns>The timestamp value stored in the register, in seconds since the Unix epoch</returns>
 	time_t ReadLinuxTimestamp();
 
 	// NUMDTCs Register

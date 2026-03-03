@@ -651,7 +651,7 @@ class DTC_Registers : public CFOandDTC_Registers
 	RegisterFormatter FormatCFOEmulationNumNullHeartbeats();
 
 	// CFO Event Mode Required Mask (required bits in event mode for CFO emulation to send a heartbeat. 1 uses them)
-	// Rhe bits that are required. If a mask-bit is 0, its accepted anyways.
+	// The bits that are required. If a mask-bit is 0, it's accepted anyway.
 	// If a mask-bit is 1, then the eventMode-bit also needs to be 1 to be accepted.
 	void              SetCFOEventModeRequiredMask(const uint32_t& mask);
 	uint32_t          ReadCFOEventModeRequiredMask(std::optional<uint32_t> val = std::nullopt);
