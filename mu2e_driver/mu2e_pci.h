@@ -10,15 +10,15 @@
 
 #include "mu2e_mmap_ioctl.h"
 
-#define XILINX_VENDOR_ID 0x10EE
-#define XILINX_DEVICE_ID 0x7042
+#define XILINX_VENDOR_ID   0x10EE
+#define XILINX_DEVICE_ID   0x7042
 #define XILINX_DEVICE_ID_2 0x7043
 
-extern int mu2e_dtc_num;
-extern dev_t mu2e_dev_number;
-extern struct class *mu2e_dev_class;
+extern int           mu2e_dtc_num;
+extern dev_t         mu2e_dev_number;
+extern struct class* mu2e_dev_class;
 
-int mu2e_pci_up(void);
+int  mu2e_pci_up(void);
 void mu2e_pci_down(void);
 
 #endif  // MU2E_PCI_H

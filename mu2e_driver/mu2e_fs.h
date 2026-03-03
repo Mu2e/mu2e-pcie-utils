@@ -12,23 +12,23 @@
 
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(2, 6, 39)
 #define IOCTL_ARGS(inode, filep, cmd, arg) inode, filep, cmd, arg
-#define IOCTL_FILE_OPS_MEMBER ioctl
-#define IOCTL_RET_TYPE int
+#define IOCTL_FILE_OPS_MEMBER              ioctl
+#define IOCTL_RET_TYPE                     int
 #else
 #define IOCTL_ARGS(inode, filep, cmd, arg) filep, cmd, arg
-#define IOCTL_FILE_OPS_MEMBER unlocked_ioctl
-#define IOCTL_RET_TYPE long
+#define IOCTL_FILE_OPS_MEMBER              unlocked_ioctl
+#define IOCTL_RET_TYPE                     long
 #endif
 
-extern dev_t mu2e_dev_number;
-extern struct class *mu2e_dev_class;
+extern dev_t         mu2e_dev_number;
+extern struct class* mu2e_dev_class;
 
-IOCTL_RET_TYPE mu2e_ioctl(IOCTL_ARGS(struct inode *inode, struct file *filp, unsigned int cmd, unsigned long arg));
-int mu2e_fs_up(void);
+IOCTL_RET_TYPE mu2e_ioctl(IOCTL_ARGS(struct inode* inode, struct file* filp, unsigned int cmd, unsigned long arg));
+int            mu2e_fs_up(void);
 
 void mu2e_fs_down(void);
 
-int mu2e_open(struct inode *inode, struct file *filp);
-int mu2e_release(struct inode *inode, struct file *filp);
+int mu2e_open(struct inode* inode, struct file* filp);
+int mu2e_release(struct inode* inode, struct file* filp);
 
 #endif  // MU2E_FS_H

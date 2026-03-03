@@ -15,14 +15,14 @@
 #include <unordered_map>
 
 // #include "artdaq-core-mu2e/Overlays/DTC_Packets.h"
+#include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DCSReplyPacket.h"
+#include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DCSRequestPacket.h"
+#include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DMAPacket.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DataBlock.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DataHeaderPacket.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DataPacket.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DataRequestPacket.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DataStatus.h"
-#include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DCSReplyPacket.h"
-#include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DCSRequestPacket.h"
-#include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DMAPacket.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_Event.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_EventHeader.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_HeartbeatPacket.h"
@@ -50,9 +50,9 @@
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_ROC_Emulation_Type.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_RXBufferStatus.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_RXStatus.h"
-#include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_SerdesClockSpeed.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_SERDESLoopbackMode.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_SERDESRXDisparityError.h"
+#include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_SerdesClockSpeed.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_SimMode.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_Subsystem.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/Exceptions.h"
@@ -68,7 +68,7 @@
 /// </summary>
 class mu2esim
 {
-public:
+  public:
 	/// <summary>
 	/// Construct the mu2esim class. Initializes register space and zeroes out memory.
 	/// <param name="ddrFileName">Name of the simulated DDR memory file</param>
@@ -129,16 +129,16 @@ public:
 	/// <returns>0 when successful (always)</returns>
 	int write_register(uint16_t address, int tmo_ms, uint32_t data);
 
-private:
-	unsigned delta_(int chn, int dir);
-	static void clearBuffer_(int chn, bool increment = true);
-	void openEvent_(DTCLib::DTC_EventWindowTag ts);
-	void closeEvent_();
-	void closeSubEvent_();
+  private:
+	unsigned              delta_(int chn, int dir);
+	static void           clearBuffer_(int chn, bool increment = true);
+	void                  openEvent_(DTCLib::DTC_EventWindowTag ts);
+	void                  closeEvent_();
+	void                  closeSubEvent_();
 	DTCLib::DTC_EventMode getEventMode_();
-	void CFOEmulator_();
-	void packetSimulator_(DTCLib::DTC_EventWindowTag ts, DTCLib::DTC_Link_ID link, uint16_t packetCount);
-	void dcsPacketSimulator_(DTCLib::DTC_DCSRequestPacket in, DTCLib::DTC_Link_ID rocLink);
+	void                  CFOEmulator_();
+	void                  packetSimulator_(DTCLib::DTC_EventWindowTag ts, DTCLib::DTC_Link_ID link, uint16_t packetCount);
+	void                  dcsPacketSimulator_(DTCLib::DTC_DCSRequestPacket in, DTCLib::DTC_Link_ID rocLink);
 
 	void eventSimulator_(DTCLib::DTC_EventWindowTag ts);
 	void trackerBlockSimulator_(DTCLib::DTC_EventWindowTag ts, DTCLib::DTC_Link_ID link, int DTCID);
@@ -149,28 +149,28 @@ private:
 
 	std::unordered_map<uint16_t /* DTC address */, uint32_t /* DTC data */> registers_;
 	std::unordered_map<DTCLib::DTC_Link_ID,
-					   std::unordered_map<uint16_t /* ROC address*/, uint16_t /* ROC data*/>>
-		rocRegisters_;
+	                   std::unordered_map<uint16_t /* ROC address*/, uint16_t /* ROC data*/>>
+	         rocRegisters_;
 	unsigned swIdx_[MU2E_MAX_CHANNELS];
 	unsigned hwIdx_[MU2E_MAX_CHANNELS];
 	// uint32_t detSimLoopCount_;
-	uint32_t simDataEWT_ = 0;
-	mu2e_databuff_t* dmaData_[MU2E_MAX_CHANNELS][SIM_BUFFCOUNT];
-	std::string ddrFileName_;
+	uint32_t                      simDataEWT_ = 0;
+	mu2e_databuff_t*              dmaData_[MU2E_MAX_CHANNELS][SIM_BUFFCOUNT];
+	std::string                   ddrFileName_;
 	std::unique_ptr<std::fstream> ddrFile_;
-	DTCLib::DTC_SimMode mode_;
-	std::thread cfoEmulatorThread_;
-	bool cancelCFO_;
+	DTCLib::DTC_SimMode           mode_;
+	std::thread                   cfoEmulatorThread_;
+	bool                          cancelCFO_;
 
-	size_t event_mode_num_tracker_blocks_;
-	size_t event_mode_num_calo_blocks_;
+	size_t   event_mode_num_tracker_blocks_;
+	size_t   event_mode_num_calo_blocks_;
 	uint16_t event_mode_num_calo_hits_;
-	size_t event_mode_num_crv_blocks_;
+	size_t   event_mode_num_crv_blocks_;
 
-	typedef std::bitset<6> readoutRequestData;
+	typedef std::bitset<6>                 readoutRequestData;
 	std::map<uint64_t, readoutRequestData> readoutRequestReceived_;
 
-	std::unique_ptr<DTCLib::DTC_Event> event_;
+	std::unique_ptr<DTCLib::DTC_Event>    event_;
 	std::unique_ptr<DTCLib::DTC_SubEvent> sub_event_;
 };
 

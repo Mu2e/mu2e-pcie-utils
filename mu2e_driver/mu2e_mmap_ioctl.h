@@ -29,7 +29,7 @@
 
 #endif
 
-#define MU2E_DEV_FILE "mu2e%d" /* %d => minor number */
+#define MU2E_DEV_FILE     "mu2e%d" /* %d => minor number */
 #define MU2E_MAX_CHANNELS 2
 #define MU2E_MAX_NUM_DTCS 4 /* Keep resonable...shouldn't ever need more than 4...*/
 
@@ -146,7 +146,7 @@ struct DataPacket
 	__extension__({                                                                                                \
 		unsigned num_buffs = mu2e_channel_info_[dtc][chn][dir].num_buffs;                                          \
 		(add < 0) ? (((unsigned)-add > idx) ? (num_buffs - (-add - idx)) % num_buffs : (idx - (-add)) % num_buffs) \
-				  : (idx + add) % num_buffs;                                                                       \
+		          : (idx + add) % num_buffs;                                                                       \
 	})
 
 /*
@@ -165,10 +165,10 @@ NOTE: for _IOR, _IOW: the size is only for the data at the address used in the
  */
 #define MU2E_IOC_MAGIC 'C'
 
-#define M_IOC_REG_ACCESS _IOWR(MU2E_IOC_MAGIC, 9, m_ioc_reg_access_t)
+#define M_IOC_REG_ACCESS    _IOWR(MU2E_IOC_MAGIC, 9, m_ioc_reg_access_t)
 #define M_IOC_GET_TST_STATE _IOWR(MU2E_IOC_MAGIC, 1, m_ioc_cmd_t)
-#define M_IOC_TEST_START _IOW(MU2E_IOC_MAGIC, 2, m_ioc_cmd_t)
-#define M_IOC_TEST_STOP _IOW(MU2E_IOC_MAGIC, 3, m_ioc_cmd_t)
+#define M_IOC_TEST_START    _IOW(MU2E_IOC_MAGIC, 2, m_ioc_cmd_t)
+#define M_IOC_TEST_STOP     _IOW(MU2E_IOC_MAGIC, 3, m_ioc_cmd_t)
 
 #define M_IOC_GET_PCI_STATE _IOR(MU2E_IOC_MAGIC, 4, m_ioc_pcistate_t)
 #define M_IOC_GET_ENG_STATE _IOWR(MU2E_IOC_MAGIC, 5, m_ioc_engstate_t)
@@ -177,10 +177,10 @@ NOTE: for _IOR, _IOW: the size is only for the data at the address used in the
 
 #define M_IOC_GET_INFO _IOWR(MU2E_IOC_MAGIC, 12, m_ioc_get_info_t)
 #define M_IOC_BUF_GIVE _IO(MU2E_IOC_MAGIC, 13)  // arg=(chn<<24)|(dir<<16)|num
-#define M_IOC_DUMP _IO(MU2E_IOC_MAGIC, 14)
+#define M_IOC_DUMP     _IO(MU2E_IOC_MAGIC, 14)
 #define M_IOC_BUF_XMIT _IO(MU2E_IOC_MAGIC, 16)
 
-#define M_IOC_DCS_LOCK _IO(MU2E_IOC_MAGIC, 17)
+#define M_IOC_DCS_LOCK    _IO(MU2E_IOC_MAGIC, 17)
 #define M_IOC_DCS_RELEASE _IO(MU2E_IOC_MAGIC, 18)
 #define M_IOC_GET_VERSION _IOR(MU2E_IOC_MAGIC, 19, mu2e_string_t)
 
@@ -191,15 +191,15 @@ typedef uint16_t dtc_address_t;
 typedef uint32_t dtc_data_t;
 typedef struct
 {
-	dtc_address_t reg_offset;  ///< Offset of register from BAR0
-	int access_type;           ///< 0=read, 1=write, 2=write-with-readback
-	dtc_data_t val;            ///< Value of register
+	dtc_address_t reg_offset;   ///< Offset of register from BAR0
+	int           access_type;  ///< 0=read, 1=write, 2=write-with-readback
+	dtc_data_t    val;          ///< Value of register
 } m_ioc_reg_access_t;
 
 /** Structure used in IOCTL to start/stop a test & to get current test state */
 typedef struct
 {
-	int Engine;          /**< Engine Number */
+	int      Engine;     /**< Engine Number */
 	unsigned TestMode;   /**< Test Mode - Enable TX, Enable loopback */
 	unsigned MinPktSize; /**< Min packet size */
 	unsigned MaxPktSize; /**< Max packet size */
@@ -208,21 +208,21 @@ typedef struct
 /** Structure used in IOCTL to get PCIe state from driver */
 typedef struct
 {
-	unsigned Version;  /**< Hardware design version info */
-	int LinkState;     /**< Link State - up or down */
-	int LinkSpeed;     /**< Link Speed */
-	int LinkWidth;     /**< Link Width */
-	unsigned VendorId; /**< Vendor ID */
-	unsigned DeviceId; /**< Device ID */
-	int IntMode;       /**< Legacy or MSI interrupts */
-	int MPS;           /**< Max Payload Size */
-	int MRRS;          /**< Max Read Request Size */
-	int InitFCCplD;    /**< Initial FC Credits for Completion Data */
-	int InitFCCplH;    /**< Initial FC Credits for Completion Header */
-	int InitFCNPD;     /**< Initial FC Credits for Non-Posted Data */
-	int InitFCNPH;     /**< Initial FC Credits for Non-Posted Data */
-	int InitFCPD;      /**< Initial FC Credits for Posted Data */
-	int InitFCPH;      /**< Initial FC Credits for Posted Data */
+	unsigned Version;    /**< Hardware design version info */
+	int      LinkState;  /**< Link State - up or down */
+	int      LinkSpeed;  /**< Link Speed */
+	int      LinkWidth;  /**< Link Width */
+	unsigned VendorId;   /**< Vendor ID */
+	unsigned DeviceId;   /**< Device ID */
+	int      IntMode;    /**< Legacy or MSI interrupts */
+	int      MPS;        /**< Max Payload Size */
+	int      MRRS;       /**< Max Read Request Size */
+	int      InitFCCplD; /**< Initial FC Credits for Completion Data */
+	int      InitFCCplH; /**< Initial FC Credits for Completion Header */
+	int      InitFCNPD;  /**< Initial FC Credits for Non-Posted Data */
+	int      InitFCNPH;  /**< Initial FC Credits for Non-Posted Data */
+	int      InitFCPD;   /**< Initial FC Credits for Posted Data */
+	int      InitFCPH;   /**< Initial FC Credits for Posted Data */
 } m_ioc_pcistate_t;
 
 /// <summary>
@@ -230,14 +230,14 @@ typedef struct
 /// </summary>
 typedef struct
 {
-	int Engine;          /**< Engine Number */
-	int BDs;             /**< Total Number of BDs */
-	int Buffers;         /**< Total Number of buffers */
+	int      Engine;     /**< Engine Number */
+	int      BDs;        /**< Total Number of BDs */
+	int      Buffers;    /**< Total Number of buffers */
 	unsigned MinPktSize; /**< Minimum packet size */
 	unsigned MaxPktSize; /**< Maximum packet size */
-	int BDerrs;          /**< Total BD errors */
-	int BDSerrs;         /**< Total BD short errors - only TX BDs */
-	int IntEnab;         /**< Interrupts enabled or not */
+	int      BDerrs;     /**< Total BD errors */
+	int      BDSerrs;    /**< Total BD short errors - only TX BDs */
+	int      IntEnab;    /**< Interrupts enabled or not */
 	unsigned TestMode;   /**< Current Test Mode */
 } m_ioc_engstate_t;
 
@@ -246,10 +246,10 @@ typedef struct
 /// </summary>
 typedef struct /* MAYBE THIS SHOULD GO ELSEWHERE??? */
 {
-	int Engine;   /**< Engine Number */
-	unsigned LBR; /**< Last Byte Rate */
-	unsigned LAT; /**< Last Active Time */
-	unsigned LWT; /**< Last Wait Time */
+	int      Engine; /**< Engine Number */
+	unsigned LBR;    /**< Last Byte Rate */
+	unsigned LAT;    /**< Last Active Time */
+	unsigned LWT;    /**< Last Wait Time */
 } DMAStatistics;
 
 /// <summary>
@@ -257,8 +257,8 @@ typedef struct /* MAYBE THIS SHOULD GO ELSEWHERE??? */
 /// </summary>
 typedef struct
 {
-	int Count;             /**< Number of statistics captures */
-	DMAStatistics *engptr; /**< Pointer to array to store statistics */
+	int            Count;  /**< Number of statistics captures */
+	DMAStatistics* engptr; /**< Pointer to array to store statistics */
 } m_ioc_engstats_t;
 
 /// <summary>
@@ -273,22 +273,22 @@ typedef struct
 /** Structure used in IOCTL to get PCIe TRN statistics from driver */
 typedef struct
 {
-	int Count;             /**< Number of statistics captures */
-	TRNStatistics *trnptr; /**< Pointer to array to store statistics */
+	int            Count;  /**< Number of statistics captures */
+	TRNStatistics* trnptr; /**< Pointer to array to store statistics */
 } TRNStatsArray;
 
 /** Structure used to hold software statistics */
 typedef struct
 {
-	int Engine;       /**< Engine Number */
-	unsigned int LBR; /**< Last Byte Rate */
+	int          Engine; /**< Engine Number */
+	unsigned int LBR;    /**< Last Byte Rate */
 } SWStatistics;
 
 /** Structure used in IOCTL to get software statistics from driver */
 typedef struct
 {
-	int Count;           /**< Number of statistics captures */
-	SWStatistics *swptr; /**< Pointer to array to store statistics */
+	int           Count; /**< Number of statistics captures */
+	SWStatistics* swptr; /**< Pointer to array to store statistics */
 } SWStatsArray;
 
 //------------------------------------------
@@ -299,8 +299,8 @@ typedef char mu2e_string_t[100];
 
 typedef enum
 {
-	DTC_DMA_Engine_DAQ = 0,
-	DTC_DMA_Engine_DCS = 1,
+	DTC_DMA_Engine_DAQ     = 0,
+	DTC_DMA_Engine_DCS     = 1,
 	DTC_DMA_Engine_Invalid = -1,
 } DTC_DMA_Engine;
 
@@ -329,14 +329,14 @@ enum
 /// </summary>
 typedef struct
 {
-	int chn;             ///< Channel (DAQ or DCS)
-	int dir;             ///< Direction (C2S or S2C)
-	int tmo_ms;          ///< Timeout for buffers
+	int      chn;        ///< Channel (DAQ or DCS)
+	int      dir;        ///< Direction (C2S or S2C)
+	int      tmo_ms;     ///< Timeout for buffers
 	unsigned buff_size;  ///< Size of the buffers in this chn/dir
 	unsigned num_buffs;  ///< Number of buffers in this chn/dir
 	unsigned hwIdx;      ///< Current buffer index for the hardware
 	unsigned swIdx;      ///< Current buffer index for the software
-						 /* unsigned cmpltIdx; maybe also need... particularly/especially for S2C */
+	                     /* unsigned cmpltIdx; maybe also need... particularly/especially for S2C */
 } m_ioc_get_info_t;
 
 /* This inline references mu2e_channel_info_ -- the name of a variable in both
@@ -344,33 +344,32 @@ typedef struct
    the mu2edev class (and therefore the using namsspace
  */
 static inline unsigned mu2e_chn_info_delta_(
-	int dtc, int chn, int dir, m_ioc_get_info_t (*mu2e_channel_info_)[MU2E_MAX_NUM_DTCS][MU2E_MAX_CHANNELS][2])
+    int dtc, int chn, int dir, m_ioc_get_info_t (*mu2e_channel_info_)[MU2E_MAX_NUM_DTCS][MU2E_MAX_CHANNELS][2])
 {
 	unsigned hw = (*mu2e_channel_info_)[dtc][chn][dir].hwIdx;
 	unsigned sw = (*mu2e_channel_info_)[dtc][chn][dir].swIdx;
 	unsigned retval;
-	if (dir == C2S)
+	if(dir == C2S)
 		retval = ((hw >= sw) ? hw - sw : (*mu2e_channel_info_)[dtc][chn][dir].num_buffs + hw - sw);
 	else
 		retval = ((sw >= hw) ? (*mu2e_channel_info_)[dtc][chn][dir].num_buffs - (sw - hw) : hw - sw);
 
 #ifndef __CLING__
-	TRACE(27, "mu2e_mmap_ioctl::delta_ dtc=%d chn=%d dir=%d hw=%u sw=%u num_buffs=%u delta=%u", dtc, chn, dir, hw, sw,
-		  (*mu2e_channel_info_)[dtc][chn][dir].num_buffs, retval);
+	TRACE(27, "mu2e_mmap_ioctl::delta_ dtc=%d chn=%d dir=%d hw=%u sw=%u num_buffs=%u delta=%u", dtc, chn, dir, hw, sw, (*mu2e_channel_info_)[dtc][chn][dir].num_buffs, retval);
 #endif
 	return retval;
 }
 
-static inline uint32_t mu2e_host_hash(int dtc, char *hostname_in)
+static inline uint32_t mu2e_host_hash(int dtc, char* hostname_in)
 {
 #ifndef __KERNEL__
 	struct utsname unameinfo;
 #endif
-	char *hostname = hostname_in;
+	char*    hostname      = hostname_in;
 	uint16_t hostname_hash = 0;
 	uint32_t scratchVal;
 
-	if (hostname == NULL)
+	if(hostname == NULL)
 	{
 #ifdef __KERNEL__
 		hostname = utsname()->nodename;
@@ -380,16 +379,16 @@ static inline uint32_t mu2e_host_hash(int dtc, char *hostname_in)
 #endif
 	}
 	hostname_hash = _trace_hash(hostname);
-	scratchVal = ((uint32_t)hostname_hash << 16) + (uint16_t)dtc;
+	scratchVal    = ((uint32_t)hostname_hash << 16) + (uint16_t)dtc;
 
 	return scratchVal;
 }
 
 // stuff from obsolete include/xpmon_be.h
-#define LINK_UP 1      /**< Link State is Up */
-#define INT_NONE 0x0   /**< No Interrupt capability */
+#define LINK_UP    1   /**< Link State is Up */
+#define INT_NONE   0x0 /**< No Interrupt capability */
 #define INT_LEGACY 0x1 /**< Legacy Interrupts capability */
-#define INT_MSI 0x2    /**< MSI Interrupts capability */
-#define INT_MSIX 0x3   /**< MSI-X Interrupts capability */
+#define INT_MSI    0x2 /**< MSI Interrupts capability */
+#define INT_MSIX   0x3 /**< MSI-X Interrupts capability */
 
 #endif  // MU2E_MMAP_IOCTL_H

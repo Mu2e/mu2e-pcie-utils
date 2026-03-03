@@ -6,14 +6,14 @@
 #include <vector>
 
 // #include "artdaq-core-mu2e/Overlays/DTC_Packets.h"
+#include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DCSReplyPacket.h"
+#include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DCSRequestPacket.h"
+#include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DMAPacket.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DataBlock.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DataHeaderPacket.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DataPacket.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DataRequestPacket.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DataStatus.h"
-#include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DCSReplyPacket.h"
-#include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DCSRequestPacket.h"
-#include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DMAPacket.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_Event.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_EventHeader.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_HeartbeatPacket.h"
@@ -43,22 +43,23 @@
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_ROC_Emulation_Type.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_RXBufferStatus.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_RXStatus.h"
-#include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_SerdesClockSpeed.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_SERDESLoopbackMode.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_SERDESRXDisparityError.h"
+#include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_SerdesClockSpeed.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_SimMode.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_Subsystem.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/Exceptions.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/Utilities.h"
 
-namespace DTCLib {
+namespace DTCLib
+{
 
 /// <summary>
 /// This class implements common DMA functionality for the CFO and DTC
 /// </summary>
 class CFOandDTC_DMAs
 {
-public:
+  public:
 	/// <summary>
 
 	/// <summary>
@@ -79,19 +80,22 @@ public:
 	struct DMAInfo
 	{
 		std::deque<mu2e_databuff_t*> buffer;
-		uint32_t bufferIndex;
-		void* currentReadPtr;
-		void* lastReadPtr;
+		uint32_t                     bufferIndex;
+		void*                        currentReadPtr;
+		void*                        lastReadPtr;
 		DMAInfo()
-			: buffer(), bufferIndex(0), currentReadPtr(nullptr), lastReadPtr(nullptr) {}
+		    : buffer()
+		    , bufferIndex(0)
+		    , currentReadPtr(nullptr)
+		    , lastReadPtr(nullptr) {}
 		~DMAInfo()
 		{
 			buffer.clear();
 			currentReadPtr = nullptr;
-			lastReadPtr = nullptr;
+			lastReadPtr    = nullptr;
 		}
 	};
-	static int GetCurrentBuffer(DMAInfo* info);
+	static int      GetCurrentBuffer(DMAInfo* info);
 	static uint16_t GetBufferByteCount(DMAInfo* info, size_t index);
 };
 }  // namespace DTCLib

@@ -8,13 +8,14 @@
 /// </summary>
 class fragmentTester
 {
-public:
+  public:
 	/// <summary>
 	/// Construct a fragmentTester object with the given initial size
 	/// </summary>
 	/// <param name="bytes">Initial size of the fragmentTester object</param>
 	explicit fragmentTester(size_t bytes)
-		: vals_(bytes), block_count(0) {}
+	    : vals_(bytes)
+	    , block_count(0) {}
 
 	~fragmentTester() = default;
 
@@ -24,7 +25,7 @@ public:
 	/// <returns>Size of the data, in bytes</returns>
 	size_t dataSize()
 	{
-		if (block_count == 0)
+		if(block_count == 0)
 		{
 			return 0;
 		}
@@ -55,7 +56,7 @@ public:
 	/// <param name="bytes">Bytes in this block</param>
 	void endSubEvt(size_t bytes)
 	{
-		if (block_count > 0)
+		if(block_count > 0)
 		{
 			blocks[block_count] = blocks[block_count - 1] + bytes;
 		}
@@ -72,8 +73,8 @@ public:
 	/// <returns>The block count of the Fragment</returns>
 	size_t hdr_block_count() const { return block_count; }
 
-private:
+  private:
 	std::vector<uint8_t> vals_;
-	size_t blocks[BLOCK_COUNT_MAX];
-	size_t block_count;
+	size_t               blocks[BLOCK_COUNT_MAX];
+	size_t               block_count;
 };

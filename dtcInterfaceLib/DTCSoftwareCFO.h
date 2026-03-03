@@ -27,9 +27,9 @@
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_ROC_Emulation_Type.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_RXBufferStatus.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_RXStatus.h"
-#include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_SerdesClockSpeed.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_SERDESLoopbackMode.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_SERDESRXDisparityError.h"
+#include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_SerdesClockSpeed.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_SimMode.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_Subsystem.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/Exceptions.h"
@@ -39,7 +39,8 @@
 #include <set>
 #include <thread>
 
-namespace DTCLib {
+namespace DTCLib
+{
 /// <summary>
 /// The DTCSoftwareCFO class is responsible for sending ReadoutRequest and
 /// DataRequest packets to the DTC in the absence of a functioning CFO.
@@ -48,7 +49,7 @@ namespace DTCLib {
 /// </summary>
 class DTCSoftwareCFO
 {
-public:
+  public:
 	/// <summary>
 	/// Construct an instance of the DTCSoftwareCFO class
 	/// </summary>
@@ -61,9 +62,7 @@ public:
 	/// <param name="asyncRR">Whether to send ReadoutRequests asynchronously</param>
 	/// <param name="forceNoDebugMode">Do NOT set the Debug flag in Data Request</param>
 	/// <param name="useCFODRP">Send DRPs from the CFO Emulator</param>
-	DTCSoftwareCFO(DTC* dtc, bool useCFOEmulator, uint16_t debugPacketCount = 0,
-				   DTC_DebugType debugType = DTC_DebugType_ExternalSerialWithReset, bool stickyDebugType = false,
-				   bool quiet = false, bool asyncRR = false, bool forceNoDebugMode = false, bool useCFODRP = false);
+	DTCSoftwareCFO(DTC* dtc, bool useCFOEmulator, uint16_t debugPacketCount = 0, DTC_DebugType debugType = DTC_DebugType_ExternalSerialWithReset, bool stickyDebugType = false, bool quiet = false, bool asyncRR = false, bool forceNoDebugMode = false, bool useCFODRP = false);
 	/// <summary>
 	/// DTCSoftwareCFO Destructor
 	/// </summary>
@@ -84,8 +83,7 @@ public:
 	/// <param name="delayBetweenDataRequests">Number of microseconds to wait between requests</param>
 	/// <param name="requestsAhead">Number of Heartbeat Packets to send ahead of data requests</param>
 	/// <param name="heartbeatsAfter">How many Heartbeat Packets to send after all Data Requests have been sent to flush the system</param>
-	void SendRequestsForRange(int count, DTC_EventWindowTag start = DTC_EventWindowTag(static_cast<uint64_t>(0)),
-							  bool increment = true, uint32_t delayBetweenDataRequests = 0, int requestsAhead = 1, uint32_t heartbeatsAfter = 16, bool sendHeartbeats = true);
+	void SendRequestsForRange(int count, DTC_EventWindowTag start = DTC_EventWindowTag(static_cast<uint64_t>(0)), bool increment = true, uint32_t delayBetweenDataRequests = 0, int requestsAhead = 1, uint32_t heartbeatsAfter = 16, bool sendHeartbeats = true);
 
 	/// <summary>
 	/// Send requests for a list of timestamps.
@@ -120,29 +118,27 @@ public:
 	/// <returns>Pointer to the DTC instance</returns>
 	DTC* GetDTC() const { return theDTC_; }
 
-private:
-	void SendRequestsForRangeImplAsync(DTC_EventWindowTag start, int count, bool increment = true,
-									   uint32_t delayBetweenDataRequests = 0, uint32_t heartbeatsAfter = 16, bool sendHeartbeats = true);
-	void SendRequestsForRangeImplSync(DTC_EventWindowTag start, int count, bool increment = true,
-									  uint32_t delayBetweenDataRequests = 0, int requestsAhead = 1, uint32_t heartbeatsAfter = 16, bool sendHeartbeats = true);
+  private:
+	void SendRequestsForRangeImplAsync(DTC_EventWindowTag start, int count, bool increment = true, uint32_t delayBetweenDataRequests = 0, uint32_t heartbeatsAfter = 16, bool sendHeartbeats = true);
+	void SendRequestsForRangeImplSync(DTC_EventWindowTag start, int count, bool increment = true, uint32_t delayBetweenDataRequests = 0, int requestsAhead = 1, uint32_t heartbeatsAfter = 16, bool sendHeartbeats = true);
 
 	void SendRequestsForListImplAsync(std::set<DTC_EventWindowTag> timestamps, uint32_t delayBetweenDataRequests = 0, uint32_t heartbeatsAfter = 16);
 
 	// Request Parameters
-	bool useCFOEmulator_;
-	uint16_t debugPacketCount_;
+	bool          useCFOEmulator_;
+	uint16_t      debugPacketCount_;
 	DTC_DebugType debugType_;
-	bool stickyDebugType_;
-	bool quiet_;  // Don't print as much
-	bool asyncRR_;
-	bool forceNoDebug_;
+	bool          stickyDebugType_;
+	bool          quiet_;  // Don't print as much
+	bool          asyncRR_;
+	bool          forceNoDebug_;
 
 	// Object basic properties (not accessible)
-	DTC* theDTC_;
-	DTC_LinkEnableMode linkMode_[6];
+	DTC*                         theDTC_;
+	DTC_LinkEnableMode           linkMode_[6];
 	std::unique_ptr<std::thread> theThread_;
-	std::atomic<bool> requestsSent_;
-	std::atomic<bool> abort_;
+	std::atomic<bool>            requestsSent_;
+	std::atomic<bool>            abort_;
 };
 }  // namespace DTCLib
 #endif  // ifndef DTCSOFTWARECFO_H

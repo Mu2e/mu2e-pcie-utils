@@ -8,7 +8,8 @@
 
 using namespace DTCLib;
 
-namespace CFOLib {
+namespace CFOLib
+{
 
 /// <summary>
 /// Register address map
@@ -17,67 +18,67 @@ enum CFO_Register : uint16_t
 {
 	DTCLIB_COMMON_REGISTERS,  // Moved here all registers in common with DTC
 
-	CFO_Register_SFPSERDESStatus = 0x9140,
-	CFO_Register_BeamOnTimerPreset = 0x9144,
-	CFO_Register_EnableBeamOnMode = 0x9148,
-	CFO_Register_EnableBeamOffMode = 0x914C,
-	CFO_Register_ClockMarkerIntervalCount = 0x9154,
+	CFO_Register_SFPSERDESStatus           = 0x9140,
+	CFO_Register_BeamOnTimerPreset         = 0x9144,
+	CFO_Register_EnableBeamOnMode          = 0x9148,
+	CFO_Register_EnableBeamOffMode         = 0x914C,
+	CFO_Register_ClockMarkerIntervalCount  = 0x9154,
 	CFO_Register_SERDESOscillatorFrequency = 0x9160,
 	CFO_Register_SERDESClock_IICBusControl = 0x9164,
-	CFO_Register_TimestampPreset0 = 0x9180,
-	CFO_Register_TimestampPreset1 = 0x9184,
-	CFO_Register_LinuxTimestamp = 0x9188,
-	CFO_Register_NUMDTCs = 0x918C,
-	CFO_Register_FIFOFullErrorFlag0 = 0x9190,
-	CFO_Register_ReceivePacketError = 0x919C,
+	CFO_Register_TimestampPreset0          = 0x9180,
+	CFO_Register_TimestampPreset1          = 0x9184,
+	CFO_Register_LinuxTimestamp            = 0x9188,
+	CFO_Register_NUMDTCs                   = 0x918C,
+	CFO_Register_FIFOFullErrorFlag0        = 0x9190,
+	CFO_Register_ReceivePacketError        = 0x919C,
 	// CFO_Register_EventWindowEmulatorIntervalTime = 0x91A0, //register deleted in Firmware version: Nov/09/2023 11:00   raw-data: 0x23110911
-	CFO_Register_EventWindowHoldoffTime = 0x91A4,
-	CFO_Register_EventWindowTimeoutError = 0x91A8,
-	CFO_Register_EventWindowTimeoutValue = 0x91AC,
-	CFO_Register_ReceiveByteCountDataLink0 = 0x9200,
-	CFO_Register_ReceiveByteCountDataLink1 = 0x9204,
-	CFO_Register_ReceiveByteCountDataLink2 = 0x9208,
-	CFO_Register_ReceiveByteCountDataLink3 = 0x920C,
-	CFO_Register_ReceiveByteCountDataLink4 = 0x9210,
-	CFO_Register_ReceiveByteCountDataLink5 = 0x9214,
-	CFO_Register_ReceiveByteCountDataLink6 = 0x9218,
-	CFO_Register_ReceiveByteCountDataLink7 = 0x921C,
-	CFO_Register_ReceivePacketCountDataLink0 = 0x9220,
-	CFO_Register_ReceivePacketCountDataLink1 = 0x9224,
-	CFO_Register_ReceivePacketCountDataLink2 = 0x9228,
-	CFO_Register_ReceivePacketCountDataLink3 = 0x922C,
-	CFO_Register_ReceivePacketCountDataLink4 = 0x9230,
-	CFO_Register_ReceivePacketCountDataLink5 = 0x9234,
-	CFO_Register_ReceivePacketCountDataLink6 = 0x9238,
-	CFO_Register_ReceivePacketCountDataLink7 = 0x923C,
-	CFO_Register_TransmitByteCountDataLink0 = 0x9240,
-	CFO_Register_TransmitByteCountDataLink1 = 0x9244,
-	CFO_Register_TransmitByteCountDataLink2 = 0x9248,
-	CFO_Register_TransmitByteCountDataLink3 = 0x924C,
-	CFO_Register_TransmitByteCountDataLink4 = 0x9250,
-	CFO_Register_TransmitByteCountDataLink5 = 0x9254,
-	CFO_Register_TransmitByteCountDataLink6 = 0x9258,
-	CFO_Register_TransmitByteCountDataLink7 = 0x925C,
-	CFO_Register_TransmitPacketCountDataLink0 = 0x9260,
-	CFO_Register_TransmitPacketCountDataLink1 = 0x9264,
-	CFO_Register_TransmitPacketCountDataLink2 = 0x9268,
-	CFO_Register_TransmitPacketCountDataLink3 = 0x926C,
-	CFO_Register_TransmitPacketCountDataLink4 = 0x9270,
-	CFO_Register_TransmitPacketCountDataLink5 = 0x9274,
-	CFO_Register_TransmitPacketCountDataLink6 = 0x9278,
-	CFO_Register_TransmitPacketCountDataLink7 = 0x927C,
+	CFO_Register_EventWindowHoldoffTime        = 0x91A4,
+	CFO_Register_EventWindowTimeoutError       = 0x91A8,
+	CFO_Register_EventWindowTimeoutValue       = 0x91AC,
+	CFO_Register_ReceiveByteCountDataLink0     = 0x9200,
+	CFO_Register_ReceiveByteCountDataLink1     = 0x9204,
+	CFO_Register_ReceiveByteCountDataLink2     = 0x9208,
+	CFO_Register_ReceiveByteCountDataLink3     = 0x920C,
+	CFO_Register_ReceiveByteCountDataLink4     = 0x9210,
+	CFO_Register_ReceiveByteCountDataLink5     = 0x9214,
+	CFO_Register_ReceiveByteCountDataLink6     = 0x9218,
+	CFO_Register_ReceiveByteCountDataLink7     = 0x921C,
+	CFO_Register_ReceivePacketCountDataLink0   = 0x9220,
+	CFO_Register_ReceivePacketCountDataLink1   = 0x9224,
+	CFO_Register_ReceivePacketCountDataLink2   = 0x9228,
+	CFO_Register_ReceivePacketCountDataLink3   = 0x922C,
+	CFO_Register_ReceivePacketCountDataLink4   = 0x9230,
+	CFO_Register_ReceivePacketCountDataLink5   = 0x9234,
+	CFO_Register_ReceivePacketCountDataLink6   = 0x9238,
+	CFO_Register_ReceivePacketCountDataLink7   = 0x923C,
+	CFO_Register_TransmitByteCountDataLink0    = 0x9240,
+	CFO_Register_TransmitByteCountDataLink1    = 0x9244,
+	CFO_Register_TransmitByteCountDataLink2    = 0x9248,
+	CFO_Register_TransmitByteCountDataLink3    = 0x924C,
+	CFO_Register_TransmitByteCountDataLink4    = 0x9250,
+	CFO_Register_TransmitByteCountDataLink5    = 0x9254,
+	CFO_Register_TransmitByteCountDataLink6    = 0x9258,
+	CFO_Register_TransmitByteCountDataLink7    = 0x925C,
+	CFO_Register_TransmitPacketCountDataLink0  = 0x9260,
+	CFO_Register_TransmitPacketCountDataLink1  = 0x9264,
+	CFO_Register_TransmitPacketCountDataLink2  = 0x9268,
+	CFO_Register_TransmitPacketCountDataLink3  = 0x926C,
+	CFO_Register_TransmitPacketCountDataLink4  = 0x9270,
+	CFO_Register_TransmitPacketCountDataLink5  = 0x9274,
+	CFO_Register_TransmitPacketCountDataLink6  = 0x9278,
+	CFO_Register_TransmitPacketCountDataLink7  = 0x927C,
 	CFO_Register_DDRMemoryDMAWriteStartAddress = 0x9300,
-	CFO_Register_DDRMemoryDMAReadStartAddress = 0x9304,
-	CFO_Register_DDRMemoryDMAReadByteCount = 0x9308,
-	CFO_Register_RunPlanBeamOnBaseAddress = 0x930C,
-	CFO_Register_RunPlanBeamOffBaseAddress = 0x9310,
+	CFO_Register_DDRMemoryDMAReadStartAddress  = 0x9304,
+	CFO_Register_DDRMemoryDMAReadByteCount     = 0x9308,
+	CFO_Register_RunPlanBeamOnBaseAddress      = 0x930C,
+	CFO_Register_RunPlanBeamOffBaseAddress     = 0x9310,
 
-	CFO_Register_RunPlan_Address = 0x9314,
-	CFO_Register_RunPlan_Data = 0x9318,
+	CFO_Register_RunPlan_Address    = 0x9314,
+	CFO_Register_RunPlan_Data       = 0x9318,
 	CFO_Register_RunPlan_EventMode0 = 0x931C,
 	CFO_Register_RunPlan_EventMode1 = 0x9320,
-	CFO_Register_RunPlan_EventTag0 = 0x9324,
-	CFO_Register_RunPlan_EventTag1 = 0x9328,
+	CFO_Register_RunPlan_EventTag0  = 0x9324,
+	CFO_Register_RunPlan_EventTag1  = 0x9328,
 
 	CFO_Register_SERDESPRBSControlLink0 = 0x9330,
 	CFO_Register_SERDESPRBSControlLink1 = 0x9334,
@@ -107,10 +108,10 @@ enum CFO_Register : uint16_t
 
 	CFO_Register_FireflyCSRRegister = 0x93A0,
 
-	CFO_Register_FPGAProgramData = 0x9400,
+	CFO_Register_FPGAProgramData       = 0x9400,
 	CFO_Register_FPGAPROMProgramStatus = 0x9404,
-	CFO_Register_FPGACoreAccess = 0x9408,
-	CFO_Register_JitterAttenuatorCSR = 0x9500,
+	CFO_Register_FPGACoreAccess        = 0x9408,
+	CFO_Register_JitterAttenuatorCSR   = 0x9500,
 	CFO_Register_Invalid,
 	// };
 };  // end CFO_Register enum
@@ -135,8 +136,7 @@ enum CFO_Link_ID : uint8_t
 /// <summary>
 /// Vector of the links, for iterating
 /// </summary>
-static const std::vector<CFO_Link_ID> CFO_Links{CFO_Link_0, CFO_Link_1, CFO_Link_2, CFO_Link_3,
-												CFO_Link_4, CFO_Link_5, CFO_Link_6, CFO_Link_7};
+static const std::vector<CFO_Link_ID> CFO_Links{CFO_Link_0, CFO_Link_1, CFO_Link_2, CFO_Link_3, CFO_Link_4, CFO_Link_5, CFO_Link_6, CFO_Link_7};
 
 /// <summary>
 /// The CFO_Registers class represents the CFO Register space, and all the methods necessary to read and write those
@@ -145,7 +145,7 @@ static const std::vector<CFO_Link_ID> CFO_Links{CFO_Link_0, CFO_Link_1, CFO_Link
 /// </summary>
 class CFO_Registers : public DTCLib::CFOandDTC_Registers
 {
-public:
+  public:
 	/// <summary>
 	/// Construct an instance of the CFO register map
 	/// </summary>
@@ -154,8 +154,7 @@ public:
 	/// <param name="skipInit">Default: false; Whether to skip initializing the CFO using the SimMode.
 	/// Used to read state.</param> <param name="expectedDesignVersion">Expected CFO Firmware Design Version. If set, will
 	/// throw an exception if the CFO firmware does not match (Default: "")</param>
-	explicit CFO_Registers(DTC_SimMode mode, int cfo, std::string expectedDesignVersion = "",
-						   bool skipInit = false, const std::string& uid = "");
+	explicit CFO_Registers(DTC_SimMode mode, int cfo, std::string expectedDesignVersion = "", bool skipInit = false, const std::string& uid = "");
 	/// <summary>
 	/// CFO_Registers destructor
 	/// </summary>
@@ -177,8 +176,7 @@ public:
 	/// CFO firmware does not match</param> <param name="mode">Mode to set</param> <param name="CFO">CFO/DTC card instance
 	/// to use</param> <param name="skipInit">Whether to skip initializing the CFO using the SimMode. Used to read
 	/// state.</param> <returns></returns>
-	DTC_SimMode SetSimMode(std::string expectedDesignVersion, DTC_SimMode mode, int CFO,
-						   bool skipInit = false, const std::string& uid = "");
+	DTC_SimMode SetSimMode(std::string expectedDesignVersion, DTC_SimMode mode, int CFO, bool skipInit = false, const std::string& uid = "");
 
 	virtual void ResetPCIe() override { throw std::runtime_error("CFO-TODO!"); };
 	virtual void FlashLEDs() override { throw std::runtime_error("CFO-TODO!"); };
@@ -203,15 +201,15 @@ public:
 	// CFO Control Register
 	// void ResetCFORunPlan();
 	// bool ReadResetCFORunPlan(std::optional<uint32_t> val = std::nullopt);
-	void EnableLED7();
-	void DisableReadLED7();
-	bool ReadLED7State(std::optional<uint32_t> val = std::nullopt);
-	void EnableAcceleratorRF0();
-	void DisableAcceleratorRF0();
-	bool ReadAcceleratorRF0Enable(std::optional<uint32_t> val = std::nullopt);
-	void EnableEmbeddedClockMarker();
-	void DisableEmbeddedClockMarker();
-	bool ReadEmbeddedClockMarkerEnable(std::optional<uint32_t> val = std::nullopt);
+	void              EnableLED7();
+	void              DisableReadLED7();
+	bool              ReadLED7State(std::optional<uint32_t> val = std::nullopt);
+	void              EnableAcceleratorRF0();
+	void              DisableAcceleratorRF0();
+	bool              ReadAcceleratorRF0Enable(std::optional<uint32_t> val = std::nullopt);
+	void              EnableEmbeddedClockMarker();
+	void              DisableEmbeddedClockMarker();
+	bool              ReadEmbeddedClockMarkerEnable(std::optional<uint32_t> val = std::nullopt);
 	RegisterFormatter FormatCFOControl();
 
 	// DMA Transfer Length Register
@@ -296,8 +294,7 @@ public:
 	/// <param name="link">Link to enable</param>
 	/// <param name="mode">Link enable bits to set (Default: All)</param>
 	/// <param name="dtcCount">Number of DTCs in the Link (Default: 0)</param>
-	void EnableLink(const CFO_Link_ID& link, const DTC_LinkEnableMode& mode = DTC_LinkEnableMode(),
-					const uint8_t& dtcCount = 0);
+	void EnableLink(const CFO_Link_ID& link, const DTC_LinkEnableMode& mode = DTC_LinkEnableMode(), const uint8_t& dtcCount = 0);
 
 	/// <summary>
 	/// Disable a SERDES Link
@@ -540,11 +537,11 @@ public:
 	void ResetSERDESOscillatorIICInterface();
 
 	// Jitter Attenuator CSR Register
-	virtual std::bitset<2> ReadJitterAttenuatorSelect(std::optional<uint32_t> val = std::nullopt) override;
-	virtual void SetJitterAttenuatorSelect(std::bitset<2> data, bool alsoResetJA = false) override;
-	virtual bool ReadJitterAttenuatorReset(std::optional<uint32_t> val = std::nullopt) override;
-	virtual bool ReadJitterAttenuatorLocked(std::optional<uint32_t> val = std::nullopt) override;
-	virtual void ResetJitterAttenuator() override;
+	virtual std::bitset<2>    ReadJitterAttenuatorSelect(std::optional<uint32_t> val = std::nullopt) override;
+	virtual void              SetJitterAttenuatorSelect(std::bitset<2> data, bool alsoResetJA = false) override;
+	virtual bool              ReadJitterAttenuatorReset(std::optional<uint32_t> val = std::nullopt) override;
+	virtual bool              ReadJitterAttenuatorLocked(std::optional<uint32_t> val = std::nullopt) override;
+	virtual void              ResetJitterAttenuator() override;
 	virtual RegisterFormatter FormatJitterAttenuatorCSR() override;
 
 	/// <summary>
@@ -600,7 +597,7 @@ public:
 	/// <returns>RegisterFormatter object containing register information</returns>
 	RegisterFormatter FormatTimestampPreset1();
 
-	void SetLinuxTimestampPreset();
+	void   SetLinuxTimestampPreset();
 	time_t ReadLinuxTimestamp();
 
 	// NUMDTCs Register
@@ -1069,10 +1066,7 @@ public:
 	/// Optional pointer to a map that will be populated with any mismatching words,
 	/// keyed by address and containing expected/actual value pairs.
 	/// </param>
-	void CompareRunPlanData(const std::string& inputData, const uint32_t& address,
-							std::map<uint32_t /* address */,
-									 std::pair<uint32_t /* expected */,
-											   uint32_t /* actual */>>* mismatches = nullptr);
+	void CompareRunPlanData(const std::string& inputData, const uint32_t& address, std::map<uint32_t /* address */, std::pair<uint32_t /* expected */, uint32_t /* actual */>>* mismatches = nullptr);
 	/// <summary>
 	/// Read the current run plan mode as reported by the firmware.
 	/// </summary>
@@ -1299,7 +1293,7 @@ public:
 
 	// Cable Delays
 	uint32_t ReadCableDelayMeasureExponentialCount(std::optional<uint32_t> val = std::nullopt);
-	void SetCableDelayMeasureExponentialCount(const uint32_t exponent);
+	void     SetCableDelayMeasureExponentialCount(const uint32_t exponent);
 	uint32_t ReadCableDelayMeasurement(const CFO_Link_ID link, const uint8_t roc, bool& done);
 
 	// /// <summary>
@@ -1473,138 +1467,137 @@ public:
 	/// </summary>
 	void DisableAllOutputs();
 
-private:
+  private:
 	bool NeedToVerifyRegisterWrite_(const CFOandDTC_Register& address) override;
 	void VerifyRegisterWrite_(const CFOandDTC_Register& address, uint32_t readbackValue, uint32_t dataToWrite) override;
 
-	int DecodeHighSpeedDivider_(int input);
-	int DecodeOutputDivider_(int input) { return input + 1; }
-	double DecodeRFREQ_(uint64_t input) { return input / 268435456.0; }
-	int EncodeHighSpeedDivider_(int input);
-	int EncodeOutputDivider_(int input);
+	int      DecodeHighSpeedDivider_(int input);
+	int      DecodeOutputDivider_(int input) { return input + 1; }
+	double   DecodeRFREQ_(uint64_t input) { return input / 268435456.0; }
+	int      EncodeHighSpeedDivider_(int input);
+	int      EncodeOutputDivider_(int input);
 	uint64_t EncodeRFREQ_(double input) { return static_cast<uint64_t>(input * 268435456) & 0x3FFFFFFFFF; }
-	uint64_t CalculateFrequencyForProgramming_(double targetFrequency, double currentFrequency,
-											   uint64_t currentProgram);
+	uint64_t CalculateFrequencyForProgramming_(double targetFrequency, double currentFrequency, uint64_t currentProgram);
 
-protected:
-	DTC_SimMode simMode_;         ///< Simulation mode
-	uint32_t maxDTCs_;            ///< Map of active DTCs
-	bool usingDetectorEmulator_;  ///< Whether Detector Emulation mode is enabled
-	uint16_t dmaSize_;            ///< Size of DMAs, in bytes (default 32k)
+  protected:
+	DTC_SimMode simMode_;                ///< Simulation mode
+	uint32_t    maxDTCs_;                ///< Map of active DTCs
+	bool        usingDetectorEmulator_;  ///< Whether Detector Emulation mode is enabled
+	uint16_t    dmaSize_;                ///< Size of DMAs, in bytes (default 32k)
 
-public:
+  public:
 	virtual const std::vector<std::function<RegisterFormatter()>>& getFormattedDumpFunctions() override { return formattedDumpFunctions_; };
 	virtual const std::vector<std::function<RegisterFormatter()>>& getFormattedSimpleDumpFunctions() override { return formattedSimpleDumpFunctions_; };
 
 	const std::vector<std::function<RegisterFormatter()>> formattedSimpleDumpFunctions_{
-		[this] { return this->FormatCFOControl(); },
-		[this] { return this->FormatBeamOffMode(); },
-		[this] { return this->FormatBeamOnMode(); },
-		[this] { return this->FormatJitterAttenuatorCSR(); },
-		[this] { return this->FormatSERDESPLLLocked(); },
-		[this] { return this->FormatLinkEnable(); },
-		[this] { return this->FormatSERDESRXCDRLock(); },
-		[this] { return this->FormatSERDESResetDone(); },
-		[this] { return this->FormatSERDESReset(); },
+	    [this] { return this->FormatCFOControl(); },
+	    [this] { return this->FormatBeamOffMode(); },
+	    [this] { return this->FormatBeamOnMode(); },
+	    [this] { return this->FormatJitterAttenuatorCSR(); },
+	    [this] { return this->FormatSERDESPLLLocked(); },
+	    [this] { return this->FormatLinkEnable(); },
+	    [this] { return this->FormatSERDESRXCDRLock(); },
+	    [this] { return this->FormatSERDESResetDone(); },
+	    [this] { return this->FormatSERDESReset(); },
 	};
 
 	const std::vector<std::function<RegisterFormatter()>> formattedDumpFunctions_{
-		[this] { return this->FormatDesignVersion(); },
-		[this] { return this->FormatDesignDate(); },
-		[this] { return this->FormatDesignStatus(); },
-		[this] { return this->FormatVivadoVersion(); },
-		[this] { return this->FormatCFOControl(); },
-		[this] { return this->FormatDMATransferLength(); },
-		[this] { return this->FormatSERDESLoopbackEnable(); },
-		[this] { return this->FormatClockOscillatorStatus(); },
-		[this] { return this->FormatLinkEnable(); },
-		[this] { return this->FormatSERDESReset(); },
-		[this] { return this->FormatSERDESRXDisparityError(); },
-		[this] { return this->FormatSERDESRXCharacterNotInTableError(); },
-		[this] { return this->FormatSERDESUnlockError(); },
-		[this] { return this->FormatSERDESPLLLocked(); },
-		[this] { return this->FormatSERDESRXStatus(); },
-		[this] { return this->FormatSERDESResetDone(); },
-		[this] { return this->FormatSERDESRXCDRLock(); },
-		[this] { return this->FormatBeamOnTimerPreset(); },
-		[this] { return this->FormatBeamOnMode(); },
-		[this] { return this->FormatBeamOffMode(); },
-		[this] { return this->FormatClockMarkerIntervalCount(); },
-		[this] { return this->FormatSERDESOscillatorFrequency(); },
-		[this] { return this->FormatSERDESOscillatorControl(); },
-		[this] { return this->FormatSERDESOscillatorParameterLow(); },
-		[this] { return this->FormatSERDESOscillatorParameterHigh(); },
-		[this] { return this->FormatTimestampPreset0(); },
-		[this] { return this->FormatTimestampPreset1(); },
-		[this] { return this->FormatNUMDTCs(); },
-		[this] { return this->FormatFIFOFullErrorFlag0(); },
-		[this] { return this->FormatReceivePacketError(); },
-		// [this] { return this->FormatEventWindowEmulatorIntervalTime(); },
-		[this] { return this->FormatEventWindowHoldoffTime(); },
-		[this] { return this->FormatEventWindowTimeoutError(); },
-		[this] { return this->FormatEventWindowTimeoutInterval(); },
-		[this] { return this->FormatDMAWriteStartAddress(); },
-		[this] { return this->FormatDMAReadStartAddress(); },
-		[this] { return this->FormatDMAReadByteCount(); },
-		[this] { return this->FormatRunPlanBeamOnBaseAddress(); },
-		[this] { return this->FormatRunPlanBeamOffBaseAddress(); },
-		[this] { return this->FormatFireflyCSR(); },
-		[this] { return this->FormatSERDESPRBSControlLink0(); },
-		[this] { return this->FormatSERDESPRBSControlLink1(); },
-		[this] { return this->FormatSERDESPRBSControlLink2(); },
-		[this] { return this->FormatSERDESPRBSControlLink3(); },
-		[this] { return this->FormatSERDESPRBSControlLink4(); },
-		[this] { return this->FormatSERDESPRBSControlLink5(); },
-		[this] { return this->FormatSERDESPRBSControlLink6(); },
-		[this] { return this->FormatSERDESPRBSControlLink7(); },
-		// [this] { return this->FormatCableDelayValueLink0(); },
-		// [this] { return this->FormatCableDelayValueLink1(); },
-		// [this] { return this->FormatCableDelayValueLink2(); },
-		// [this] { return this->FormatCableDelayValueLink3(); },
-		// [this] { return this->FormatCableDelayValueLink4(); },
-		// [this] { return this->FormatCableDelayValueLink5(); },
-		// [this] { return this->FormatCableDelayValueLink6(); },
-		// [this] { return this->FormatCableDelayValueLink7(); },
-		// [this] { return this->FormatCableDelayControl(); },
-		[this] { return this->FormatFPGAPROMProgramStatus(); },
-		[this] { return this->FormatFPGACoreAccess(); }};
+	    [this] { return this->FormatDesignVersion(); },
+	    [this] { return this->FormatDesignDate(); },
+	    [this] { return this->FormatDesignStatus(); },
+	    [this] { return this->FormatVivadoVersion(); },
+	    [this] { return this->FormatCFOControl(); },
+	    [this] { return this->FormatDMATransferLength(); },
+	    [this] { return this->FormatSERDESLoopbackEnable(); },
+	    [this] { return this->FormatClockOscillatorStatus(); },
+	    [this] { return this->FormatLinkEnable(); },
+	    [this] { return this->FormatSERDESReset(); },
+	    [this] { return this->FormatSERDESRXDisparityError(); },
+	    [this] { return this->FormatSERDESRXCharacterNotInTableError(); },
+	    [this] { return this->FormatSERDESUnlockError(); },
+	    [this] { return this->FormatSERDESPLLLocked(); },
+	    [this] { return this->FormatSERDESRXStatus(); },
+	    [this] { return this->FormatSERDESResetDone(); },
+	    [this] { return this->FormatSERDESRXCDRLock(); },
+	    [this] { return this->FormatBeamOnTimerPreset(); },
+	    [this] { return this->FormatBeamOnMode(); },
+	    [this] { return this->FormatBeamOffMode(); },
+	    [this] { return this->FormatClockMarkerIntervalCount(); },
+	    [this] { return this->FormatSERDESOscillatorFrequency(); },
+	    [this] { return this->FormatSERDESOscillatorControl(); },
+	    [this] { return this->FormatSERDESOscillatorParameterLow(); },
+	    [this] { return this->FormatSERDESOscillatorParameterHigh(); },
+	    [this] { return this->FormatTimestampPreset0(); },
+	    [this] { return this->FormatTimestampPreset1(); },
+	    [this] { return this->FormatNUMDTCs(); },
+	    [this] { return this->FormatFIFOFullErrorFlag0(); },
+	    [this] { return this->FormatReceivePacketError(); },
+	    // [this] { return this->FormatEventWindowEmulatorIntervalTime(); },
+	    [this] { return this->FormatEventWindowHoldoffTime(); },
+	    [this] { return this->FormatEventWindowTimeoutError(); },
+	    [this] { return this->FormatEventWindowTimeoutInterval(); },
+	    [this] { return this->FormatDMAWriteStartAddress(); },
+	    [this] { return this->FormatDMAReadStartAddress(); },
+	    [this] { return this->FormatDMAReadByteCount(); },
+	    [this] { return this->FormatRunPlanBeamOnBaseAddress(); },
+	    [this] { return this->FormatRunPlanBeamOffBaseAddress(); },
+	    [this] { return this->FormatFireflyCSR(); },
+	    [this] { return this->FormatSERDESPRBSControlLink0(); },
+	    [this] { return this->FormatSERDESPRBSControlLink1(); },
+	    [this] { return this->FormatSERDESPRBSControlLink2(); },
+	    [this] { return this->FormatSERDESPRBSControlLink3(); },
+	    [this] { return this->FormatSERDESPRBSControlLink4(); },
+	    [this] { return this->FormatSERDESPRBSControlLink5(); },
+	    [this] { return this->FormatSERDESPRBSControlLink6(); },
+	    [this] { return this->FormatSERDESPRBSControlLink7(); },
+	    // [this] { return this->FormatCableDelayValueLink0(); },
+	    // [this] { return this->FormatCableDelayValueLink1(); },
+	    // [this] { return this->FormatCableDelayValueLink2(); },
+	    // [this] { return this->FormatCableDelayValueLink3(); },
+	    // [this] { return this->FormatCableDelayValueLink4(); },
+	    // [this] { return this->FormatCableDelayValueLink5(); },
+	    // [this] { return this->FormatCableDelayValueLink6(); },
+	    // [this] { return this->FormatCableDelayValueLink7(); },
+	    // [this] { return this->FormatCableDelayControl(); },
+	    [this] { return this->FormatFPGAPROMProgramStatus(); },
+	    [this] { return this->FormatFPGACoreAccess(); }};
 
 	/// <summary>
 	/// Dump Byte/Packet Counter Registers
 	/// </summary>
 	const std::vector<std::function<RegisterFormatter()>> formattedCounterFunctions_{
-		[this] { return this->FormatReceiveByteCountLink0(); },
-		[this] { return this->FormatReceiveByteCountLink1(); },
-		[this] { return this->FormatReceiveByteCountLink2(); },
-		[this] { return this->FormatReceiveByteCountLink3(); },
-		[this] { return this->FormatReceiveByteCountLink4(); },
-		[this] { return this->FormatReceiveByteCountLink5(); },
-		[this] { return this->FormatReceiveByteCountLink6(); },
-		[this] { return this->FormatReceiveByteCountLink7(); },
-		[this] { return this->FormatReceivePacketCountLink0(); },
-		[this] { return this->FormatReceivePacketCountLink1(); },
-		[this] { return this->FormatReceivePacketCountLink2(); },
-		[this] { return this->FormatReceivePacketCountLink3(); },
-		[this] { return this->FormatReceivePacketCountLink4(); },
-		[this] { return this->FormatReceivePacketCountLink5(); },
-		[this] { return this->FormatReceivePacketCountLink6(); },
-		[this] { return this->FormatReceivePacketCountLink7(); },
-		[this] { return this->FormatTramsitByteCountLink0(); },
-		[this] { return this->FormatTramsitByteCountLink1(); },
-		[this] { return this->FormatTramsitByteCountLink2(); },
-		[this] { return this->FormatTramsitByteCountLink3(); },
-		[this] { return this->FormatTramsitByteCountLink4(); },
-		[this] { return this->FormatTramsitByteCountLink5(); },
-		[this] { return this->FormatTramsitByteCountLink6(); },
-		[this] { return this->FormatTramsitByteCountLink7(); },
-		[this] { return this->FormatTransmitPacketCountLink0(); },
-		[this] { return this->FormatTransmitPacketCountLink1(); },
-		[this] { return this->FormatTransmitPacketCountLink2(); },
-		[this] { return this->FormatTransmitPacketCountLink3(); },
-		[this] { return this->FormatTransmitPacketCountLink4(); },
-		[this] { return this->FormatTransmitPacketCountLink5(); },
-		[this] { return this->FormatTransmitPacketCountLink6(); },
-		[this] { return this->FormatTransmitPacketCountLink7(); }};
+	    [this] { return this->FormatReceiveByteCountLink0(); },
+	    [this] { return this->FormatReceiveByteCountLink1(); },
+	    [this] { return this->FormatReceiveByteCountLink2(); },
+	    [this] { return this->FormatReceiveByteCountLink3(); },
+	    [this] { return this->FormatReceiveByteCountLink4(); },
+	    [this] { return this->FormatReceiveByteCountLink5(); },
+	    [this] { return this->FormatReceiveByteCountLink6(); },
+	    [this] { return this->FormatReceiveByteCountLink7(); },
+	    [this] { return this->FormatReceivePacketCountLink0(); },
+	    [this] { return this->FormatReceivePacketCountLink1(); },
+	    [this] { return this->FormatReceivePacketCountLink2(); },
+	    [this] { return this->FormatReceivePacketCountLink3(); },
+	    [this] { return this->FormatReceivePacketCountLink4(); },
+	    [this] { return this->FormatReceivePacketCountLink5(); },
+	    [this] { return this->FormatReceivePacketCountLink6(); },
+	    [this] { return this->FormatReceivePacketCountLink7(); },
+	    [this] { return this->FormatTramsitByteCountLink0(); },
+	    [this] { return this->FormatTramsitByteCountLink1(); },
+	    [this] { return this->FormatTramsitByteCountLink2(); },
+	    [this] { return this->FormatTramsitByteCountLink3(); },
+	    [this] { return this->FormatTramsitByteCountLink4(); },
+	    [this] { return this->FormatTramsitByteCountLink5(); },
+	    [this] { return this->FormatTramsitByteCountLink6(); },
+	    [this] { return this->FormatTramsitByteCountLink7(); },
+	    [this] { return this->FormatTransmitPacketCountLink0(); },
+	    [this] { return this->FormatTransmitPacketCountLink1(); },
+	    [this] { return this->FormatTransmitPacketCountLink2(); },
+	    [this] { return this->FormatTransmitPacketCountLink3(); },
+	    [this] { return this->FormatTransmitPacketCountLink4(); },
+	    [this] { return this->FormatTransmitPacketCountLink5(); },
+	    [this] { return this->FormatTransmitPacketCountLink6(); },
+	    [this] { return this->FormatTransmitPacketCountLink7(); }};
 };
 }  // namespace CFOLib
 
