@@ -399,8 +399,8 @@ public:
 	void EnableSoftwareDRP();                                                   // alias to  DisableAutogenDRP()
 	void DisableSoftwareDRP();                                                  // alias to  EnableAutogenDRP()
 	bool ReadSoftwareDRP(std::optional<uint32_t> val = std::nullopt);
-	virtual void ResetPCIe() override;                                 // B21
-	bool ReadResetPCIe(std::optional<uint32_t> val = std::nullopt);    // B21
+	virtual void ResetPCIe() override;                               // B21
+	bool ReadResetPCIe(std::optional<uint32_t> val = std::nullopt);  // B21
 	// Bit 20 Reserved
 	void EnableDownLED0();                                               // B19
 	void DisableDownLED0();                                              // B19
@@ -657,7 +657,6 @@ public:
 	void SetCFOEventModeRequiredMask(const uint32_t& mask);
 	uint32_t ReadCFOEventModeRequiredMask(std::optional<uint32_t> val = std::nullopt);
 	RegisterFormatter FormatCFOEventModeRequiredMask();
-
 
 	// CFO Emulation Event Mode Bytes Registers
 	void SetCFOEmulationEventMode(const uint64_t& eventMode);
