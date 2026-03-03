@@ -119,12 +119,12 @@ void DTCLib::DTCSoftwareCFO::SendRequestForTimestamp(DTC_EventWindowTag ts, uint
 		}
 		theDTC_->SetCFOEmulationNumHeartbeats(1);
 		theDTC_->SetCFOEmulationEventWindowInterval(20000);
-		//theDTC_->SetCFOEmulationDebugType(debugType_);
+		// theDTC_->SetCFOEmulationDebugType(debugType_);
 		theDTC_->SetCFOEmulationModeByte(5, 1);
 		theDTC_->SetCFOEmulationNumNullHeartbeats(heartbeatsAfter);
-		//if (!forceNoDebug_)
+		// if (!forceNoDebug_)
 		//	theDTC_->EnableDebugPacketMode();
-		//else
+		// else
 		//	theDTC_->DisableDebugPacketMode();
 		TLOG(TLVL_SendRequestsForTimestamp2) << "SendRequestForTimestamp enabling DTC CFO Emulator";
 		theDTC_->EnableCFOEmulation();
@@ -189,12 +189,12 @@ void DTCLib::DTCSoftwareCFO::SendRequestsForRange(int count, DTC_EventWindowTag 
 			}
 		}
 		theDTC_->SetCFOEmulationNumHeartbeats(count);
-		//theDTC_->SetCFOEmulationDebugType(debugType_);
+		// theDTC_->SetCFOEmulationDebugType(debugType_);
 		theDTC_->SetCFOEmulationModeByte(5, 1);
 		theDTC_->SetCFOEmulationNumNullHeartbeats(heartbeatsAfter);
-		//if (!forceNoDebug_)
+		// if (!forceNoDebug_)
 		//	theDTC_->EnableDebugPacketMode();
-		//else
+		// else
 		//	theDTC_->DisableDebugPacketMode();
 		theDTC_->SetCFOEmulationEventWindowInterval(delayBetweenDataRequests);
 		TLOG(TLVL_SendRequestsForRange) << "SendRequestsForRange enabling DTC CFO Emulator";
@@ -259,11 +259,11 @@ void DTCLib::DTCSoftwareCFO::SendRequestsForListImplAsync(std::set<DTC_EventWind
 		}
 		theDTC_->SetCFOEmulationNumHeartbeats(1);
 		theDTC_->SetCFOEmulationNumNullHeartbeats(heartbeatsAfter);
-		//theDTC_->SetCFOEmulationDebugType(debugType_);
+		// theDTC_->SetCFOEmulationDebugType(debugType_);
 		theDTC_->SetCFOEmulationModeByte(5, 1);
-		//if (!forceNoDebug_)
+		// if (!forceNoDebug_)
 		//	theDTC_->EnableDebugPacketMode();
-		//else
+		// else
 		//	theDTC_->DisableDebugPacketMode();
 		theDTC_->SetCFOEmulationEventWindowInterval(delayBetweenDataRequests);
 		TLOG(TLVL_SendRequestsForRangeImpl) << "SendRequestsForRange enabling DTC CFO Emulator";
