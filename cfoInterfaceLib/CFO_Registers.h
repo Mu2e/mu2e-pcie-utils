@@ -26,6 +26,7 @@ enum CFO_Register : uint16_t
 	CFO_Register_SERDESClock_IICBusControl = 0x9164,
 	CFO_Register_TimestampPreset0 = 0x9180,
 	CFO_Register_TimestampPreset1 = 0x9184,
+	CFO_Register_LinuxTimestamp = 0x9188,
 	CFO_Register_NUMDTCs = 0x918C,
 	CFO_Register_FIFOFullErrorFlag0 = 0x9190,
 	CFO_Register_ReceivePacketError = 0x919C,
@@ -598,6 +599,9 @@ public:
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
 	RegisterFormatter FormatTimestampPreset1();
+
+	void SetLinuxTimestampPreset();
+	time_t ReadLinuxTimestamp();
 
 	// NUMDTCs Register
 	/// <summary>
