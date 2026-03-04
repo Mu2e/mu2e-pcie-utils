@@ -6,8 +6,8 @@
 #include <vector>
 
 // #include "artdaq-core-mu2e/Overlays/CFO_Packets.h"
-#include "artdaq-core-mu2e/Overlays/CFO_Packets/CFO_DataPacket.h"
 #include "artdaq-core-mu2e/Overlays/CFO_Packets/CFO_DMAPacket.h"
+#include "artdaq-core-mu2e/Overlays/CFO_Packets/CFO_DataPacket.h"
 #include "artdaq-core-mu2e/Overlays/CFO_Packets/CFO_Event.h"
 #include "artdaq-core-mu2e/Overlays/CFO_Packets/CFO_EventRecord.h"
 #include "artdaq-core-mu2e/Overlays/CFO_Packets/CFO_PacketType.h"
@@ -35,9 +35,9 @@
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_ROC_Emulation_Type.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_RXBufferStatus.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_RXStatus.h"
-#include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_SerdesClockSpeed.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_SERDESLoopbackMode.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_SERDESRXDisparityError.h"
+#include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_SerdesClockSpeed.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_SimMode.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_Subsystem.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/Exceptions.h"
@@ -45,19 +45,19 @@
 
 using namespace DTCLib;
 
-namespace CFOLib {
+namespace CFOLib
+{
 /// <summary>
 /// The CFO class implements the data transfers to the CFO card. It derives from CFO_Registers, the class representing
 /// the CFO register space.
 /// </summary>
 class CFO : public CFO_Registers
 {
-public:
+  public:
 	/// <summary>
 	/// Construct an instance of the CFO class
 	/// </summary>
-	explicit CFO(DTC_SimMode mode = DTC_SimMode_Disabled, int cfo = -1,
-				 std::string expectedDesignVersion = "", bool skipInit = false, const std::string& uid = "");
+	explicit CFO(DTC_SimMode mode = DTC_SimMode_Disabled, int cfo = -1, std::string expectedDesignVersion = "", bool skipInit = false, const std::string& uid = "");
 	virtual ~CFO();
 
 	// //
@@ -85,9 +85,9 @@ public:
 	/// <param name="channel">Channel to release</param>
 	void ReleaseAllBuffers(const DTC_DMA_Engine& channel);
 
-private:
+  private:
 	std::unique_ptr<CFO_DataPacket> ReadNextPacket(const DTC_DMA_Engine& channel, int tmo_ms);
-	int ReadBuffer(const DTC_DMA_Engine& channel, int tmo_ms);
+	int                             ReadBuffer(const DTC_DMA_Engine& channel, int tmo_ms);
 	// /// <summary>
 	// /// This function releases all buffers except for the one containing currentReadPtr. Should only be called when done
 	// /// with data in other buffers!

@@ -22,7 +22,7 @@
 /// </summary>
 class mu2edev
 {
-public:
+  public:
 	/// <summary>
 	/// Initialize counters and other data needed by the mu2edev class.
 	/// Does not initialize the DTC, call init(DTC_SimMode) to do that.
@@ -72,7 +72,7 @@ public:
 	/// <param name="dtc">Desired DTC card to use (/dev/mu2eX)</param>
 	/// <param name="simMemoryFileName">If using simulated DTC, name of the memory file ("mu2esim.bin")</param>
 	/// <returns>0 on success</returns>
-	int init(DTCLib::DTC_SimMode simMode, int deviceIndex, std::string simMemoryFileName = "mu2esim.bin", const std::string& uid = "");
+	int  init(DTCLib::DTC_SimMode simMode, int deviceIndex, std::string simMemoryFileName = "mu2esim.bin", const std::string& uid = "");
 	void initDMAEngine();
 
 	/// <summary>
@@ -157,10 +157,10 @@ public:
 	// int  read_test_command(m_ioc_cmd_t *output);
 	// int  write_test_command(m_ioc_cmd_t input, bool start);
 
-	void begin_dcs_transaction();
-	void end_dcs_transaction(bool force = false);
-	bool thread_owns_dcs_lock();
-	bool dcs_lock_free();
+	void        begin_dcs_transaction();
+	void        end_dcs_transaction(bool force = false);
+	bool        thread_owns_dcs_lock();
+	bool        dcs_lock_free();
 	std::string get_driver_version();
 
 	/// <summary>
@@ -176,28 +176,28 @@ public:
 	/// <returns>No value is returned.</returns>
 	void spy(int chn, unsigned flags);
 
-private:
+  private:
 	// unsigned delta_(int chn, int dir);
 
-	int devfd_;
-	volatile void* mu2e_mmap_ptrs_[MU2E_MAX_NUM_DTCS][MU2E_MAX_CHANNELS][2][2];
+	int              devfd_;
+	volatile void*   mu2e_mmap_ptrs_[MU2E_MAX_NUM_DTCS][MU2E_MAX_CHANNELS][2][2];
 	m_ioc_get_info_t mu2e_channel_info_[MU2E_MAX_NUM_DTCS][MU2E_MAX_CHANNELS][2];
-	unsigned buffers_held_;
-	mu2esim* simulator_;
-	int activeDeviceIndex_;
+	unsigned         buffers_held_;
+	mu2esim*         simulator_;
+	int              activeDeviceIndex_;
 	struct DCSLock
 	{
 		std::atomic<std::thread::id> thread_id{std::thread::id()};
-		std::atomic<int> lock_count{0};
+		std::atomic<int>             lock_count{0};
 	};
 	static std::array<DCSLock, MU2E_MAX_NUM_DTCS> dcs_locks_;
 
 	std::atomic<long long> deviceTime_;
-	std::atomic<size_t> writeSize_;
-	std::atomic<size_t> readSize_;
+	std::atomic<size_t>    writeSize_;
+	std::atomic<size_t>    readSize_;
 
-	std::string UID_;
-	FILE* debugFp_ = 0;
+	std::string                           UID_;
+	FILE*                                 debugFp_ = 0;
 	std::chrono::steady_clock::time_point lastWriteTime_;
 };
 

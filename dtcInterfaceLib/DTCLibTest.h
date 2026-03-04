@@ -6,13 +6,14 @@
 #include <atomic>
 #include <thread>
 
-namespace DTCLib {
+namespace DTCLib
+{
 /// <summary>
 /// Unit tests for DTC Library
 /// </summary>
 class DTCLibTest
 {
-public:
+  public:
 	/// <summary>
 	/// Construct the test adapter
 	/// </summary>
@@ -29,8 +30,7 @@ public:
 	/// <param name="dcsEnabled">Run DCS read/write test</param>
 	/// <param name="nTests">Number of times to repeat tests</param>
 	/// <param name="printMessages">Print debuffing messages (Default: false)</param>
-	void startTest(bool classEnabled, bool regIOEnabled, bool daqEnabled, bool dcsEnabled, int nTests,
-				   bool printMessages = false);
+	void startTest(bool classEnabled, bool regIOEnabled, bool daqEnabled, bool dcsEnabled, int nTests, bool printMessages = false);
 	/// <summary>
 	/// Abort testing
 	/// </summary>
@@ -84,7 +84,7 @@ public:
 	/// <returns>The number of instances of the DCS test that failed</returns>
 	int dcsFailed();
 
-private:
+  private:
 	// Test Worker
 	void doTests();
 	void doClassTest();
@@ -117,14 +117,14 @@ private:
 
 	// Test Internals
 	DTC* thisDTC_;
-	int nTests_;
+	int  nTests_;
 
 	bool runClassTest_;
 	bool runRegTest_;
 	bool runDAQTest_;
 	bool runDCSTest_;
 
-	bool printMessages_;
+	bool        printMessages_;
 	std::thread workerThread_;
 };
 }  // namespace DTCLib

@@ -6,14 +6,14 @@
 #include <vector>
 
 // #include "artdaq-core-mu2e/Overlays/DTC_Packets.h"
+#include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DCSReplyPacket.h"
+#include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DCSRequestPacket.h"
+#include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DMAPacket.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DataBlock.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DataHeaderPacket.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DataPacket.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DataRequestPacket.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DataStatus.h"
-#include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DCSReplyPacket.h"
-#include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DCSRequestPacket.h"
-#include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_DMAPacket.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_Event.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_EventHeader.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_HeartbeatPacket.h"
@@ -21,21 +21,21 @@
 #include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_SubEvent.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Packets/DTC_SubEventHeader.h"
 
-#include "DTC_Registers.h"
 #include "CFOandDTC_DMAs.h"
+#include "DTC_Registers.h"
 
 // #include "artdaq-core-mu2e/Overlays/DTC_Types.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_CharacterNotInTableError.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_DCSOperationType.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_DDRFlags.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_DebugType.h"
+#include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_EVBStatsType.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_EVBStatus.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_EventMode.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_EventWindowTag.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_FIFOFullErrorFlags.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_IICDDRBusAddress.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_IICSERDESBusAddress.h"
-#include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_EVBStatsType.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_LinkEnableMode.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_LinkStatus.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_Link_ID.h"
@@ -45,15 +45,16 @@
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_ROC_Emulation_Type.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_RXBufferStatus.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_RXStatus.h"
-#include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_SerdesClockSpeed.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_SERDESLoopbackMode.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_SERDESRXDisparityError.h"
+#include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_SerdesClockSpeed.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_SimMode.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/DTC_Subsystem.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/Exceptions.h"
 #include "artdaq-core-mu2e/Overlays/DTC_Types/Utilities.h"
 
-namespace DTCLib {
+namespace DTCLib
+{
 
 typedef uint16_t roc_data_t;
 typedef uint16_t roc_address_t;
@@ -64,7 +65,7 @@ typedef uint16_t roc_address_t;
 /// </summary>
 class DTC : public DTC_Registers
 {
-public:
+  public:
 	/// <summary>
 	/// Construct an instance of the DTC class
 	/// </summary>
@@ -75,8 +76,7 @@ public:
 	/// Firmware Design Version. If set, will throw an exception if the DTC firmware does not match (Default: "")</param>
 	/// <param name="skipInit">Whether to skip full initialization of the DTC</param>
 	/// <param name="simMemoryFile">Name of the simulated DDR memory file if mu2esim is used</param>
-	explicit DTC(DTC_SimMode mode = DTC_SimMode_Disabled, int dtc = -1, unsigned rocMask = 0x1,
-				 std::string expectedDesignVersion = "", bool skipInit = false, std::string simMemoryFile = "mu2esim.bin", const std::string& uid = "");
+	explicit DTC(DTC_SimMode mode = DTC_SimMode_Disabled, int dtc = -1, unsigned rocMask = 0x1, std::string expectedDesignVersion = "", bool skipInit = false, std::string simMemoryFile = "mu2esim.bin", const std::string& uid = "");
 	virtual ~DTC();
 
 	//
@@ -107,8 +107,7 @@ public:
 	/// <param name="overwriteEnvrionment">Whether to use file instead of DTCLIB_SIM_FILE</param>
 	/// <param name="outputFileName">Name of binary file to write expected output (Default: "", no file created)</param>
 	/// <param name="skipVerify">Skip the verify stage of WriteSimFileToDTC</param>
-	void WriteSimFileToDTC(std::string file, bool goForever, bool overwriteEnvrionment = false,
-						   std::string outputFileName = "", bool skipVerify = false);
+	void WriteSimFileToDTC(std::string file, bool goForever, bool overwriteEnvrionment = false, std::string outputFileName = "", bool skipVerify = false);
 	/// <summary>
 	/// Read the DTC memory and determine whether the file was written correctly.
 	/// </summary>
@@ -148,8 +147,7 @@ public:
 	/// <param name="address2">Second address to read</param>
 	/// <param name="tmo_ms">Timeout, in milliseconds, for read (will retry until timeout is expired or data received)</param>
 	/// <returns>Pair of register values, first is from the first address, second from the second</returns>
-	std::pair<roc_data_t, roc_data_t> ReadROCRegisters(const DTC_Link_ID& link, const roc_address_t address1,
-													   const roc_address_t address2, int tmo_ms);
+	std::pair<roc_data_t, roc_data_t> ReadROCRegisters(const DTC_Link_ID& link, const roc_address_t address1, const roc_address_t address2, int tmo_ms);
 	/// <summary>
 	/// Perform a "double operation" write to ROC registers
 	/// </summary>
@@ -160,8 +158,7 @@ public:
 	/// <param name="data2">Value to write to second register</param>
 	/// <param name="requestAck">Whether to request acknowledement of this operation</param>
 	/// <param name="ack_tmo_ms">Timeout, in milliseconds, for ack (will retry until timeout is expired or ack received)</param>
-	bool WriteROCRegisters(const DTC_Link_ID& link, const roc_address_t address1, const roc_data_t data1,
-						   const roc_address_t address2, const roc_data_t data2, bool requestAck, int ack_tmo_ms);
+	bool WriteROCRegisters(const DTC_Link_ID& link, const roc_address_t address1, const roc_data_t data1, const roc_address_t address2, const roc_data_t data2, bool requestAck, int ack_tmo_ms);
 	/// <summary>
 	/// Perform a ROC block read
 	/// </summary>
@@ -235,9 +232,7 @@ public:
 	/// <param name="quiet">Whether to not print the JSON representation of the Readout Request (Default: true, no JSON
 	/// printed)</param>
 	/// <param name="requestAck">Whether to request acknowledement of this operation</param>
-	void SendDCSRequestPacket(const DTC_Link_ID& link, const DTC_DCSOperationType type, const roc_address_t address,
-							  const roc_data_t data = 0x0, const roc_address_t address2 = 0x0, const roc_data_t data2 = 0,
-							  bool quiet = true, bool requestAck = false);
+	void SendDCSRequestPacket(const DTC_Link_ID& link, const DTC_DCSOperationType type, const roc_address_t address, const roc_data_t data = 0x0, const roc_address_t address2 = 0x0, const roc_data_t data2 = 0, bool quiet = true, bool requestAck = false);
 
 	/// <summary>
 	/// Writes a packet to the DTC on the DCS channel
@@ -289,9 +284,9 @@ public:
 	/// <param name="channel">Channel to release</param>
 	void ReleaseAllBuffers(const DTC_DMA_Engine& channel);
 
-private:
+  private:
 	std::unique_ptr<DTC_DataPacket> ReadNextPacket(const DTC_DMA_Engine& channel, int tmo_ms);
-	int ReadBuffer(const DTC_DMA_Engine& channel, int retries = 10);
+	int                             ReadBuffer(const DTC_DMA_Engine& channel, int retries = 10);
 	/// <summary>
 	/// This function releases all buffers except for the one containing currentReadPtr. Should only be called when done
 	/// with data in other buffers!
