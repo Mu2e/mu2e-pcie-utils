@@ -1911,11 +1911,11 @@ void CFOLib::CFO_Registers::SetRunPlanData(const std::string& inputData, const u
 /// @param mismatches Optional pointer to a map that will be filled with any mismatches found, where the key is the
 ///		address of the mismatch and the value is a pair of expected and actual data values. If nullptr, an exception will be thrown on the first mismatch instead.
 void CFOLib::CFO_Registers::CompareRunPlanData(const std::string& inputData, const uint32_t& runPlanBaseAddress,
-											   std::map<uint32_t /* address */,
+											   std::optional<std::reference_wrapper<std::map<uint32_t /* address */,
 														std::pair<uint32_t /* expected */,
-																  uint32_t /* actual */>>* mismatches,
-											   std::vector<uint64_t>* andMasks /* = nullptr */,
-											   std::vector<uint64_t>* orMasks /* = nullptr */)
+																  uint32_t /* actual */>>>> mismatches,
+											   std::optional<std::reference_wrapper<std::vector<uint64_t>>> andMasks /* = std::nullopt */,
+											   std::optional<std::reference_wrapper<std::vector<uint64_t>>> orMasks /* = std::nullopt */)
 {
 	auto dataPtr = reinterpret_cast<const uint8_t*>(&inputData[0]);
 
@@ -1932,13 +1932,13 @@ void CFOLib::CFO_Registers::CompareRunPlanData(const std::string& inputData, con
 			uint8_t opCode = ((*((uint32_t*)(&(dataPtr[l])))) >> 24) & 0xFF;
 			if (andMasks && opCode == (uint8_t)CFOLib::CFO_Compiler::CFO_INSTR::AND_MODE_BITS)
 			{
-				andMasks->push_back((uint64_t)lastVal | ((uint64_t)(val & 0xFFFF) << 32));
-				__COUTT__ << "Found AND line = " << l / 8 << " --> 0x" << std::hex << andMasks->back() << __E__;
+				andMasks->get().push_back((uint64_t)lastVal | ((uint64_t)(val & 0xFFFF) << 32));
+				__COUTT__ << "Found AND line = " << l / 8 << " --> 0x" << std::hex << andMasks->get().back() << __E__;
 			}
 			if (orMasks && opCode == (uint8_t)CFOLib::CFO_Compiler::CFO_INSTR::OR_MODE_BITS)
 			{
-				orMasks->push_back((uint64_t)lastVal | ((uint64_t)(val & 0xFFFF) << 32));
-				__COUTT__ << "Found AND line = " << l / 8 << " --> 0x" << std::hex << orMasks->back() << __E__;
+				orMasks->get().push_back((uint64_t)lastVal | ((uint64_t)(val & 0xFFFF) << 32));
+				__COUTT__ << "Found AND line = " << l / 8 << " --> 0x" << std::hex << orMasks->get().back() << __E__;
 			}
 		}
 
@@ -1949,7 +1949,7 @@ void CFOLib::CFO_Registers::CompareRunPlanData(const std::string& inputData, con
 				__SS_THROW__;
 
 			__COUT__ << ss.str() << __E__;
-			(*mismatches)[runPlanBaseAddress + l / 4] = std::make_pair(*((uint32_t*)(&(dataPtr[l]))), val);
+			mismatches->get()[runPlanBaseAddress + l / 4] = std::make_pair(*((uint32_t*)(&(dataPtr[l]))), val);
 		}
 
 		lastVal = val;
