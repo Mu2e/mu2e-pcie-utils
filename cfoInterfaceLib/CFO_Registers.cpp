@@ -1912,8 +1912,9 @@ void CFOLib::CFO_Registers::SetRunPlanData(const std::string& inputData, const u
 ///		address of the mismatch and the value is a pair of expected and actual data values. If nullptr, an exception will be thrown on the first mismatch instead.
 void CFOLib::CFO_Registers::CompareRunPlanData(const std::string& inputData, const uint32_t& runPlanBaseAddress,
 											   std::optional<std::reference_wrapper<std::map<uint32_t /* address */,
-														std::pair<uint32_t /* expected */,
-																  uint32_t /* actual */>>>> mismatches,
+																							 std::pair<uint32_t /* expected */,
+																									   uint32_t /* actual */>>>>
+												   mismatches,
 											   std::optional<std::reference_wrapper<std::vector<uint64_t>>> andMasks /* = std::nullopt */,
 											   std::optional<std::reference_wrapper<std::vector<uint64_t>>> orMasks /* = std::nullopt */)
 {

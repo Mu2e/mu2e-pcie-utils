@@ -1075,10 +1075,7 @@ class CFO_Registers : public DTCLib::CFOandDTC_Registers
 	/// Optional pointer to a map that will be populated with any mismatching words,
 	/// keyed by address and containing expected/actual value pairs.
 	/// </param>
-	void CompareRunPlanData(const std::string& inputData, const uint32_t& address,
-	                        std::optional<std::reference_wrapper<std::map<uint32_t /* address */, std::pair<uint32_t /* expected */, uint32_t /* actual */>>>> mismatches = std::nullopt,
-	                        std::optional<std::reference_wrapper<std::vector<uint64_t>>> andMasks = std::nullopt,
-	                        std::optional<std::reference_wrapper<std::vector<uint64_t>>> orMasks = std::nullopt);
+	void CompareRunPlanData(const std::string& inputData, const uint32_t& address, std::optional<std::reference_wrapper<std::map<uint32_t /* address */, std::pair<uint32_t /* expected */, uint32_t /* actual */>>>> mismatches = std::nullopt, std::optional<std::reference_wrapper<std::vector<uint64_t>>> andMasks = std::nullopt, std::optional<std::reference_wrapper<std::vector<uint64_t>>> orMasks = std::nullopt);
 	/// <summary>
 	/// Read the current run plan mode as reported by the firmware.
 	/// </summary>
