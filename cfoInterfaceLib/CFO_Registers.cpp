@@ -9,6 +9,7 @@
 
 #include "artdaq-core/Utilities/ExceptionHandler.hh"    /*for artdaq::ExceptionHandler*/
 #include "artdaq-core/Utilities/ExceptionStackTrace.hh" /*for artdaq::ExceptionStackTrace*/
+#include "cfoInterfaceLib/CFO_Compiler.hh"
 
 #include "TRACE/tracemf.h"
 #define TLVL_ResetCFO TLVL_DEBUG + 5
@@ -1912,17 +1913,35 @@ void CFOLib::CFO_Registers::SetRunPlanData(const std::string& inputData, const u
 void CFOLib::CFO_Registers::CompareRunPlanData(const std::string& inputData, const uint32_t& runPlanBaseAddress,
 											   std::map<uint32_t /* address */,
 														std::pair<uint32_t /* expected */,
-																  uint32_t /* actual */>>* mismatches)
+																  uint32_t /* actual */>>* mismatches,
+									std::vector<uint64_t>* andMasks /* = nullptr */, 
+									std::vector<uint64_t>* orMasks /* = nullptr */)
 {
 	auto dataPtr = reinterpret_cast<const uint8_t*>(&inputData[0]);
 
 	WriteRegister_(runPlanBaseAddress, CFO_Register_RunPlan_Address);  // resets run plan BRAM write address
-	uint32_t val;
+	uint32_t val, lastVal = 0;
 	for (uint32_t l = 0; l < inputData.size(); l += 4)
 	{
 		val = ReadRegister_(CFO_Register_RunPlan_Data);
 
 		__COUTT__ << std::hex << std::setw(8) << std::setfill('0') << "addr 0x" << (runPlanBaseAddress + l / 4) << " data 0x" << *((uint32_t*)(&(dataPtr[l]))) << " =? rdata 0x" << val << __E__;
+
+		if((andMasks || orMasks) && l % 8 == 4) //check opcodes
+		{
+			uint8_t opCode = ((*((uint32_t*)(&(dataPtr[l])))) >> 24) & 0xFF;
+			if(andMasks && opCode ==  (uint8_t)CFOLib::CFO_Compiler::CFO_INSTR::AND_MODE_BITS)
+			{
+				andMasks->push_back((uint64_t)lastVal | ((uint64_t)(val & 0xFFFF) << 32));
+				__COUTT__ << "Found AND line = " << l/8 << " --> 0x" << std::hex << andMasks->back() << __E__;
+			}
+			if(orMasks && opCode ==  (uint8_t)CFOLib::CFO_Compiler::CFO_INSTR::OR_MODE_BITS)
+			{
+				orMasks->push_back((uint64_t)lastVal | ((uint64_t)(val & 0xFFFF) << 32));
+				__COUTT__ << "Found AND line = " << l/8 << " --> 0x" << std::hex << orMasks->back() << __E__;
+			}			
+		}
+
 		if (val != *((uint32_t*)(&(dataPtr[l]))))
 		{
 			__SS__ << "Run plan validation failed at " << std::hex << std::setw(8) << std::setfill('0') << "addr 0x" << (runPlanBaseAddress + l / 4) << " data 0x" << *((uint32_t*)(&(dataPtr[l]))) << " != rdata 0x" << val << __E__;
@@ -1932,6 +1951,8 @@ void CFOLib::CFO_Registers::CompareRunPlanData(const std::string& inputData, con
 			__COUT__ << ss.str() << __E__;
 			(*mismatches)[runPlanBaseAddress + l / 4] = std::make_pair(*((uint32_t*)(&(dataPtr[l]))), val);
 		}
+
+		lastVal = val;
 	}  // end run plan validation
 
 }  // end CompareRunPlanData()
