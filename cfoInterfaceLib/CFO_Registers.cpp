@@ -1944,7 +1944,7 @@ void CFOLib::CFO_Registers::CompareRunPlanData(const std::string& inputData, con
 			if (orMasks && opCode == (uint8_t)CFOLib::CFO_Compiler::CFO_INSTR::OR_MODE_BITS)
 			{
 				orMasks->get().push_back((uint64_t)lastVal | ((uint64_t)(val & 0xFFFF) << 32));
-				__COUTT__ << "Found AND line = " << l / 8 << " --> 0x" << std::hex << orMasks->get().back() << __E__;
+				__COUTT__ << "Found OR line = " << l / 8 << " --> 0x" << std::hex << orMasks->get().back() << __E__;
 			}
 		}
 
