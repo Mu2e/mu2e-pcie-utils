@@ -132,6 +132,7 @@ try
 	char outStr[20];
 	std::string binaryLine;  // build least-significant byte on right display
 	std::string tabStr = "";
+	int markerCnt = 0;
 	for (auto c : output_)
 	{
 		outFile << c;
@@ -151,11 +152,14 @@ try
 		// show command for easier human understanding of binary
 		if (cnt % 8 == 7)  // last byte in output is most-significant (and the opcode)
 		{
-			resultSs << binaryLine << "     // " << translateOpCode(CFOLib::CFO_Compiler::CFO_INSTR(c));
+			auto instr = CFOLib::CFO_Compiler::CFO_INSTR(c);
+			resultSs << binaryLine << "     // " << translateOpCode(instr);
+			if (instr == CFO_INSTR::MARKER)
+				resultSs << " Marker #" << ++markerCnt;
 			__COUTV__(binaryLine);
-			if (CFOLib::CFO_Compiler::CFO_INSTR(c) == CFO_INSTR::LOOP)
+			if (instr == CFO_INSTR::LOOP)
 				tabStr += '\t';
-			else if (CFOLib::CFO_Compiler::CFO_INSTR(c) == CFO_INSTR::DO_LOOP && tabStr.length())
+			else if (instr == CFO_INSTR::DO_LOOP && tabStr.length())
 				tabStr = tabStr.substr(0, tabStr.length() - 1);
 		}
 
