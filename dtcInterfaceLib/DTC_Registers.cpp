@@ -90,16 +90,14 @@ DTCLib::DTC_SimMode DTCLib::DTC_Registers::SetSimMode(std::string expectedDesign
 	if (expectedDesignVersion != "" &&
 		static_cast<uint32_t>(std::stoul(expectedDesignVersion, nullptr, 16)) != ReadRegister_(CFOandDTC_Register_DesignDate))
 	{
-		__SS__;		
+		__SS__;
 		try
 		{
-			ss << "Version mismatch! Expected DTC version is '" <<  ReadDesignDate( static_cast<uint32_t>(std::stoul(expectedDesignVersion, nullptr, 16))) << 
-				"' (0x" << std::hex << static_cast<uint32_t>(std::stoul(expectedDesignVersion, nullptr, 16)) << " != 0x" << ReadRegister_(CFOandDTC_Register_DesignDate) << ") while the readback version was '" << ReadDesignVersion() << ".'" << __E__;
+			ss << "Version mismatch! Expected DTC version is '" << ReadDesignDate(static_cast<uint32_t>(std::stoul(expectedDesignVersion, nullptr, 16))) << "' (0x" << std::hex << static_cast<uint32_t>(std::stoul(expectedDesignVersion, nullptr, 16)) << " != 0x" << ReadRegister_(CFOandDTC_Register_DesignDate) << ") while the readback version was '" << ReadDesignVersion() << ".'" << __E__;
 		}
-		catch(...) //simplify printout if illegal required version
+		catch (...)  // simplify printout if illegal required version
 		{
-			ss << "Version mismatch (is required version legal?)! Expected DTC version is '" <<  expectedDesignVersion << 
-				"' (0x" << std::hex << static_cast<uint32_t>(std::stoul(expectedDesignVersion, nullptr, 16)) << " != 0x" << ReadRegister_(CFOandDTC_Register_DesignDate) << ") while the readback version was '" << ReadDesignVersion() << ".'" << __E__;
+			ss << "Version mismatch (is required version legal?)! Expected DTC version is '" << expectedDesignVersion << "' (0x" << std::hex << static_cast<uint32_t>(std::stoul(expectedDesignVersion, nullptr, 16)) << " != 0x" << ReadRegister_(CFOandDTC_Register_DesignDate) << ") while the readback version was '" << ReadDesignVersion() << ".'" << __E__;
 		}
 		__SS_THROW__;
 		// throw new DTC_WrongVersionException(expectedDesignVersion, ReadDesignVersion());
