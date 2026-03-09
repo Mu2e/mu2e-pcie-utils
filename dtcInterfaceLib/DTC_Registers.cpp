@@ -87,20 +87,27 @@ DTCLib::DTC_SimMode DTCLib::DTC_Registers::SetSimMode(std::string expectedDesign
 	TLOG(TLVL_INFO) << "Initializing DTC device, sim mode is " << DTC_SimModeConverter(simMode_).toString() << " for uid = " << uid << ", deviceIndex = " << dtc;
 
 	device_.init(simMode_, dtc, simMemoryFile, uid);
-	if (expectedDesignVersion != "" &&
-		static_cast<uint32_t>(std::stoul(expectedDesignVersion, nullptr, 16)) != ReadRegister_(CFOandDTC_Register_DesignDate))
+	if (expectedDesignVersion != "")
 	{
-		__SS__;
+		uint32_t parsedExpectedVersion = 0;
 		try
 		{
-			ss << "Version mismatch! Expected DTC version is '" << ReadDesignDate(static_cast<uint32_t>(std::stoul(expectedDesignVersion, nullptr, 16))) << "' (0x" << std::hex << static_cast<uint32_t>(std::stoul(expectedDesignVersion, nullptr, 16)) << " != 0x" << ReadRegister_(CFOandDTC_Register_DesignDate) << ") while the readback version was '" << ReadDesignVersion() << ".'" << __E__;
+			parsedExpectedVersion = static_cast<uint32_t>(std::stoul(expectedDesignVersion, nullptr, 16));
 		}
-		catch (...)  // simplify printout if illegal required version
+		catch (...)  // illegal/non-hex expectedDesignVersion
 		{
-			ss << "Version mismatch (is required version legal?)! Expected DTC version is '" << expectedDesignVersion << "' (0x" << std::hex << static_cast<uint32_t>(std::stoul(expectedDesignVersion, nullptr, 16)) << " != 0x" << ReadRegister_(CFOandDTC_Register_DesignDate) << ") while the readback version was '" << ReadDesignVersion() << ".'" << __E__;
+			__SS__;
+			ss << "Version mismatch (is required version legal?)! Expected DTC version is '" << expectedDesignVersion << "' while the readback version was '" << ReadDesignVersion() << ".'" << __E__;
+			__SS_THROW__;
 		}
-		__SS_THROW__;
-		// throw new DTC_WrongVersionException(expectedDesignVersion, ReadDesignVersion());
+
+		if (parsedExpectedVersion != ReadRegister_(CFOandDTC_Register_DesignDate))
+		{
+			__SS__;
+			ss << "Version mismatch! Expected DTC version is '" << ReadDesignDate(parsedExpectedVersion) << "' (0x" << std::hex << parsedExpectedVersion << " != 0x" << ReadRegister_(CFOandDTC_Register_DesignDate) << ") while the readback version was '" << ReadDesignVersion() << ".'" << __E__;
+			__SS_THROW__;
+			// throw new DTC_WrongVersionException(expectedDesignVersion, ReadDesignVersion());
+		}
 	}
 
 	// if (skipInit || true)
