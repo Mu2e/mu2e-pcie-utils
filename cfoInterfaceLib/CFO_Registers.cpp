@@ -1904,12 +1904,17 @@ void CFOLib::CFO_Registers::SetRunPlanData(const std::string& inputData, const u
 
 /// @brief  Read back run plan data from BRAM and compare to input data for validation.
 ///		Note that the run plan BRAM read address auto-increments with each read, so we just need to set it once at the beginning of the function.
-///		If mismatches is not null, it will be filled with a map of mismatches instead of throwing an exception on first mismatch.
-///		Otherwise, an exception will be thrown on the first mismatch with details of the failure.
-/// @param inputData
-/// @param runPlanBaseAddress
-/// @param mismatches Optional pointer to a map that will be filled with any mismatches found, where the key is the
-///		address of the mismatch and the value is a pair of expected and actual data values. If nullptr, an exception will be thrown on the first mismatch instead.
+///		If mismatches has a value, it will be filled with a map of mismatches instead of throwing an exception on the first mismatch.
+///		Otherwise (std::nullopt), an exception will be thrown on the first mismatch with details of the failure.
+/// @param inputData  The binary run plan data to compare against the readback.
+/// @param runPlanBaseAddress  The base BRAM address at which the run plan was written.
+/// @param mismatches  Optional reference to a map that will be filled with any mismatches found, where the key is the
+///		address of the mismatch and the value is a pair of (expected, actual) data values.
+///		Pass std::nullopt (default) to throw an exception on the first mismatch instead of collecting them.
+/// @param andMasks  Optional reference to a vector that will be filled with the 48-bit mask values found in
+///		AND_MODE_BITS instructions during the readback scan. Pass std::nullopt (default) to skip collection.
+/// @param orMasks   Optional reference to a vector that will be filled with the 48-bit mask values found in
+///		OR_MODE_BITS instructions during the readback scan. Pass std::nullopt (default) to skip collection.
 void CFOLib::CFO_Registers::CompareRunPlanData(const std::string& inputData, const uint32_t& runPlanBaseAddress,
 											   std::optional<std::reference_wrapper<std::map<uint32_t /* address */,
 																							 std::pair<uint32_t /* expected */,
