@@ -11,7 +11,7 @@ cmake_minimum_required (VERSION 3.19 FATAL_ERROR)
 
 find_package(cetmodules 3.19.02 REQUIRED)
 
-project(mu2e-pcie-utils VERSION 8.01.00)
+project(mu2e-pcie-utils VERSION 8.02.00)
 
 include(CetCMakeEnv)
 cet_cmake_env()
