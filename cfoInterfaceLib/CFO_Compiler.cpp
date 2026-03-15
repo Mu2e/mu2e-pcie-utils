@@ -243,6 +243,7 @@ const std::map<std::string, CFOLib::CFO_Compiler::CFO_INSTR> CFOLib::CFO_Compile
 	{"SET_MODE_BITS", CFO_INSTR::SET_MODE_BITS},
 	{"AND_MODE_BITS", CFO_INSTR::AND_MODE_BITS},
 	{"OR_MODE_BITS", CFO_INSTR::OR_MODE_BITS},
+	{"OR_SINGLESHOT_MODE_BITS", CFO_INSTR::OR_SINGLESHOT_MODE_BITS},
 	{"SET_MODE", CFO_INSTR::SET_MODE},
 };
 
@@ -279,6 +280,7 @@ const std::map<CFOLib::CFO_Compiler::CFO_INSTR, std::string> CFOLib::CFO_Compile
 	{CFOLib::CFO_Compiler::CFO_INSTR::SET_MODE_BITS, "SET_MODE_BITS"},
 	{CFOLib::CFO_Compiler::CFO_INSTR::AND_MODE_BITS, "AND_MODE_BITS"},
 	{CFOLib::CFO_Compiler::CFO_INSTR::OR_MODE_BITS, "OR_MODE_BITS"},
+	{CFOLib::CFO_Compiler::CFO_INSTR::OR_SINGLESHOT_MODE_BITS, "OR_SINGLESHOT_MODE_BITS"},
 	{CFOLib::CFO_Compiler::CFO_INSTR::SET_MODE, "SET_MODE"},
 };
 
@@ -639,7 +641,8 @@ uint64_t CFOLib::CFO_Compiler::calculateParameterAndErrorCheck(CFO_INSTR instruc
 					   // otherwise, a normal noop label
 		case CFO_INSTR::SET_MODE_BITS:
 		case CFO_INSTR::AND_MODE_BITS:
-		case CFO_INSTR::OR_MODE_BITS: {
+		case CFO_INSTR::OR_MODE_BITS:
+		case CFO_INSTR::OR_SINGLESHOT_MODE_BITS: {
 			if (opArgCount != 7 ||
 				opArguments_[1] != "start_bit" ||
 				opArguments_[3] != "bit_count" ||
@@ -729,10 +732,11 @@ uint64_t CFOLib::CFO_Compiler::calculateParameterAndErrorCheck(CFO_INSTR instruc
 					return value;        // AND
 
 				case CFO_INSTR::OR_MODE_BITS:
+				case CFO_INSTR::OR_SINGLESHOT_MODE_BITS:
 
 					value <<= startBit;  // shift then mask
 					value &= bitmask;    // force ignore outside of bitcount in case of ~ inverted value
-					return value;        // OR
+					return value;        // OR / OR (single-shot)
 
 				default: {
 					__COUTV__((int)instructionOpcode);

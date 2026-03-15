@@ -49,7 +49,8 @@ class CFO_Compiler
 		CLEAR_MODE_BITS = 100,  // used by HEARTBEAT w/param 'event_mode = registered'
 		SET_MODE_BITS   = 101,  // used by HEARTBEAT w/param 'event_mode = registered'
 		AND_MODE_BITS   = 102,  // used by HEARTBEAT w/param 'event_mode = registered'
-		OR_MODE_BITS    = 103,  // used by HEARTBEAT w/param 'event_mode = registered'
+		OR_MODE_BITS             = 103,  // used by HEARTBEAT w/param 'event_mode = registered'
+		OR_SINGLESHOT_MODE_BITS  = 111,  // single-shot OR; identical to OR but fires only once in hardware
 		SET_MODE        = 200,  // used by HEARTBEAT w/param 'event_mode = registered'
 		INVALID         = 0xFF,
 	};
