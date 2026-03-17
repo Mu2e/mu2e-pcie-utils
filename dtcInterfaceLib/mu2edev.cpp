@@ -57,7 +57,6 @@ mu2edev::~mu2edev()
 	TLOG(TLVL_INFO) << "DESTRUCTOR " << UID_;
 
 	end_dcs_transaction(false /* mustHaveLock */);
-	delete simulator_;
 	if (debugFp_) fclose(debugFp_);
 
 	close();
