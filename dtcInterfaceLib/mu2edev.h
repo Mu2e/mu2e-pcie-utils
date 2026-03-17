@@ -179,7 +179,7 @@ class mu2edev
   private:
 	// unsigned delta_(int chn, int dir);
 
-	int              devfd_;
+	int              devfd_ = -1;
 	volatile void*   mu2e_mmap_ptrs_[MU2E_MAX_NUM_DTCS][MU2E_MAX_CHANNELS][2][2];
 	m_ioc_get_info_t mu2e_channel_info_[MU2E_MAX_NUM_DTCS][MU2E_MAX_CHANNELS][2];
 	unsigned         buffers_held_;
