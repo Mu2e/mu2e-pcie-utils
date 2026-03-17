@@ -43,7 +43,6 @@ DTCLib::CFOandDTC_Registers::CFOandDTC_Registers()
 DTCLib::CFOandDTC_Registers::~CFOandDTC_Registers()
 {
 	TLOG(TLVL_TRACE) << "DESTRUCTOR";
-	device_.close();
 }  // end destructor()
 
 /// <summary>

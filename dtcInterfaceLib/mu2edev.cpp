@@ -49,14 +49,19 @@ mu2edev::mu2edev()
 {
 	// TRACE_CNTL( "lvlmskM", 0x3 );
 	// TRACE_CNTL( "lvlmskS", 0x3 );
-}
+	TLOG(TLVL_INFO) << "CONSTRUCTOR";
+}  // end constructor
 
 mu2edev::~mu2edev()
 {
+	TLOG(TLVL_INFO) << "DESTRUCTOR " << UID_;
+
 	end_dcs_transaction(false /* mustHaveLock */);
-	delete simulator_;
 	if (debugFp_) fclose(debugFp_);
-}
+
+	close();
+	TLOG(TLVL_INFO) << "DESTRUCTOR end";
+}  // end destructor
 
 int mu2edev::init(DTCLib::DTC_SimMode simMode, int deviceIndex, std::string simMemoryFileName, const std::string& uid)
 {
@@ -303,7 +308,7 @@ int mu2edev::read_data(DTC_DMA_Engine const& chn, void** buffer, int tmo_ms)
 	deviceTime_ += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start).count();
 	if (retsts > 0) readSize_ += retsts;
 	return retsts;
-}  // read_data
+}  // end read_data()
 
 /* read_release
    release a number of buffers (usually 1)
@@ -358,7 +363,7 @@ int mu2edev::read_release(DTC_DMA_Engine const& chn, unsigned num)
 	}
 	deviceTime_ += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start).count();
 	return retsts;
-}
+}  // end read_release()
 
 int mu2edev::read_register(uint16_t address, int tmo_ms, uint32_t* output)
 {
@@ -384,7 +389,7 @@ int mu2edev::read_register(uint16_t address, int tmo_ms, uint32_t* output)
 	TRACE(TLVL_READ_REGISTER, UID_ + " - Read value 0x%x from register 0x%x errorcode %d", reg.val, address, errorCode);
 	deviceTime_ += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start).count();
 	return errorCode;
-}
+}  // end read_register()
 
 int mu2edev::write_register(uint16_t address, int tmo_ms, uint32_t data)
 {
@@ -408,7 +413,7 @@ int mu2edev::write_register(uint16_t address, int tmo_ms, uint32_t data)
 	}
 	deviceTime_ += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start).count();
 	return retsts;
-}
+}  // end write_register()
 
 int mu2edev::write_register_checked(uint16_t address, int tmo_ms, uint32_t data, uint32_t* output)
 {
@@ -435,7 +440,7 @@ int mu2edev::write_register_checked(uint16_t address, int tmo_ms, uint32_t data,
 	}
 	deviceTime_ += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start).count();
 	return retsts;
-}
+}  // end write_register_checked()
 
 void mu2edev::meta_dump()
 {
@@ -538,7 +543,7 @@ int mu2edev::write_data(DTC_DMA_Engine const& chn, void* buffer, size_t bytes)
 	deviceTime_ += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start).count();
 	if (retsts >= 0) writeSize_ += bytes;
 	return retsts;
-}  // write_data
+}  // end write_data()
 
 int mu2edev::release_all(DTC_DMA_Engine const& chn)
 {
@@ -598,7 +603,7 @@ int mu2edev::release_all(DTC_DMA_Engine const& chn)
 	}
 	deviceTime_ += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start).count();
 	return retsts;
-}
+}  // end release_all()
 
 void mu2edev::close()
 {
@@ -606,13 +611,41 @@ void mu2edev::close()
 	{
 		delete simulator_;
 		simulator_ = nullptr;
+		TLOG(TLVL_INFO) << UID_ << " " << __PRETTY_FUNCTION__ << " - mu2edev::close() closed simulated device";
 	}
-	else
+	else if (devfd_ != -1)
 	{
+		// mmap also keeps handle to the device! so must unmap
+		for (int chn = 0; chn < MU2E_MAX_CHANNELS; ++chn)
+			for (unsigned dir = 0; dir < 2; ++dir)
+				for (unsigned map = 0; map < 2; ++map)
+				{
+					if (mu2e_mmap_ptrs_[activeDeviceIndex_][chn][dir][map] &&
+						mu2e_mmap_ptrs_[activeDeviceIndex_][chn][dir][map] != MAP_FAILED)
+					{
+						size_t length = mu2e_channel_info_[activeDeviceIndex_][chn][dir].num_buffs *
+										((map == MU2E_MAP_BUFF) ? mu2e_channel_info_[activeDeviceIndex_][chn][dir].buff_size : sizeof(int));
+
+						TRACE(TLVL_INIT_DMA_ENGINE, UID_ + " - mu2edev::init chnDirMap2offset=%lu mu2e_mmap_ptrs_[offset][%d][%d][%d]=%p p=prot l=%lu",
+							  // offset,
+							  activeDeviceIndex_, chn,
+							  dir, map, mu2e_mmap_ptrs_[activeDeviceIndex_][chn][dir][map],
+							  // prot == PROT_READ ? 'R' : 'W',
+							  length);
+
+						munmap((void*)mu2e_mmap_ptrs_[activeDeviceIndex_][chn][dir][map],
+							   length);
+						mu2e_mmap_ptrs_[activeDeviceIndex_][chn][dir][map] = nullptr;
+					}
+				}
+
+		// after unmap, then close device
 		::close(devfd_);
-		devfd_ = 0;
+		devfd_ = -1;
+		TLOG(TLVL_INFO) << UID_ << " " << __PRETTY_FUNCTION__ << " - mu2edev::close() closed device file descriptor";
 	}
-}
+	TLOG(TLVL_DEBUG) << UID_ << " " << __PRETTY_FUNCTION__ << " - mu2edev::close() done: " << otsStyleStackTrace() << __E__;
+}  // end close()
 
 void mu2edev::begin_dcs_transaction()
 {
