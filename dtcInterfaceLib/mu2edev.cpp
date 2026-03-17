@@ -62,7 +62,7 @@ mu2edev::~mu2edev()
 
 	close();
 	TLOG(TLVL_INFO) << "DESTRUCTOR end";
-}  // end desctructor
+}  // end destructor
 
 int mu2edev::init(DTCLib::DTC_SimMode simMode, int deviceIndex, std::string simMemoryFileName, const std::string& uid)
 {
