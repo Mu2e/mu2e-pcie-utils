@@ -119,7 +119,7 @@ std::string DTCLib::CFOandDTC_Registers::ReadDesignDate(std::optional<uint32_t> 
 	if (mon - 1 >= months.size())
 	{
 		__SS__ << "Invalid register read for firmware design date month index: " + std::to_string(mon) << " in hex read-data 0x" << std::hex << readData << ". If the value is 0 or 165, this likely means the PCIe in not initialized and perhaps a PCIe reset of the linux system would fix the issue.";
-		__SS_THROW__;		
+		__SS_THROW__;
 	}
 	if (((readData >> 28) & 0xF) == 0xA)
 		o << "SIM-";

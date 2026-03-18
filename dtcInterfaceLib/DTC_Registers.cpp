@@ -95,7 +95,7 @@ DTCLib::DTC_SimMode DTCLib::DTC_Registers::SetSimMode(std::string expectedDesign
 		try
 		{
 			parsedExpectedVersion = static_cast<uint32_t>(std::stoul(expectedDesignVersion, nullptr, 16));
-			parsedDesignDate =  ReadDesignDate(parsedExpectedVersion);
+			parsedDesignDate = ReadDesignDate(parsedExpectedVersion);
 		}
 		catch (...)  // illegal/non-hex expectedDesignVersion
 		{
