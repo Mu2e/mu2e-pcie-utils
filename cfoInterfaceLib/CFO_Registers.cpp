@@ -95,21 +95,23 @@ DTCLib::DTC_SimMode CFOLib::CFO_Registers::SetSimMode(std::string expectedDesign
 	if (expectedDesignVersion != "")
 	{
 		uint32_t parsedExpectedVersion = 0;
+		std::string parsedDesignDate = "";
 		try
 		{
 			parsedExpectedVersion = static_cast<uint32_t>(std::stoul(expectedDesignVersion, nullptr, 16));
+			parsedDesignDate =  ReadDesignDate(parsedExpectedVersion);
 		}
 		catch (...)  // illegal/non-hex expectedDesignVersion
 		{
 			__SS__;
-			ss << "Version mismatch (is required version legal?)! Expected CFO (device index #" << cfo << ") version is '" << expectedDesignVersion << "' while the readback version was '" << ReadDesignVersion() << ".'" << __E__;
+			ss << "Version mismatch (is Expected Firmware Version string legal?)! Expected CFO (device index #" << cfo << ") version is '" << expectedDesignVersion << "' while the readback version was '" << ReadDesignVersion() << ".'" << __E__;
 			__SS_THROW__;
 		}
 
 		if (parsedExpectedVersion != ReadRegister_(CFOandDTC_Register_DesignDate))
 		{
 			__SS__;
-			ss << "Version mismatch! Expected CFO (device index #" << cfo << ") version is '" << ReadDesignDate(parsedExpectedVersion) << "' (0x" << std::hex << parsedExpectedVersion << " != 0x" << ReadRegister_(CFOandDTC_Register_DesignDate) << ") while the readback version was '" << ReadDesignVersion() << ".'" << __E__;
+			ss << "Version mismatch! Expected CFO (device index #" << cfo << ") version is '" << parsedDesignDate << "' (0x" << std::hex << parsedExpectedVersion << " != 0x" << ReadRegister_(CFOandDTC_Register_DesignDate) << ") while the readback version was '" << ReadDesignVersion() << ".'" << __E__;
 			__SS_THROW__;
 			// throw new DTC_WrongVersionException(expectedDesignVersion, ReadDesignVersion());
 		}
