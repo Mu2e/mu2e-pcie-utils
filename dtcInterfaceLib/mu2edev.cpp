@@ -158,9 +158,9 @@ void mu2edev::initDMAEngine()
 		__SS__ << "mu2e Device file not found (or DTCLIB_SIM_ENABLE not set)! Exiting.\n"
 			   << "Attempt to open '" << devfile << "' and received error: " << errno << " - " << strerror(errno) << __E__;
 
-		ss << "Who owns it?\n"
+		ss << "Who owns it? (ls -l /dev/mu2e*)\n"
 		   << exec("ls -l /dev/mu2e*") << __E__;
-		ss << "\nWhat process is using it (will onyl show if the same user)?\n"
+		ss << "\nWhat process is using it (lsof /dev/mu2e* 2>/dev/null, will only show processes owned by the current user)?\n"
 		   << exec("lsof /dev/mu2e* 2>/dev/null") << __E__;
 		perror(ss.str().c_str());
 		__SS_THROW__;
