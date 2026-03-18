@@ -57,12 +57,11 @@ mu2edev::~mu2edev()
 	TLOG(TLVL_INFO) << "DESTRUCTOR " << UID_;
 
 	end_dcs_transaction(false /* mustHaveLock */);
-	delete simulator_;
 	if (debugFp_) fclose(debugFp_);
 
 	close();
 	TLOG(TLVL_INFO) << "DESTRUCTOR end";
-}  // end desctructor
+}  // end destructor
 
 int mu2edev::init(DTCLib::DTC_SimMode simMode, int deviceIndex, std::string simMemoryFileName, const std::string& uid)
 {
