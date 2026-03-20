@@ -837,7 +837,7 @@ uint64_t CFOLib::CFO_Compiler::calculateParameterAndErrorCheck(CFO_INSTR instruc
 template<class T>
 bool getNumber(const std::string& s, T& retValue)
 {
-	__COUTVS__(2,s);
+	__COUTVS__(2, s);
 
 	// extract set of potential numbers and operators
 	std::vector<std::string> numbers;
@@ -849,8 +849,8 @@ bool getNumber(const std::string& s, T& retValue)
 						/*whitespace*/ std::set<char>({' ', '\t', '\n', '\r'}),
 						&ops);
 
-	__COUTVS__(2,vectorToString(numbers));
-	__COUTVS__(2,vectorToString(ops));
+	__COUTVS__(2, vectorToString(numbers));
+	__COUTVS__(2, vectorToString(ops));
 
 	retValue = 0;  // initialize
 
@@ -874,7 +874,7 @@ bool getNumber(const std::string& s, T& retValue)
 
 		verified = false;
 
-		__COUTVS__(2,number);
+		__COUTVS__(2, number);
 
 		// check integer types
 		if (typeid(unsigned int) == typeid(retValue) || typeid(int) == typeid(retValue) || typeid(unsigned long long) == typeid(retValue) ||
@@ -926,7 +926,7 @@ bool getNumber(const std::string& s, T& retValue)
 				 typeid(long long) == typeid(retValue) || typeid(unsigned long) == typeid(retValue) || typeid(long) == typeid(retValue) ||
 				 typeid(unsigned short) == typeid(retValue) || typeid(short) == typeid(retValue) || typeid(uint8_t) == typeid(retValue))
 		{
-			__COUTVS__(2,number[1]);
+			__COUTVS__(2, number[1]);
 			if (number.size() > 2 && number[1] == 'x')  // assume hex value
 				tmpValue = (T)strtol(number.c_str(), 0, 16);
 			else if (number.size() > 1 && number[0] == 'b')            // assume binary value
@@ -936,7 +936,7 @@ bool getNumber(const std::string& s, T& retValue)
 		}
 		else  // just try!
 		{
-			__COUTVS__(2,number[1]);
+			__COUTVS__(2, number[1]);
 			if (number.size() > 2 && number[1] == 'x')  // assume hex value
 				tmpValue = (T)strtol(number.c_str(), 0, 16);
 			else if (number.size() > 1 && number[0] == 'b')            // assume binary value
@@ -948,7 +948,7 @@ bool getNumber(const std::string& s, T& retValue)
 			// __SS_THROW__;
 		}
 
-		__COUTVS__(2,tmpValue);
+		__COUTVS__(2, tmpValue);
 
 		// apply operation
 		if (i == 0)  // first value, no operation, just take value
