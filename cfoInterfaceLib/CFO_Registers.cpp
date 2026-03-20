@@ -1899,7 +1899,7 @@ DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatRunPlanBeamOffBaseAddress
 void CFOLib::CFO_Registers::SetRunPlanData(const std::string& inputData, const uint32_t& runPlanBaseAddress)
 {
 	__COUTTV__(inputData.size());
-	__COUTT__ << "Writing run plan of size " << inputData.size() << " to base address 0x" << std::hex << std::setw(8) << std::setfill('0') << runPlanBaseAddress << __E__;
+	__COUT__ << "Writing run plan of size " << inputData.size() << " to base address 0x" << std::hex << std::setw(8) << std::setfill('0') << runPlanBaseAddress << __E__;
 
 	auto dataPtr = reinterpret_cast<const uint8_t*>(&inputData[0]);
 
@@ -1913,6 +1913,7 @@ void CFOLib::CFO_Registers::SetRunPlanData(const std::string& inputData, const u
 		__COUTT__ << std::hex << std::setw(8) << std::setfill('0') << "addr 0x" << (runPlanBaseAddress + l / 4) << " data 0x" << *((uint32_t*)(&(dataPtr[l]))) << __E__;
 	}  // end primary run plan write loop
 
+	__COUT__ << "Verifying run plan of size " << inputData.size() << " to base address 0x" << std::hex << std::setw(8) << std::setfill('0') << runPlanBaseAddress << __E__;
 	// now verify run plan w/readback (throws exception on mismatch)
 	CompareRunPlanData(inputData, runPlanBaseAddress);
 
@@ -1966,7 +1967,29 @@ void CFOLib::CFO_Registers::CompareRunPlanData(const std::string& inputData, con
 
 		if (val != *((uint32_t*)(&(dataPtr[l]))))
 		{
-			__SS__ << "Run plan validation failed at " << std::hex << std::setw(8) << std::setfill('0') << "addr 0x" << (runPlanBaseAddress + l / 4) << " data 0x" << *((uint32_t*)(&(dataPtr[l]))) << " != rdata 0x" << val << __E__;
+			uint8_t opCode = -1;
+			if(l % 8 == 4)
+				opCode = ((*((uint32_t*)(&(dataPtr[l])))) >> 24) & 0xFF;
+			else if(l + 4 < inputData.size())
+				opCode = ((*((uint32_t*)(&(dataPtr[l+4])))) >> 24) & 0xFF;
+			if (opCode == (uint8_t)CFOLib::CFO_Compiler::CFO_INSTR::OR_SINGLESHOT_MODE_BITS)
+			{
+				if(l % 8 == 4 && opCode == (val >> 24))  // if opcode matches, ignore mismatch since single-shot mode bit instructions fire once and then clear 48-bit value
+				{
+					__COUTT__ << "Ignoring mismatch at line #" << l / 8 << " for OR_SINGLESHOT_MODE_BITS instruction since opcode matches and data auto-clears after firing." << __E__;
+					continue;
+				}
+				if(l % 8 == 0)
+				{
+					__COUTT__ << "Ignoring mismatch at line #" << l / 8 << " for OR_SINGLESHOT_MODE_BITS instruction since opcode matches for this data and data auto-clears after firing." << __E__;
+					continue;
+				}
+			}
+
+			__SS__ << "Run plan validation failed at line #" << l / 8 << " " 
+				<< "addr 0x" << std::hex << std::setw(8) << std::setfill('0') << (runPlanBaseAddress + l / 4) 
+				<< " expected data 0x" << std::hex << std::setw(8) << std::setfill('0') << *((uint32_t*)(&(dataPtr[l]))) 
+				<< " != readback data 0x" << std::hex << std::setw(8) << std::setfill('0') << val << __E__;
 			if (!mismatches)
 				__SS_THROW__;
 
@@ -1989,12 +2012,20 @@ uint64_t CFOLib::CFO_Registers::ReadRunPlanCurrentTag()
 
 DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatRunPlanCurrentTag()
 {
-	auto form = CreateFormatter(CFO_Register_RunPlan_EventTag0, false /* getValue */);
+	auto form = CreateFormatter(CFO_Register_RunPlan_EventTag0, true /* getValue */);
 	form.description = "Run Plan Current Tag";
-	std::stringstream oss;
-	oss << "0x" << std::hex << std::setw(8) << std::setfill('0') << ReadRegister_(CFO_Register_RunPlan_EventTag0);
-	form.vals.push_back(oss.str());  // show hex format low 32-bits of tag
-	form.vals.push_back(std::to_string(ReadRunPlanCurrentTag()));
+	{
+		std::stringstream oss;
+		oss << "0x" << std::hex << std::setw(8) << std::setfill('0') << ReadRegister_(CFO_Register_RunPlan_EventTag0);
+		form.vals.push_back(oss.str());  // show hex format low 32-bits of tag
+	}
+	{
+		auto currentTag = ReadRunPlanCurrentTag();
+		std::stringstream oss;
+		oss << std::dec << currentTag << " " << std::scientific << static_cast<double>(currentTag) <<
+			" (0x" << std::hex << currentTag << ")";
+		form.vals.push_back(oss.str());
+	}
 	return form;
 }  // end FormatRunPlanCurrentTag()
 

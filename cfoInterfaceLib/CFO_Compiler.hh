@@ -56,7 +56,7 @@ class CFO_Compiler
 	};
 
 	static const std::string                                            MAIN_GOTO_LABEL;
-	static const std::map<CFOLib::CFO_Compiler::CFO_INSTR, std::string> CODE_to_OP_TRANSLATION;
+	static const std::map<uint8_t, std::string> CODE_to_OP_TRANSLATION;
 	static const std::map<std::string, CFOLib::CFO_Compiler::CFO_INSTR> OP_to_CODE_TRANSLATION;
 
   public:
