@@ -34,12 +34,12 @@ enum CFO_Register : uint16_t
 	CFO_Register_FIFOFullErrorFlag0        = 0x9190,
 	CFO_Register_ReceivePacketError        = 0x919C,
 	// CFO_Register_EventWindowEmulatorIntervalTime = 0x91A0, //register deleted in Firmware version: Nov/09/2023 11:00   raw-data: 0x23110911
-	CFO_Register_EventWindowHoldoffTime        = 0x91A4,
-	CFO_Register_EventWindowTimeoutError       = 0x91A8,
-	CFO_Register_EventWindowTimeoutValue       = 0x91AC,	
-	CFO_Register_ReceiveRF0MarkerCount    	= 0x9200,
-	CFO_Register_TransmitHeartbeatPacketCount    = 0x9240,
-	CFO_Register_TransmitEventWindowMarkerCount    = 0x9260,
+	CFO_Register_EventWindowHoldoffTime         = 0x91A4,
+	CFO_Register_EventWindowTimeoutError        = 0x91A8,
+	CFO_Register_EventWindowTimeoutValue        = 0x91AC,
+	CFO_Register_ReceiveRF0MarkerCount          = 0x9200,
+	CFO_Register_TransmitHeartbeatPacketCount   = 0x9240,
+	CFO_Register_TransmitEventWindowMarkerCount = 0x9260,
 	// CFO_Register_ReceiveByteCountDataLink0     = 0x9200,
 	// CFO_Register_ReceiveByteCountDataLink1     = 0x9204,
 	// CFO_Register_ReceiveByteCountDataLink2     = 0x9208,
@@ -770,10 +770,9 @@ class CFO_Registers : public DTCLib::CFOandDTC_Registers
 	/// <returns>RegisterFormatter object containing register information</returns>
 	RegisterFormatter FormatEventWindowTimeoutInterval();
 
-
-	uint32_t ReadReceiveRF0MarkerCount(std::optional<uint32_t> val = std::nullopt);
-	uint32_t ReadTransmitHeartbeatPacketCount(std::optional<uint32_t> val = std::nullopt);
-	uint32_t ReadTransmitEventWindowMarkerCount(std::optional<uint32_t> val = std::nullopt);
+	uint32_t          ReadReceiveRF0MarkerCount(std::optional<uint32_t> val = std::nullopt);
+	uint32_t          ReadTransmitHeartbeatPacketCount(std::optional<uint32_t> val = std::nullopt);
+	uint32_t          ReadTransmitEventWindowMarkerCount(std::optional<uint32_t> val = std::nullopt);
 	RegisterFormatter FormatReceiveRF0MarkerCount();
 	RegisterFormatter FormatTransmitHeartbeatPacketCount();
 	RegisterFormatter FormatTransmitEventWindowMarkerCount();
