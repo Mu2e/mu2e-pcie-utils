@@ -25,6 +25,7 @@
 #define __COUT__			TLOG(TLVL_DEBUG)       << __COUT_HDR__
 #define __COUTT__			TLOG(TLVL_TRACE)       << __COUT_HDR__
 #define __COUT_TYPE__(LVL) 	TLOG(TLVL_DEBUG + LVL) << __COUT_HDR__
+#define __COUTS__(LVL)		__COUT_TYPE__(LVL)
 //std::cout << __MF_DECOR__ << __COUT_HDR_FL__
 
 #define __THROW__(X) 		throw std::runtime_error(X)
