@@ -1194,622 +1194,668 @@ DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatEventWindowTimeoutInterva
 	return form;
 }
 
-// SERDES Counter Registers
-void CFOLib::CFO_Registers::ClearReceiveByteCount(const CFO_Link_ID& link)
+// // SERDES Counter Registers
+// void CFOLib::CFO_Registers::ClearReceiveByteCount(const CFO_Link_ID& link)
+// {
+// 	CFO_Register reg;
+// 	switch (link)
+// 	{
+// 		case CFO_Link_0:
+// 			reg = CFO_Register_ReceiveByteCountDataLink0;
+// 			break;
+// 		case CFO_Link_1:
+// 			reg = CFO_Register_ReceiveByteCountDataLink1;
+// 			break;
+// 		case CFO_Link_2:
+// 			reg = CFO_Register_ReceiveByteCountDataLink2;
+// 			break;
+// 		case CFO_Link_3:
+// 			reg = CFO_Register_ReceiveByteCountDataLink3;
+// 			break;
+// 		case CFO_Link_4:
+// 			reg = CFO_Register_ReceiveByteCountDataLink4;
+// 			break;
+// 		case CFO_Link_5:
+// 			reg = CFO_Register_ReceiveByteCountDataLink5;
+// 			break;
+// 		case CFO_Link_6:
+// 			reg = CFO_Register_ReceiveByteCountDataLink6;
+// 			break;
+// 		case CFO_Link_7:
+// 			reg = CFO_Register_ReceiveByteCountDataLink7;
+// 			break;
+// 		default: {
+// 			__SS__ << "Illegal link index provided: " << link << __E__;
+// 			__SS_THROW__;
+// 		}
+// 	}
+// 	WriteRegister_(0, reg);
+// }
+
+// uint32_t CFOLib::CFO_Registers::ReadReceiveByteCount(const CFO_Link_ID& link, std::optional<uint32_t> val)
+// {
+// 	CFO_Register reg;
+// 	switch (link)
+// 	{
+// 		case CFO_Link_0:
+// 			reg = CFO_Register_ReceiveByteCountDataLink0;
+// 			break;
+// 		case CFO_Link_1:
+// 			reg = CFO_Register_ReceiveByteCountDataLink1;
+// 			break;
+// 		case CFO_Link_2:
+// 			reg = CFO_Register_ReceiveByteCountDataLink2;
+// 			break;
+// 		case CFO_Link_3:
+// 			reg = CFO_Register_ReceiveByteCountDataLink3;
+// 			break;
+// 		case CFO_Link_4:
+// 			reg = CFO_Register_ReceiveByteCountDataLink4;
+// 			break;
+// 		case CFO_Link_5:
+// 			reg = CFO_Register_ReceiveByteCountDataLink5;
+// 			break;
+// 		case CFO_Link_6:
+// 			reg = CFO_Register_ReceiveByteCountDataLink6;
+// 			break;
+// 		case CFO_Link_7:
+// 			reg = CFO_Register_ReceiveByteCountDataLink7;
+// 			break;
+// 		default: {
+// 			__SS__ << "Illegal link index provided: " << link << __E__;
+// 			__SS_THROW__;
+// 		}
+// 	}
+// 	return val.has_value() ? *val : ReadRegister_(reg);
+// }
+
+// void CFOLib::CFO_Registers::ClearReceivePacketCount(const CFO_Link_ID& link)
+// {
+// 	CFO_Register reg;
+// 	switch (link)
+// 	{
+// 		case CFO_Link_0:
+// 			reg = CFO_Register_ReceivePacketCountDataLink0;
+// 			break;
+// 		case CFO_Link_1:
+// 			reg = CFO_Register_ReceivePacketCountDataLink1;
+// 			break;
+// 		case CFO_Link_2:
+// 			reg = CFO_Register_ReceivePacketCountDataLink2;
+// 			break;
+// 		case CFO_Link_3:
+// 			reg = CFO_Register_ReceivePacketCountDataLink3;
+// 			break;
+// 		case CFO_Link_4:
+// 			reg = CFO_Register_ReceivePacketCountDataLink4;
+// 			break;
+// 		case CFO_Link_5:
+// 			reg = CFO_Register_ReceivePacketCountDataLink5;
+// 			break;
+// 		case CFO_Link_6:
+// 			reg = CFO_Register_ReceivePacketCountDataLink6;
+// 			break;
+// 		case CFO_Link_7:
+// 			reg = CFO_Register_ReceivePacketCountDataLink7;
+// 			break;
+// 		default: {
+// 			__SS__ << "Illegal link index provided: " << link << __E__;
+// 			__SS_THROW__;
+// 		}
+// 	}
+// 	WriteRegister_(0, reg);
+// }
+
+// uint32_t CFOLib::CFO_Registers::ReadReceivePacketCount(const CFO_Link_ID& link, std::optional<uint32_t> val)
+// {
+// 	CFO_Register reg;
+// 	switch (link)
+// 	{
+// 		case CFO_Link_0:
+// 			reg = CFO_Register_ReceivePacketCountDataLink0;
+// 			break;
+// 		case CFO_Link_1:
+// 			reg = CFO_Register_ReceivePacketCountDataLink1;
+// 			break;
+// 		case CFO_Link_2:
+// 			reg = CFO_Register_ReceivePacketCountDataLink2;
+// 			break;
+// 		case CFO_Link_3:
+// 			reg = CFO_Register_ReceivePacketCountDataLink3;
+// 			break;
+// 		case CFO_Link_4:
+// 			reg = CFO_Register_ReceivePacketCountDataLink4;
+// 			break;
+// 		case CFO_Link_5:
+// 			reg = CFO_Register_ReceivePacketCountDataLink5;
+// 			break;
+// 		case CFO_Link_6:
+// 			reg = CFO_Register_ReceivePacketCountDataLink6;
+// 			break;
+// 		case CFO_Link_7:
+// 			reg = CFO_Register_ReceivePacketCountDataLink7;
+// 			break;
+// 		default: {
+// 			__SS__ << "Illegal link index provided: " << link << __E__;
+// 			__SS_THROW__;
+// 		}
+// 	}
+// 	return val.has_value() ? *val : ReadRegister_(reg);
+// }
+
+// void CFOLib::CFO_Registers::ClearTransmitByteCount(const CFO_Link_ID& link)
+// {
+// 	CFO_Register reg;
+// 	switch (link)
+// 	{
+// 		case CFO_Link_0:
+// 			reg = CFO_Register_TransmitByteCountDataLink0;
+// 			break;
+// 		case CFO_Link_1:
+// 			reg = CFO_Register_TransmitByteCountDataLink1;
+// 			break;
+// 		case CFO_Link_2:
+// 			reg = CFO_Register_TransmitByteCountDataLink2;
+// 			break;
+// 		case CFO_Link_3:
+// 			reg = CFO_Register_TransmitByteCountDataLink3;
+// 			break;
+// 		case CFO_Link_4:
+// 			reg = CFO_Register_TransmitByteCountDataLink4;
+// 			break;
+// 		case CFO_Link_5:
+// 			reg = CFO_Register_TransmitByteCountDataLink5;
+// 			break;
+// 		case CFO_Link_6:
+// 			reg = CFO_Register_TransmitByteCountDataLink6;
+// 			break;
+// 		case CFO_Link_7:
+// 			reg = CFO_Register_TransmitByteCountDataLink7;
+// 			break;
+// 		default: {
+// 			__SS__ << "Illegal link index provided: " << link << __E__;
+// 			__SS_THROW__;
+// 		}
+// 	}
+// 	WriteRegister_(0, reg);
+// }
+
+// uint32_t CFOLib::CFO_Registers::ReadTransmitByteCount(const CFO_Link_ID& link, std::optional<uint32_t> val)
+// {
+// 	CFO_Register reg;
+// 	switch (link)
+// 	{
+// 		case CFO_Link_0:
+// 			reg = CFO_Register_TransmitByteCountDataLink0;
+// 			break;
+// 		case CFO_Link_1:
+// 			reg = CFO_Register_TransmitByteCountDataLink1;
+// 			break;
+// 		case CFO_Link_2:
+// 			reg = CFO_Register_TransmitByteCountDataLink2;
+// 			break;
+// 		case CFO_Link_3:
+// 			reg = CFO_Register_TransmitByteCountDataLink3;
+// 			break;
+// 		case CFO_Link_4:
+// 			reg = CFO_Register_TransmitByteCountDataLink4;
+// 			break;
+// 		case CFO_Link_5:
+// 			reg = CFO_Register_TransmitByteCountDataLink5;
+// 			break;
+// 		case CFO_Link_6:
+// 			reg = CFO_Register_TransmitByteCountDataLink6;
+// 			break;
+// 		case CFO_Link_7:
+// 			reg = CFO_Register_TransmitByteCountDataLink7;
+// 			break;
+// 		default: {
+// 			__SS__ << "Illegal link index provided: " << link << __E__;
+// 			__SS_THROW__;
+// 		}
+// 	}
+// 	return val.has_value() ? *val : ReadRegister_(reg);
+// }
+
+// void CFOLib::CFO_Registers::ClearTransmitPacketCount(const CFO_Link_ID& link)
+// {
+// 	CFO_Register reg;
+// 	switch (link)
+// 	{
+// 		case CFO_Link_0:
+// 			reg = CFO_Register_TransmitPacketCountDataLink0;
+// 			break;
+// 		case CFO_Link_1:
+// 			reg = CFO_Register_TransmitPacketCountDataLink1;
+// 			break;
+// 		case CFO_Link_2:
+// 			reg = CFO_Register_TransmitPacketCountDataLink2;
+// 			break;
+// 		case CFO_Link_3:
+// 			reg = CFO_Register_TransmitPacketCountDataLink3;
+// 			break;
+// 		case CFO_Link_4:
+// 			reg = CFO_Register_TransmitPacketCountDataLink4;
+// 			break;
+// 		case CFO_Link_5:
+// 			reg = CFO_Register_TransmitPacketCountDataLink5;
+// 			break;
+// 		case CFO_Link_6:
+// 			reg = CFO_Register_TransmitPacketCountDataLink6;
+// 			break;
+// 		case CFO_Link_7:
+// 			reg = CFO_Register_TransmitPacketCountDataLink7;
+// 			break;
+// 		default: {
+// 			__SS__ << "Illegal link index provided: " << link << __E__;
+// 			__SS_THROW__;
+// 		}
+// 	}
+// 	WriteRegister_(0, reg);
+// }
+
+// uint32_t CFOLib::CFO_Registers::ReadTransmitPacketCount(const CFO_Link_ID& link, std::optional<uint32_t> val)
+// {
+// 	CFO_Register reg;
+// 	switch (link)
+// 	{
+// 		case CFO_Link_0:
+// 			reg = CFO_Register_TransmitPacketCountDataLink0;
+// 			break;
+// 		case CFO_Link_1:
+// 			reg = CFO_Register_TransmitPacketCountDataLink1;
+// 			break;
+// 		case CFO_Link_2:
+// 			reg = CFO_Register_TransmitPacketCountDataLink2;
+// 			break;
+// 		case CFO_Link_3:
+// 			reg = CFO_Register_TransmitPacketCountDataLink3;
+// 			break;
+// 		case CFO_Link_4:
+// 			reg = CFO_Register_TransmitPacketCountDataLink4;
+// 			break;
+// 		case CFO_Link_5:
+// 			reg = CFO_Register_TransmitPacketCountDataLink5;
+// 			break;
+// 		case CFO_Link_6:
+// 			reg = CFO_Register_TransmitPacketCountDataLink6;
+// 			break;
+// 		case CFO_Link_7:
+// 			reg = CFO_Register_TransmitPacketCountDataLink7;
+// 			break;
+// 		default: {
+// 			__SS__ << "Illegal link index provided: " << link << __E__;
+// 			__SS_THROW__;
+// 		}
+// 	}
+// 	return val.has_value() ? *val : ReadRegister_(reg);
+// }
+
+uint32_t CFOLib::CFO_Registers::ReadReceiveRF0MarkerCount(std::optional<uint32_t> val)
 {
-	CFO_Register reg;
-	switch (link)
-	{
-		case CFO_Link_0:
-			reg = CFO_Register_ReceiveByteCountDataLink0;
-			break;
-		case CFO_Link_1:
-			reg = CFO_Register_ReceiveByteCountDataLink1;
-			break;
-		case CFO_Link_2:
-			reg = CFO_Register_ReceiveByteCountDataLink2;
-			break;
-		case CFO_Link_3:
-			reg = CFO_Register_ReceiveByteCountDataLink3;
-			break;
-		case CFO_Link_4:
-			reg = CFO_Register_ReceiveByteCountDataLink4;
-			break;
-		case CFO_Link_5:
-			reg = CFO_Register_ReceiveByteCountDataLink5;
-			break;
-		case CFO_Link_6:
-			reg = CFO_Register_ReceiveByteCountDataLink6;
-			break;
-		case CFO_Link_7:
-			reg = CFO_Register_ReceiveByteCountDataLink7;
-			break;
-		default: {
-			__SS__ << "Illegal link index provided: " << link << __E__;
-			__SS_THROW__;
-		}
-	}
-	WriteRegister_(0, reg);
+	std::bitset<32> data = val.has_value() ? *val : ReadRegister_(CFO_Register_ReceiveRF0MarkerCount);
+	return static_cast<uint32_t>(data.to_ulong());
+}
+uint32_t CFOLib::CFO_Registers::ReadTransmitHeartbeatPacketCount(std::optional<uint32_t> val)
+{
+	std::bitset<32> data = val.has_value() ? *val : ReadRegister_(CFO_Register_TransmitHeartbeatPacketCount);
+	return static_cast<uint32_t>(data.to_ulong());
+}
+uint32_t CFOLib::CFO_Registers::ReadTransmitEventWindowMarkerCount(std::optional<uint32_t> val)
+{
+	std::bitset<32> data = val.has_value() ? *val : ReadRegister_(CFO_Register_TransmitEventWindowMarkerCount);
+	return static_cast<uint32_t>(data.to_ulong());
 }
 
-uint32_t CFOLib::CFO_Registers::ReadReceiveByteCount(const CFO_Link_ID& link, std::optional<uint32_t> val)
+DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceiveRF0MarkerCount()
 {
-	CFO_Register reg;
-	switch (link)
-	{
-		case CFO_Link_0:
-			reg = CFO_Register_ReceiveByteCountDataLink0;
-			break;
-		case CFO_Link_1:
-			reg = CFO_Register_ReceiveByteCountDataLink1;
-			break;
-		case CFO_Link_2:
-			reg = CFO_Register_ReceiveByteCountDataLink2;
-			break;
-		case CFO_Link_3:
-			reg = CFO_Register_ReceiveByteCountDataLink3;
-			break;
-		case CFO_Link_4:
-			reg = CFO_Register_ReceiveByteCountDataLink4;
-			break;
-		case CFO_Link_5:
-			reg = CFO_Register_ReceiveByteCountDataLink5;
-			break;
-		case CFO_Link_6:
-			reg = CFO_Register_ReceiveByteCountDataLink6;
-			break;
-		case CFO_Link_7:
-			reg = CFO_Register_ReceiveByteCountDataLink7;
-			break;
-		default: {
-			__SS__ << "Illegal link index provided: " << link << __E__;
-			__SS_THROW__;
-		}
-	}
-	return val.has_value() ? *val : ReadRegister_(reg);
-}
-
-void CFOLib::CFO_Registers::ClearReceivePacketCount(const CFO_Link_ID& link)
-{
-	CFO_Register reg;
-	switch (link)
-	{
-		case CFO_Link_0:
-			reg = CFO_Register_ReceivePacketCountDataLink0;
-			break;
-		case CFO_Link_1:
-			reg = CFO_Register_ReceivePacketCountDataLink1;
-			break;
-		case CFO_Link_2:
-			reg = CFO_Register_ReceivePacketCountDataLink2;
-			break;
-		case CFO_Link_3:
-			reg = CFO_Register_ReceivePacketCountDataLink3;
-			break;
-		case CFO_Link_4:
-			reg = CFO_Register_ReceivePacketCountDataLink4;
-			break;
-		case CFO_Link_5:
-			reg = CFO_Register_ReceivePacketCountDataLink5;
-			break;
-		case CFO_Link_6:
-			reg = CFO_Register_ReceivePacketCountDataLink6;
-			break;
-		case CFO_Link_7:
-			reg = CFO_Register_ReceivePacketCountDataLink7;
-			break;
-		default: {
-			__SS__ << "Illegal link index provided: " << link << __E__;
-			__SS_THROW__;
-		}
-	}
-	WriteRegister_(0, reg);
-}
-
-uint32_t CFOLib::CFO_Registers::ReadReceivePacketCount(const CFO_Link_ID& link, std::optional<uint32_t> val)
-{
-	CFO_Register reg;
-	switch (link)
-	{
-		case CFO_Link_0:
-			reg = CFO_Register_ReceivePacketCountDataLink0;
-			break;
-		case CFO_Link_1:
-			reg = CFO_Register_ReceivePacketCountDataLink1;
-			break;
-		case CFO_Link_2:
-			reg = CFO_Register_ReceivePacketCountDataLink2;
-			break;
-		case CFO_Link_3:
-			reg = CFO_Register_ReceivePacketCountDataLink3;
-			break;
-		case CFO_Link_4:
-			reg = CFO_Register_ReceivePacketCountDataLink4;
-			break;
-		case CFO_Link_5:
-			reg = CFO_Register_ReceivePacketCountDataLink5;
-			break;
-		case CFO_Link_6:
-			reg = CFO_Register_ReceivePacketCountDataLink6;
-			break;
-		case CFO_Link_7:
-			reg = CFO_Register_ReceivePacketCountDataLink7;
-			break;
-		default: {
-			__SS__ << "Illegal link index provided: " << link << __E__;
-			__SS_THROW__;
-		}
-	}
-	return val.has_value() ? *val : ReadRegister_(reg);
-}
-
-void CFOLib::CFO_Registers::ClearTransmitByteCount(const CFO_Link_ID& link)
-{
-	CFO_Register reg;
-	switch (link)
-	{
-		case CFO_Link_0:
-			reg = CFO_Register_TransmitByteCountDataLink0;
-			break;
-		case CFO_Link_1:
-			reg = CFO_Register_TransmitByteCountDataLink1;
-			break;
-		case CFO_Link_2:
-			reg = CFO_Register_TransmitByteCountDataLink2;
-			break;
-		case CFO_Link_3:
-			reg = CFO_Register_TransmitByteCountDataLink3;
-			break;
-		case CFO_Link_4:
-			reg = CFO_Register_TransmitByteCountDataLink4;
-			break;
-		case CFO_Link_5:
-			reg = CFO_Register_TransmitByteCountDataLink5;
-			break;
-		case CFO_Link_6:
-			reg = CFO_Register_TransmitByteCountDataLink6;
-			break;
-		case CFO_Link_7:
-			reg = CFO_Register_TransmitByteCountDataLink7;
-			break;
-		default: {
-			__SS__ << "Illegal link index provided: " << link << __E__;
-			__SS_THROW__;
-		}
-	}
-	WriteRegister_(0, reg);
-}
-
-uint32_t CFOLib::CFO_Registers::ReadTransmitByteCount(const CFO_Link_ID& link, std::optional<uint32_t> val)
-{
-	CFO_Register reg;
-	switch (link)
-	{
-		case CFO_Link_0:
-			reg = CFO_Register_TransmitByteCountDataLink0;
-			break;
-		case CFO_Link_1:
-			reg = CFO_Register_TransmitByteCountDataLink1;
-			break;
-		case CFO_Link_2:
-			reg = CFO_Register_TransmitByteCountDataLink2;
-			break;
-		case CFO_Link_3:
-			reg = CFO_Register_TransmitByteCountDataLink3;
-			break;
-		case CFO_Link_4:
-			reg = CFO_Register_TransmitByteCountDataLink4;
-			break;
-		case CFO_Link_5:
-			reg = CFO_Register_TransmitByteCountDataLink5;
-			break;
-		case CFO_Link_6:
-			reg = CFO_Register_TransmitByteCountDataLink6;
-			break;
-		case CFO_Link_7:
-			reg = CFO_Register_TransmitByteCountDataLink7;
-			break;
-		default: {
-			__SS__ << "Illegal link index provided: " << link << __E__;
-			__SS_THROW__;
-		}
-	}
-	return val.has_value() ? *val : ReadRegister_(reg);
-}
-
-void CFOLib::CFO_Registers::ClearTransmitPacketCount(const CFO_Link_ID& link)
-{
-	CFO_Register reg;
-	switch (link)
-	{
-		case CFO_Link_0:
-			reg = CFO_Register_TransmitPacketCountDataLink0;
-			break;
-		case CFO_Link_1:
-			reg = CFO_Register_TransmitPacketCountDataLink1;
-			break;
-		case CFO_Link_2:
-			reg = CFO_Register_TransmitPacketCountDataLink2;
-			break;
-		case CFO_Link_3:
-			reg = CFO_Register_TransmitPacketCountDataLink3;
-			break;
-		case CFO_Link_4:
-			reg = CFO_Register_TransmitPacketCountDataLink4;
-			break;
-		case CFO_Link_5:
-			reg = CFO_Register_TransmitPacketCountDataLink5;
-			break;
-		case CFO_Link_6:
-			reg = CFO_Register_TransmitPacketCountDataLink6;
-			break;
-		case CFO_Link_7:
-			reg = CFO_Register_TransmitPacketCountDataLink7;
-			break;
-		default: {
-			__SS__ << "Illegal link index provided: " << link << __E__;
-			__SS_THROW__;
-		}
-	}
-	WriteRegister_(0, reg);
-}
-
-uint32_t CFOLib::CFO_Registers::ReadTransmitPacketCount(const CFO_Link_ID& link, std::optional<uint32_t> val)
-{
-	CFO_Register reg;
-	switch (link)
-	{
-		case CFO_Link_0:
-			reg = CFO_Register_TransmitPacketCountDataLink0;
-			break;
-		case CFO_Link_1:
-			reg = CFO_Register_TransmitPacketCountDataLink1;
-			break;
-		case CFO_Link_2:
-			reg = CFO_Register_TransmitPacketCountDataLink2;
-			break;
-		case CFO_Link_3:
-			reg = CFO_Register_TransmitPacketCountDataLink3;
-			break;
-		case CFO_Link_4:
-			reg = CFO_Register_TransmitPacketCountDataLink4;
-			break;
-		case CFO_Link_5:
-			reg = CFO_Register_TransmitPacketCountDataLink5;
-			break;
-		case CFO_Link_6:
-			reg = CFO_Register_TransmitPacketCountDataLink6;
-			break;
-		case CFO_Link_7:
-			reg = CFO_Register_TransmitPacketCountDataLink7;
-			break;
-		default: {
-			__SS__ << "Illegal link index provided: " << link << __E__;
-			__SS_THROW__;
-		}
-	}
-	return val.has_value() ? *val : ReadRegister_(reg);
-}
-
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceiveByteCountLink0()
-{
-	auto form = CreateFormatter(CFO_Register_ReceiveByteCountDataLink0);
-	form.description = "Receive Byte Count: Link 0";
+	auto form = CreateFormatter(CFO_Register_ReceiveRF0MarkerCount);
+	form.description = "Receive RF0 Marker Count";
 	std::stringstream o;
-	o << "0x" << std::hex << ReadReceiveByteCount(CFO_Link_0, form.value);
+	o << "0x" << std::hex << ReadReceiveRF0MarkerCount(form.value);
 	form.vals.push_back(o.str());
 	return form;
 }
 
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceiveByteCountLink1()
+DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTransmitHeartbeatPacketCount()
 {
-	auto form = CreateFormatter(CFO_Register_ReceiveByteCountDataLink1);
-	form.description = "Receive Byte Count: Link 1";
+	auto form = CreateFormatter(CFO_Register_TransmitHeartbeatPacketCount);
+	form.description = "Transmit Heartbeat Packet Count";
 	std::stringstream o;
-	o << "0x" << std::hex << ReadReceiveByteCount(CFO_Link_1, form.value);
+	o << "0x" << std::hex << ReadTransmitHeartbeatPacketCount(form.value);
 	form.vals.push_back(o.str());
 	return form;
 }
 
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceiveByteCountLink2()
+DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTransmitEventWindowMarkerCount()
 {
-	auto form = CreateFormatter(CFO_Register_ReceiveByteCountDataLink2);
-	form.description = "Receive Byte Count: Link 2";
+	auto form = CreateFormatter(CFO_Register_TransmitEventWindowMarkerCount);
+	form.description = "Transmit Event Window Marker Count";
 	std::stringstream o;
-	o << "0x" << std::hex << ReadReceiveByteCount(CFO_Link_2, form.value);
+	o << "0x" << std::hex << ReadTransmitEventWindowMarkerCount(form.value);
 	form.vals.push_back(o.str());
 	return form;
 }
 
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceiveByteCountLink3()
-{
-	auto form = CreateFormatter(CFO_Register_ReceiveByteCountDataLink3);
-	form.description = "Receive Byte Count: Link 3";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadReceiveByteCount(CFO_Link_3, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceiveByteCountLink0()
+// {
+// 	auto form = CreateFormatter(CFO_Register_ReceiveByteCountDataLink0);
+// 	form.description = "Receive Byte Count: Link 0";
+// 	std::stringstream o;
+// 	o << "0x" << std::hex << ReadReceiveByteCount(CFO_Link_0, form.value);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceiveByteCountLink4()
-{
-	auto form = CreateFormatter(CFO_Register_ReceiveByteCountDataLink4);
-	form.description = "Receive Byte Count: Link 4";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadReceiveByteCount(CFO_Link_4, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceiveByteCountLink1()
+// {
+// 	auto form = CreateFormatter(CFO_Register_ReceiveByteCountDataLink1);
+// 	form.description = "Receive Byte Count: Link 1";
+// 	std::stringstream o;
+// 	o << "0x" << std::hex << ReadReceiveByteCount(CFO_Link_1, form.value);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceiveByteCountLink5()
-{
-	auto form = CreateFormatter(CFO_Register_ReceiveByteCountDataLink5);
-	form.description = "Receive Byte Count: Link 5";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadReceiveByteCount(CFO_Link_5, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceiveByteCountLink2()
+// {
+// 	auto form = CreateFormatter(CFO_Register_ReceiveByteCountDataLink2);
+// 	form.description = "Receive Byte Count: Link 2";
+// 	std::stringstream o;
+// 	o << "0x" << std::hex << ReadReceiveByteCount(CFO_Link_2, form.value);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceiveByteCountLink6()
-{
-	auto form = CreateFormatter(CFO_Register_ReceiveByteCountDataLink6);
-	form.description = "Receive Byte Count: Link 6";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadReceiveByteCount(CFO_Link_6, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceiveByteCountLink3()
+// {
+// 	auto form = CreateFormatter(CFO_Register_ReceiveByteCountDataLink3);
+// 	form.description = "Receive Byte Count: Link 3";
+// 	std::stringstream o;
+// 	o << "0x" << std::hex << ReadReceiveByteCount(CFO_Link_3, form.value);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceiveByteCountLink7()
-{
-	auto form = CreateFormatter(CFO_Register_ReceiveByteCountDataLink7);
-	form.description = "Receive Byte Count: Link 7";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadReceiveByteCount(CFO_Link_7, form.value);
-	form.vals.push_back(o.str());
-	return form;
-}
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceiveByteCountLink4()
+// {
+// 	auto form = CreateFormatter(CFO_Register_ReceiveByteCountDataLink4);
+// 	form.description = "Receive Byte Count: Link 4";
+// 	std::stringstream o;
+// 	o << "0x" << std::hex << ReadReceiveByteCount(CFO_Link_4, form.value);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceivePacketCountLink0()
-{
-	auto form = CreateFormatter(CFO_Register_ReceivePacketCountDataLink0);
-	form.description = "Receive Packet Count: Link 0";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadReceivePacketCount(CFO_Link_0);
-	form.vals.push_back(o.str());
-	return form;
-}
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceiveByteCountLink5()
+// {
+// 	auto form = CreateFormatter(CFO_Register_ReceiveByteCountDataLink5);
+// 	form.description = "Receive Byte Count: Link 5";
+// 	std::stringstream o;
+// 	o << "0x" << std::hex << ReadReceiveByteCount(CFO_Link_5, form.value);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceivePacketCountLink1()
-{
-	auto form = CreateFormatter(CFO_Register_ReceivePacketCountDataLink1);
-	form.description = "Receive Packet Count: Link 1";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadReceivePacketCount(CFO_Link_1);
-	form.vals.push_back(o.str());
-	return form;
-}
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceiveByteCountLink6()
+// {
+// 	auto form = CreateFormatter(CFO_Register_ReceiveByteCountDataLink6);
+// 	form.description = "Receive Byte Count: Link 6";
+// 	std::stringstream o;
+// 	o << "0x" << std::hex << ReadReceiveByteCount(CFO_Link_6, form.value);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceivePacketCountLink2()
-{
-	auto form = CreateFormatter(CFO_Register_ReceivePacketCountDataLink2);
-	form.description = "Receive Packet Count: Link 2";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadReceivePacketCount(CFO_Link_2);
-	form.vals.push_back(o.str());
-	return form;
-}
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceiveByteCountLink7()
+// {
+// 	auto form = CreateFormatter(CFO_Register_ReceiveByteCountDataLink7);
+// 	form.description = "Receive Byte Count: Link 7";
+// 	std::stringstream o;
+// 	o << "0x" << std::hex << ReadReceiveByteCount(CFO_Link_7, form.value);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceivePacketCountLink3()
-{
-	auto form = CreateFormatter(CFO_Register_ReceivePacketCountDataLink3);
-	form.description = "Receive Packet Count: Link 3";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadReceivePacketCount(CFO_Link_3);
-	form.vals.push_back(o.str());
-	return form;
-}
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceivePacketCountLink0()
+// {
+// 	auto form = CreateFormatter(CFO_Register_ReceivePacketCountDataLink0);
+// 	form.description = "Receive Packet Count: Link 0";
+// 	std::stringstream o;
+// 	o << "0x" << std::hex << ReadReceivePacketCount(CFO_Link_0);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceivePacketCountLink4()
-{
-	auto form = CreateFormatter(CFO_Register_ReceivePacketCountDataLink4);
-	form.description = "Receive Packet Count: Link 4";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadReceivePacketCount(CFO_Link_4);
-	form.vals.push_back(o.str());
-	return form;
-}
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceivePacketCountLink1()
+// {
+// 	auto form = CreateFormatter(CFO_Register_ReceivePacketCountDataLink1);
+// 	form.description = "Receive Packet Count: Link 1";
+// 	std::stringstream o;
+// 	o << "0x" << std::hex << ReadReceivePacketCount(CFO_Link_1);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceivePacketCountLink5()
-{
-	auto form = CreateFormatter(CFO_Register_ReceivePacketCountDataLink5);
-	form.description = "Receive Packet Count: Link 5";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadReceivePacketCount(CFO_Link_5);
-	form.vals.push_back(o.str());
-	return form;
-}
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceivePacketCountLink2()
+// {
+// 	auto form = CreateFormatter(CFO_Register_ReceivePacketCountDataLink2);
+// 	form.description = "Receive Packet Count: Link 2";
+// 	std::stringstream o;
+// 	o << "0x" << std::hex << ReadReceivePacketCount(CFO_Link_2);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceivePacketCountLink6()
-{
-	auto form = CreateFormatter(CFO_Register_ReceivePacketCountDataLink6);
-	form.description = "Receive Packet Count: Link 6";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadReceivePacketCount(CFO_Link_6);
-	form.vals.push_back(o.str());
-	return form;
-}
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceivePacketCountLink3()
+// {
+// 	auto form = CreateFormatter(CFO_Register_ReceivePacketCountDataLink3);
+// 	form.description = "Receive Packet Count: Link 3";
+// 	std::stringstream o;
+// 	o << "0x" << std::hex << ReadReceivePacketCount(CFO_Link_3);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceivePacketCountLink7()
-{
-	auto form = CreateFormatter(CFO_Register_ReceivePacketCountDataLink7);
-	form.description = "Receive Packet Count: Link 7";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadReceivePacketCount(CFO_Link_7);
-	form.vals.push_back(o.str());
-	return form;
-}
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceivePacketCountLink4()
+// {
+// 	auto form = CreateFormatter(CFO_Register_ReceivePacketCountDataLink4);
+// 	form.description = "Receive Packet Count: Link 4";
+// 	std::stringstream o;
+// 	o << "0x" << std::hex << ReadReceivePacketCount(CFO_Link_4);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTramsitByteCountLink0()
-{
-	auto form = CreateFormatter(CFO_Register_TransmitByteCountDataLink0);
-	form.description = "Transmit Byte Count: Link 0";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadTransmitByteCount(CFO_Link_0);
-	form.vals.push_back(o.str());
-	return form;
-}
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceivePacketCountLink5()
+// {
+// 	auto form = CreateFormatter(CFO_Register_ReceivePacketCountDataLink5);
+// 	form.description = "Receive Packet Count: Link 5";
+// 	std::stringstream o;
+// 	o << "0x" << std::hex << ReadReceivePacketCount(CFO_Link_5);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTramsitByteCountLink1()
-{
-	auto form = CreateFormatter(CFO_Register_TransmitByteCountDataLink1);
-	form.description = "Transmit Byte Count: Link 1";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadTransmitByteCount(CFO_Link_1);
-	form.vals.push_back(o.str());
-	return form;
-}
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceivePacketCountLink6()
+// {
+// 	auto form = CreateFormatter(CFO_Register_ReceivePacketCountDataLink6);
+// 	form.description = "Receive Packet Count: Link 6";
+// 	std::stringstream o;
+// 	o << "0x" << std::hex << ReadReceivePacketCount(CFO_Link_6);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTramsitByteCountLink2()
-{
-	auto form = CreateFormatter(CFO_Register_TransmitByteCountDataLink2);
-	form.description = "Transmit Byte Count: Link 2";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadTransmitByteCount(CFO_Link_2);
-	form.vals.push_back(o.str());
-	return form;
-}
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatReceivePacketCountLink7()
+// {
+// 	auto form = CreateFormatter(CFO_Register_ReceivePacketCountDataLink7);
+// 	form.description = "Receive Packet Count: Link 7";
+// 	std::stringstream o;
+// 	o << "0x" << std::hex << ReadReceivePacketCount(CFO_Link_7);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTramsitByteCountLink3()
-{
-	auto form = CreateFormatter(CFO_Register_TransmitByteCountDataLink3);
-	form.description = "Transmit Byte Count: Link 3";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadTransmitByteCount(CFO_Link_3);
-	form.vals.push_back(o.str());
-	return form;
-}
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTramsitByteCountLink0()
+// {
+// 	auto form = CreateFormatter(CFO_Register_TransmitByteCountDataLink0);
+// 	form.description = "Transmit Byte Count: Link 0";
+// 	std::stringstream o;
+// 	o << "0x" << std::hex << ReadTransmitByteCount(CFO_Link_0);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTramsitByteCountLink4()
-{
-	auto form = CreateFormatter(CFO_Register_TransmitByteCountDataLink4);
-	form.description = "Transmit Byte Count: Link 4";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadTransmitByteCount(CFO_Link_4);
-	form.vals.push_back(o.str());
-	return form;
-}
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTramsitByteCountLink1()
+// {
+// 	auto form = CreateFormatter(CFO_Register_TransmitByteCountDataLink1);
+// 	form.description = "Transmit Byte Count: Link 1";
+// 	std::stringstream o;
+// 	o << "0x" << std::hex << ReadTransmitByteCount(CFO_Link_1);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTramsitByteCountLink5()
-{
-	auto form = CreateFormatter(CFO_Register_TransmitByteCountDataLink5);
-	form.description = "Transmit Byte Count: Link 5";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadTransmitByteCount(CFO_Link_5);
-	form.vals.push_back(o.str());
-	return form;
-}
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTramsitByteCountLink2()
+// {
+// 	auto form = CreateFormatter(CFO_Register_TransmitByteCountDataLink2);
+// 	form.description = "Transmit Byte Count: Link 2";
+// 	std::stringstream o;
+// 	o << "0x" << std::hex << ReadTransmitByteCount(CFO_Link_2);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTramsitByteCountLink6()
-{
-	auto form = CreateFormatter(CFO_Register_TransmitByteCountDataLink6);
-	form.description = "Transmit Byte Count: Link 6";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadTransmitByteCount(CFO_Link_6);
-	form.vals.push_back(o.str());
-	return form;
-}
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTramsitByteCountLink3()
+// {
+// 	auto form = CreateFormatter(CFO_Register_TransmitByteCountDataLink3);
+// 	form.description = "Transmit Byte Count: Link 3";
+// 	std::stringstream o;
+// 	o << "0x" << std::hex << ReadTransmitByteCount(CFO_Link_3);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTramsitByteCountLink7()
-{
-	auto form = CreateFormatter(CFO_Register_TransmitByteCountDataLink7);
-	form.description = "Transmit Byte Count: Link 7";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadTransmitByteCount(CFO_Link_7);
-	form.vals.push_back(o.str());
-	return form;
-}
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTramsitByteCountLink4()
+// {
+// 	auto form = CreateFormatter(CFO_Register_TransmitByteCountDataLink4);
+// 	form.description = "Transmit Byte Count: Link 4";
+// 	std::stringstream o;
+// 	o << "0x" << std::hex << ReadTransmitByteCount(CFO_Link_4);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTransmitPacketCountLink0()
-{
-	auto form = CreateFormatter(CFO_Register_TransmitPacketCountDataLink0);
-	form.description = "Transmit Packet Count: Link 0";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadTransmitPacketCount(CFO_Link_0);
-	form.vals.push_back(o.str());
-	return form;
-}
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTramsitByteCountLink5()
+// {
+// 	auto form = CreateFormatter(CFO_Register_TransmitByteCountDataLink5);
+// 	form.description = "Transmit Byte Count: Link 5";
+// 	std::stringstream o;
+// 	o << "0x" << std::hex << ReadTransmitByteCount(CFO_Link_5);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTransmitPacketCountLink1()
-{
-	auto form = CreateFormatter(CFO_Register_TransmitPacketCountDataLink1);
-	form.description = "Transmit Packet Count: Link 1";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadTransmitPacketCount(CFO_Link_1);
-	form.vals.push_back(o.str());
-	return form;
-}
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTramsitByteCountLink6()
+// {
+// 	auto form = CreateFormatter(CFO_Register_TransmitByteCountDataLink6);
+// 	form.description = "Transmit Byte Count: Link 6";
+// 	std::stringstream o;
+// 	o << "0x" << std::hex << ReadTransmitByteCount(CFO_Link_6);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTransmitPacketCountLink2()
-{
-	auto form = CreateFormatter(CFO_Register_TransmitPacketCountDataLink2);
-	form.description = "Transmit Packet Count: Link 2";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadTransmitPacketCount(CFO_Link_2);
-	form.vals.push_back(o.str());
-	return form;
-}
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTramsitByteCountLink7()
+// {
+// 	auto form = CreateFormatter(CFO_Register_TransmitByteCountDataLink7);
+// 	form.description = "Transmit Byte Count: Link 7";
+// 	std::stringstream o;
+// 	o << "0x" << std::hex << ReadTransmitByteCount(CFO_Link_7);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTransmitPacketCountLink3()
-{
-	auto form = CreateFormatter(CFO_Register_TransmitPacketCountDataLink3);
-	form.description = "Transmit Packet Count: Link 3";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadTransmitPacketCount(CFO_Link_3);
-	form.vals.push_back(o.str());
-	return form;
-}
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTransmitPacketCountLink0()
+// {
+// 	auto form = CreateFormatter(CFO_Register_TransmitPacketCountDataLink0);
+// 	form.description = "Transmit Packet Count: Link 0";
+// 	std::stringstream o;
+// 	o << "0x" << std::hex << ReadTransmitPacketCount(CFO_Link_0);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTransmitPacketCountLink4()
-{
-	auto form = CreateFormatter(CFO_Register_TransmitPacketCountDataLink4);
-	form.description = "Transmit Packet Count: Link 4";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadTransmitPacketCount(CFO_Link_4);
-	form.vals.push_back(o.str());
-	return form;
-}
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTransmitPacketCountLink1()
+// {
+// 	auto form = CreateFormatter(CFO_Register_TransmitPacketCountDataLink1);
+// 	form.description = "Transmit Packet Count: Link 1";
+// 	std::stringstream o;
+// 	o << "0x" << std::hex << ReadTransmitPacketCount(CFO_Link_1);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTransmitPacketCountLink5()
-{
-	auto form = CreateFormatter(CFO_Register_TransmitPacketCountDataLink5);
-	form.description = "Transmit Packet Count: Link 5";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadTransmitPacketCount(CFO_Link_5);
-	form.vals.push_back(o.str());
-	return form;
-}
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTransmitPacketCountLink2()
+// {
+// 	auto form = CreateFormatter(CFO_Register_TransmitPacketCountDataLink2);
+// 	form.description = "Transmit Packet Count: Link 2";
+// 	std::stringstream o;
+// 	o << "0x" << std::hex << ReadTransmitPacketCount(CFO_Link_2);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTransmitPacketCountLink6()
-{
-	auto form = CreateFormatter(CFO_Register_TransmitPacketCountDataLink6);
-	form.description = "Transmit Packet Count: Link 6";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadTransmitPacketCount(CFO_Link_6);
-	form.vals.push_back(o.str());
-	return form;
-}
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTransmitPacketCountLink3()
+// {
+// 	auto form = CreateFormatter(CFO_Register_TransmitPacketCountDataLink3);
+// 	form.description = "Transmit Packet Count: Link 3";
+// 	std::stringstream o;
+// 	o << "0x" << std::hex << ReadTransmitPacketCount(CFO_Link_3);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
 
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTransmitPacketCountLink7()
-{
-	auto form = CreateFormatter(CFO_Register_TransmitPacketCountDataLink7);
-	form.description = "Transmit Packet Count: Link 7";
-	std::stringstream o;
-	o << "0x" << std::hex << ReadTransmitPacketCount(CFO_Link_7);
-	form.vals.push_back(o.str());
-	return form;
-}
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTransmitPacketCountLink4()
+// {
+// 	auto form = CreateFormatter(CFO_Register_TransmitPacketCountDataLink4);
+// 	form.description = "Transmit Packet Count: Link 4";
+// 	std::stringstream o;
+// 	o << "0x" << std::hex << ReadTransmitPacketCount(CFO_Link_4);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
+
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTransmitPacketCountLink5()
+// {
+// 	auto form = CreateFormatter(CFO_Register_TransmitPacketCountDataLink5);
+// 	form.description = "Transmit Packet Count: Link 5";
+// 	std::stringstream o;
+// 	o << "0x" << std::hex << ReadTransmitPacketCount(CFO_Link_5);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
+
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTransmitPacketCountLink6()
+// {
+// 	auto form = CreateFormatter(CFO_Register_TransmitPacketCountDataLink6);
+// 	form.description = "Transmit Packet Count: Link 6";
+// 	std::stringstream o;
+// 	o << "0x" << std::hex << ReadTransmitPacketCount(CFO_Link_6);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
+
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTransmitPacketCountLink7()
+// {
+// 	auto form = CreateFormatter(CFO_Register_TransmitPacketCountDataLink7);
+// 	form.description = "Transmit Packet Count: Link 7";
+// 	std::stringstream o;
+// 	o << "0x" << std::hex << ReadTransmitPacketCount(CFO_Link_7);
+// 	form.vals.push_back(o.str());
+// 	return form;
+// }
 
 // DMA Address Registers
 void CFOLib::CFO_Registers::SetDMAWriteStartAddress(const uint32_t& address)
