@@ -2058,15 +2058,16 @@ uint64_t CFOLib::CFO_Registers::ReadRunPlanCurrentTag()
 
 DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatRunPlanCurrentTag()
 {
-	auto form = CreateFormatter(CFO_Register_RunPlan_EventTag0, true /* getValue */);
+	uint64_t currentTag = ReadRunPlanCurrentTag();	
+	auto form = CreateFormatter(CFO_Register_RunPlan_EventTag1, false /* getValue */);
+	form.value = uint32_t(currentTag >> 32); // show high 32-bits of tag in hex value field
 	form.description = "Run Plan Current Tag";
 	{
 		std::stringstream oss;
-		oss << "0x" << std::hex << std::setw(8) << std::setfill('0') << ReadRegister_(CFO_Register_RunPlan_EventTag0);
-		form.vals.push_back(oss.str());  // show hex format low 32-bits of tag
+		oss << "0x" << std::hex << std::setw(8) << std::setfill('0') << uint32_t(currentTag);  // show hex format low 32-bits of tag
+		form.vals.push_back(oss.str()); 
 	}
-	{
-		auto currentTag = ReadRunPlanCurrentTag();
+	{ //show full 64-bit number
 		std::stringstream oss;
 		oss << std::dec << currentTag << " " << std::scientific << static_cast<double>(currentTag) << " (0x" << std::hex << currentTag << ")";
 		form.vals.push_back(oss.str());
