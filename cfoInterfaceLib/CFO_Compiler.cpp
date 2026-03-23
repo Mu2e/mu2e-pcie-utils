@@ -62,11 +62,11 @@ try
 			line += lineChars;
 
 		++txtLineNumber_;
-		__COUT__ << "Line number " << txtLineNumber_ << ": " << line << __E__;
+		__COUTT__ << "Line number " << txtLineNumber_ << ": " << line << __E__;
 
 		if (isComment(line))
 		{
-			__COUT__ << txtLineNumber_ << ": is comment" << __E__;
+			__COUTT__ << txtLineNumber_ << ": is comment" << __E__;
 			continue;
 		}
 
@@ -89,12 +89,12 @@ try
 				break;
 			}
 
-		__COUTV__(opArguments_.size());
-		__COUTV__(vectorToString(opArguments_));
+		__COUTTV__(opArguments_.size());
+		__COUTTV__(vectorToString(opArguments_));
 
 		if (!opArguments_.size())  // skip no arguments
 		{
-			__COUT__ << txtLineNumber_ << ": is empty" << __E__;
+			__COUTT__ << txtLineNumber_ << ": is empty" << __E__;
 			continue;
 		}
 
@@ -157,7 +157,7 @@ try
 			resultSs << binaryLine << "     // " << translateOpCode(instr);
 			if (instr == CFO_INSTR::MARKER)
 				resultSs << " -----> #" << ++markerCnt;
-			__COUT__ << "binaryLine #" << ++binaryLineNumber << " = " << binaryLine << __E__;
+			__COUTT__ << "binaryLine #" << ++binaryLineNumber << " = " << binaryLine << __E__;
 			if (instr == CFO_INSTR::LOOP)
 				tabStr += '\t';
 			else if (instr == CFO_INSTR::DO_LOOP && tabStr.length())
@@ -374,7 +374,7 @@ uint64_t CFOLib::CFO_Compiler::calculateParameterAndErrorCheck(CFO_INSTR instruc
 	size_t opArgCount = opArguments_.size();
 	modeClearMask_ = 0;  // clear
 
-	__COUT__ << "calculateParameterAndErrorCheck... Instruction: " << opArguments_[0] << ", Parameter count: " << opArgCount << __E__;
+	__COUTT__ << "calculateParameterAndErrorCheck... Instruction: " << opArguments_[0] << ", Parameter count: " << opArgCount << __E__;
 
 	uint64_t value;
 
@@ -501,13 +501,13 @@ uint64_t CFOLib::CFO_Compiler::calculateParameterAndErrorCheck(CFO_INSTR instruc
 			}
 			// test floating point in case integer conversion dropped something
 			double timeValue = strtod(opArguments_[1].c_str(), 0);
-			__COUTV__(timeValue);
+			__COUTTV__(timeValue);
 			if (timeValue < value)
 				timeValue = value;
 
-			__COUTV__(FPGAClock_);
-			__COUTV__(value);
-			__COUTV__(timeValue);
+			__COUTTV__(FPGAClock_);
+			__COUTTV__(value);
+			__COUTTV__(timeValue);
 
 			if (opArguments_[2] == "s")  // Wait wanted in seconds
 				return timeValue * 1e9 / FPGAClock_;
@@ -549,7 +549,7 @@ uint64_t CFOLib::CFO_Compiler::calculateParameterAndErrorCheck(CFO_INSTR instruc
 					   << "Use 0x### to indicate hex and b### to indicate binary; otherwise, decimal is inferred." << __E__;
 				__SS_THROW__;
 			}
-			__COUT__ << "loopStack_ = " << binLineNumber_ << " at " << loopStack_.size() << __E__;
+			__COUTT__ << "loopStack_ = " << binLineNumber_ << " at " << loopStack_.size() << __E__;
 			loopStack_.push_back(binLineNumber_);
 			return value;
 
@@ -564,9 +564,9 @@ uint64_t CFOLib::CFO_Compiler::calculateParameterAndErrorCheck(CFO_INSTR instruc
 				uint64_t loopLine;
 				loopLine = loopStack_.back();
 				value = (binLineNumber_ - loopLine);
-				__COUT__ << "DO_LOOP from [" << binLineNumber_ << "], loop line popped = " << loopLine << ", must go back	" << value << " lines.";
+				__COUTT__ << "DO_LOOP from [" << binLineNumber_ << "], loop line popped = " << loopLine << ", must go back	" << value << " lines.";
 				loopStack_.pop_back();
-				__COUT__ << "DO_LOOP loopStack_ " << loopStack_.size() << " w/parameterCalc=" << value;
+				__COUTT__ << "DO_LOOP loopStack_ " << loopStack_.size() << " w/parameterCalc=" << value;
 				return value;
 			}
 			else
@@ -603,12 +603,12 @@ uint64_t CFOLib::CFO_Compiler::calculateParameterAndErrorCheck(CFO_INSTR instruc
 			}
 			opArguments_.push_back(MAIN_GOTO_LABEL);  // force label MAIN because only one GOTO ever makes sense if jumping in and out of loops is not allowed (since there are on IF statements)
 			opArguments_[1] = MAIN_GOTO_LABEL;        // in case of comments, push_back doesnt work
-			__COUT__ << "Goto lookup label '" << opArguments_[1] << "'" << __E__;
+			__COUTT__ << "Goto lookup label '" << opArguments_[1] << "'" << __E__;
 
 			if (labelMap_.find(opArguments_[1]) == labelMap_.end())
 			{
 				for (auto& labelPair : labelMap_)
-					__COUTV__(labelPair.first);
+					__COUTTV__(labelPair.first);
 				__SS__ << "Missing label '" << opArguments_[1] << "' needed for GOTO at line " << txtLineNumber_ << __E__;
 				__SS_THROW__;
 			}
@@ -631,7 +631,7 @@ uint64_t CFOLib::CFO_Compiler::calculateParameterAndErrorCheck(CFO_INSTR instruc
 			opArguments_.push_back(MAIN_GOTO_LABEL);
 			opArguments_[1] = MAIN_GOTO_LABEL;  // in case of comments, push_back doesnt work
 
-			__COUT__ << "Saving map for label '" << opArguments_[1] << "' to line " << binLineNumber_ << __E__;
+			__COUTT__ << "Saving map for label '" << opArguments_[1] << "' to line " << binLineNumber_ << __E__;
 			if (labelMap_.find(opArguments_[1]) != labelMap_.end())
 			{
 				__SS__ << "On Line " << txtLineNumber_ << ", " << opArguments_[0] << " encountered when one already exists in the run plan. Only one " << opArguments_[0] << " allowed in a run plan." << __E__;
@@ -708,9 +708,9 @@ uint64_t CFOLib::CFO_Compiler::calculateParameterAndErrorCheck(CFO_INSTR instruc
 				__SS_THROW__;
 			}
 
-			__COUTV__(startBit);
-			__COUTV__(bitCount);
-			__COUTV__(value);
+			__COUTTV__(startBit);
+			__COUTTV__(bitCount);
+			__COUTTV__(value);
 			uint64_t bitmask = 0;
 			for (uint16_t i = startBit; i < startBit + bitCount; ++i)
 				bitmask |= (uint64_t(1) << i);
@@ -719,11 +719,11 @@ uint64_t CFOLib::CFO_Compiler::calculateParameterAndErrorCheck(CFO_INSTR instruc
 			{
 				case CFO_INSTR::SET_MODE_BITS:  // treat SET_MODE_BITS as two ops in hardware: an AND and an OR
 
-					__COUT__ << "bitmask 0x" << std::hex << bitmask << __E__;
+					__COUTT__ << "bitmask 0x" << std::hex << bitmask << __E__;
 					value <<= startBit;         // shift then mask
 					value &= bitmask;           // force bitcount in case of ~ inverted value
 					modeClearMask_ = ~bitmask;  // CLEAR
-					__COUT__ << "modeClearMask_ 0x" << std::hex << modeClearMask_ << __E__;
+					__COUTT__ << "modeClearMask_ 0x" << std::hex << modeClearMask_ << __E__;
 					return value;  // SET
 
 				case CFO_INSTR::AND_MODE_BITS:
@@ -740,7 +740,7 @@ uint64_t CFOLib::CFO_Compiler::calculateParameterAndErrorCheck(CFO_INSTR instruc
 					return value;        // OR / OR (single-shot)
 
 				default: {
-					__COUTV__((int)instructionOpcode);
+					__COUTTV__((int)instructionOpcode);
 					__SS__ << "On Line " << txtLineNumber_ << ", invalid instruction '" << opArguments_[0] << "' encountered.'" << __E__;
 					__SS_THROW__;
 				}
@@ -821,7 +821,7 @@ uint64_t CFOLib::CFO_Compiler::calculateParameterAndErrorCheck(CFO_INSTR instruc
 			return value;        // SET
 		}
 		default: {
-			__COUTV__((int)instructionOpcode);
+			__COUTTV__((int)instructionOpcode);
 			__SS__ << "On Line " << txtLineNumber_ << ", invalid instruction '" << opArguments_[0] << "' encountered.'" << __E__;
 			__SS_THROW__;
 		}

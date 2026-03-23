@@ -2039,7 +2039,7 @@ void CFOLib::CFO_Registers::CompareRunPlanData(const std::string& inputData, con
 			if (!mismatches)
 				__SS_THROW__;
 
-			__COUT__ << ss.str() << __E__;
+			__COUTT__ << ss.str() << __E__;
 			mismatches->get()[runPlanBaseAddress + l / 4] = std::make_pair(*((uint32_t*)(&(dataPtr[l]))), val);
 		}
 
