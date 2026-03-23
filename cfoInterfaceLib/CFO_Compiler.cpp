@@ -926,7 +926,7 @@ bool getNumber(const std::string& s, T& retValue)
 				 typeid(long long) == typeid(retValue) || typeid(unsigned long) == typeid(retValue) || typeid(long) == typeid(retValue) ||
 				 typeid(unsigned short) == typeid(retValue) || typeid(short) == typeid(retValue) || typeid(uint8_t) == typeid(retValue))
 		{
-			__COUTVS__(2, number[1]);
+			__COUTVS__(2, number);
 			if (number.size() > 2 && number[1] == 'x')  // assume hex value
 				tmpValue = (T)strtol(number.c_str(), 0, 16);
 			else if (number.size() > 1 && number[0] == 'b')            // assume binary value
@@ -936,7 +936,7 @@ bool getNumber(const std::string& s, T& retValue)
 		}
 		else  // just try!
 		{
-			__COUTVS__(2, number[1]);
+			__COUTVS__(2, number);
 			if (number.size() > 2 && number[1] == 'x')  // assume hex value
 				tmpValue = (T)strtol(number.c_str(), 0, 16);
 			else if (number.size() > 1 && number[0] == 'b')            // assume binary value
