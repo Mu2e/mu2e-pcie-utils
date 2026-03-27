@@ -2133,6 +2133,44 @@ DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatRunPlanCurrentMode()
 	return form;
 }  // end FormatRunPlanCurrentMode()
 
+// Run Plan Subrun Event Limit Register
+void CFOLib::CFO_Registers::SetRunPlanSubrunEvtLimit(uint32_t limit)
+{
+	WriteRegister_(limit, CFO_Register_RunPlanSubrunEvtLimit);
+}
+
+uint32_t CFOLib::CFO_Registers::ReadRunPlanSubrunEvtLimit(std::optional<uint32_t> val)
+{
+	return val.has_value() ? *val : ReadRegister_(CFO_Register_RunPlanSubrunEvtLimit);
+}
+
+DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatRunPlanSubrunEvtLimit()
+{
+	auto form = CreateFormatter(CFO_Register_RunPlanSubrunEvtLimit);
+	form.description = "Run Plan Subrun Event Limit";
+	form.vals.push_back(std::to_string(ReadRunPlanSubrunEvtLimit(form.value)));
+	return form;
+}
+
+// Run Plan Subrun Prediction Offset Register
+void CFOLib::CFO_Registers::SetRunPlanSubrunPredOffset(uint32_t offset)
+{
+	WriteRegister_(offset, CFO_Register_RunPlanSubrunPredOffset);
+}
+
+uint32_t CFOLib::CFO_Registers::ReadRunPlanSubrunPredOffset(std::optional<uint32_t> val)
+{
+	return val.has_value() ? *val : ReadRegister_(CFO_Register_RunPlanSubrunPredOffset);
+}
+
+DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatRunPlanSubrunPredOffset()
+{
+	auto form = CreateFormatter(CFO_Register_RunPlanSubrunPredOffset);
+	form.description = "Run Plan Subrun Prediction Offset";
+	form.vals.push_back(std::to_string(ReadRunPlanSubrunPredOffset(form.value)));
+	return form;
+}
+
 // Firefly CSR Register
 bool CFOLib::CFO_Registers::ReadFireflyTXRXPresent(std::optional<uint32_t> val)
 {
