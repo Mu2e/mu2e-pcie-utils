@@ -190,10 +190,10 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 				}
 
 				DTC_TLOG(TLVL_GetData) << "GetSubEventData after ReadNextDAQSubEventDMA, found " << output.size() << " subevents"
-									 << ", first tag = " << output[0]->GetEventWindowTag().GetEventWindowTag(true)
-									 << " (0x" << std::hex << output[0]->GetEventWindowTag().GetEventWindowTag(true) << ")"
-									 << ", expected tag = " << std::dec << when.GetEventWindowTag(true)
-									 << " (0x" << std::hex << when.GetEventWindowTag(true) << ")";
+									   << ", first tag = " << output[0]->GetEventWindowTag().GetEventWindowTag(true)
+									   << " (0x" << std::hex << output[0]->GetEventWindowTag().GetEventWindowTag(true) << ")"
+									   << ", expected tag = " << std::dec << when.GetEventWindowTag(true)
+									   << " (0x" << std::hex << when.GetEventWindowTag(true) << ")";
 			}
 			else
 				DTC_TLOG(TLVL_GetData) << "GetSubEventData after ReadNextDAQSubEventDMA, no data";
