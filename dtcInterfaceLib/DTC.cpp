@@ -162,83 +162,85 @@ std::vector<std::unique_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetData(DTC_EventWi
 }  // GetData
 
 // GetSubEventData ~~
-//	Similart to GetData() but retrieves a SubEvent, as opposed to an Event -- This is appropriate for SW Event building or more basic tests.
+//	Similar to CFO GetData() -- retrieves one or more SubEvents from a single DMA buffer read.
+//	This is appropriate for SW Event building or more basic tests.
 std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(DTC_EventWindowTag when, bool matchEventWindowTag)
 {
 	DTC_TLOG(TLVL_GetData) << "GetSubEventData begin EventWindowTag=" << when.GetEventWindowTag(true) << ", doMatching=" << (matchEventWindowTag ? "true" : "false");
 	std::vector<std::unique_ptr<DTC_SubEvent>> output;
-	std::unique_ptr<DTC_SubEvent> packet = nullptr;
+	bool result = false;
 
-	// Release read buffers here "I am done with everything I read before" (because the return is pointers to the raw data, not copies)
+	// Release read buffers here "I am done with everything I read before" (because the return may be pointers to the raw data, not copies)
 	ReleaseBuffers(DTC_DMA_Engine_DAQ);  // Currently race condition because GetCurrentBuffer(info) is used inside to decide how many buffers to release.
 
 	try
 	{
-		// Read the next DTC_SubEvent
+		// Read SubEvent(s) from the next DMA buffer(s)
 		auto tries = 0;
-		auto done = true;  // false; This code has been changed around!!!!
-		do
+		while (!result && tries < 3)
 		{
-			while (packet == nullptr && tries < 3)
+			DTC_TLOG(TLVL_GetData) << "GetSubEventData before ReadNextDAQSubEventDMA(...), tries = " << tries;
+			result = ReadNextDAQSubEventDMA(output, 100 /* ms */);
+			if (result)
 			{
-				DTC_TLOG(TLVL_GetData) << "GetSubEventData before ReadNextDAQSubEventDMA(...), tries = " << tries;
-				packet = ReadNextDAQSubEventDMA(100 /* ms */);
-				if (packet != nullptr)
-					DTC_TLOG(TLVL_GetData) << "GetSubEventData after ReadNextDAQSubEvent, found tag = " << packet->GetEventWindowTag().GetEventWindowTag(true) << " (0x" << std::hex << packet->GetEventWindowTag().GetEventWindowTag(true) << "), expected tag = " << std::dec << when.GetEventWindowTag(true) << " (0x" << std::hex << when.GetEventWindowTag(true) << ")";
-				else
-					DTC_TLOG(TLVL_GetData) << "GetSubEventData after ReadNextDAQSubEvent, packet == nullptr";
-				tries++;
-				// if (packet == nullptr) usleep(5000);
+				if (output.size() == 0)
+				{
+					__SS__ << "Impossible empty output vector after returned success!" << __E__;
+					__SS_THROW__;
+				}
+
+				DTC_TLOG(TLVL_GetData) << "GetSubEventData after ReadNextDAQSubEventDMA, found " << output.size() << " subevents"
+									 << ", first tag = " << output[0]->GetEventWindowTag().GetEventWindowTag(true)
+									 << " (0x" << std::hex << output[0]->GetEventWindowTag().GetEventWindowTag(true) << ")"
+									 << ", expected tag = " << std::dec << when.GetEventWindowTag(true)
+									 << " (0x" << std::hex << when.GetEventWindowTag(true) << ")";
 			}
+			else
+				DTC_TLOG(TLVL_GetData) << "GetSubEventData after ReadNextDAQSubEventDMA, no data";
+			tries++;
+		}
 
-			// return if no data found
-			if (packet == nullptr)
-			{
-				DTC_TLOG(TLVL_GetData) << "GetData: Timeout Occurred! (DTC_SubEvent is nullptr after retries); no data found; RETURNing output.size()=" << output.size();
-				return output;
-			}
+		// return if no data found
+		if (!result)
+		{
+			DTC_TLOG(TLVL_GetData) << "GetSubEventData: Timeout Occurred! no data found; RETURNing output.size()=" << output.size();
+			return output;
+		}
 
-			// return if failed to match
-			if (packet->GetEventWindowTag() != when && matchEventWindowTag)
-			{
-				DTC_TLOG(TLVL_ERROR) << "GetData: Error: DTC_SubEvent has wrong Event Window Tag! 0x" << std::hex << when.GetEventWindowTag(true)
-									 << "(expected) != 0x" << std::hex << packet->GetEventWindowTag().GetEventWindowTag(true);
-				packet.reset(nullptr);
-				daqDMAInfo_.currentReadPtr = daqDMAInfo_.lastReadPtr;
-				return output;
-			}
-
-			// increment for next packet search
-			when = DTC_EventWindowTag(packet->GetEventWindowTag().GetEventWindowTag(true) + 1);
-
-			DTC_TLOG(TLVL_GetData) << "GetData: Adding DTC_SubEvent tag = " << packet->GetEventWindowTag().GetEventWindowTag(true) << " to the list, ptr=" << (void*)daqDMAInfo_.lastReadPtr;
-			output.push_back(std::move(packet));
-
-		} while (!done);  // primary loop to read one subevent
+		// return if failed to match
+		if (matchEventWindowTag && output[0]->GetEventWindowTag() != when)
+		{
+			DTC_TLOG(TLVL_ERROR) << "GetSubEventData: Error: DTC_SubEvent has wrong Event Window Tag! 0x" << std::hex << when.GetEventWindowTag(true)
+								 << "(expected) != 0x" << std::hex << output[0]->GetEventWindowTag().GetEventWindowTag(true);
+			daqDMAInfo_.currentReadPtr = daqDMAInfo_.lastReadPtr;
+			return output;
+		}
 	}
 	catch (DTC_WrongPacketTypeException& ex)
 	{
 		daqDMAInfo_.currentReadPtr = nullptr;
-		DTC_TLOG(TLVL_ERROR) << "GetData: Bad omen: Wrong packet type at the current read position";
+		DTC_TLOG(TLVL_ERROR) << "GetSubEventData: Bad omen: Wrong packet type at the current read position, last tag=" << (output.size() ? output.back()->GetEventWindowTag().GetEventWindowTag(true) : -1);
 		device_.spy(DTC_DMA_Engine_DAQ, 3 /* for once */ | 8 /* for wide view */ | 16 /* for stack trace */);
 		throw;
 	}
 	catch (DTC_IOErrorException& ex)
 	{
 		daqDMAInfo_.currentReadPtr = nullptr;
-		DTC_TLOG(TLVL_ERROR) << "GetData: IO Exception Occurred!";
+		DTC_TLOG(TLVL_ERROR) << "GetSubEventData: IO Exception Occurred! last tag=" << (output.size() ? output.back()->GetEventWindowTag().GetEventWindowTag(true) : -1);
 		device_.spy(DTC_DMA_Engine_DAQ, 3 /* for once */ | 8 /* for wide view */ | 16 /* for stack trace */);
 		throw;
 	}
 	catch (DTC_DataCorruptionException& ex)
 	{
 		daqDMAInfo_.currentReadPtr = nullptr;
-		DTC_TLOG(TLVL_ERROR) << "GetData: Data Corruption Exception Occurred!";
+		DTC_TLOG(TLVL_ERROR) << "GetSubEventData: Data Corruption Exception Occurred! last tag=" << (output.size() ? output.back()->GetEventWindowTag().GetEventWindowTag(true) : -1);
 		device_.spy(DTC_DMA_Engine_DAQ, 3 /* for once */ | 8 /* for wide view */ | 16 /* for stack trace */);
 		throw;
 	}
 
-	DTC_TLOG(TLVL_GetData) << "GetSubEventData RETURN output.size()=" << output.size();
+	DTC_TLOG(TLVL_GetData) << "GetSubEventData RETURN output.size()=" << output.size()
+						   << " first tag=" << output[0]->GetEventWindowTag().GetEventWindowTag(true)
+						   << " last tag=" << output.back()->GetEventWindowTag().GetEventWindowTag(true);
 	return output;
 }  // GetSubEventData
 
@@ -1059,7 +1061,7 @@ std::unique_ptr<DTCLib::DTC_Event> DTCLib::DTC::ReadNextDAQDMA(int tmo_ms)
 	return res;
 }  // end ReadNextDAQDMA()
 
-std::unique_ptr<DTCLib::DTC_SubEvent> DTCLib::DTC::ReadNextDAQSubEventDMA(int tmo_ms)
+bool DTCLib::DTC::ReadNextDAQSubEventDMA(std::vector<std::unique_ptr<DTC_SubEvent>>& output, int tmo_ms)
 {
 	TRACE_EXIT
 	{
@@ -1084,6 +1086,8 @@ std::unique_ptr<DTCLib::DTC_SubEvent> DTCLib::DTC::ReadNextDAQSubEventDMA(int tm
 
 	auto index = CFOandDTC_DMAs::GetCurrentBuffer(&daqDMAInfo_);  // if buffers onhand, returns daqDMAInfo_.buffer.size().. which is count used by ReleaseBuffers()
 
+	size_t metaBufferSize = 0;
+
 	// Need new starting subevent buffer if GetCurrentBuffer returns -1 (no buffers) or -2 (done with all held buffers)
 	if (index < 0)
 	{
@@ -1094,9 +1098,10 @@ std::unique_ptr<DTCLib::DTC_SubEvent> DTCLib::DTC::ReadNextDAQSubEventDMA(int tm
 		auto sts = ReadBuffer(DTC_DMA_Engine_DAQ, tmo_ms);  // does return code
 		if (sts <= 0)
 		{
-			DTC_TLOG(TLVL_ReadNextDAQPacket) << "ReadNextDAQSubEventDMA: ReadBuffer returned " << sts << ", returning nullptr";
-			return nullptr;
+			DTC_TLOG(TLVL_ReadNextDAQPacket) << "ReadNextDAQSubEventDMA: ReadBuffer returned " << sts << ", returning false";
+			return false;
 		}
+		metaBufferSize = sts;
 		// MUST BE ABLE TO HANDLE daqbuffer_==nullptr OR retry forever?
 		daqDMAInfo_.currentReadPtr = &daqDMAInfo_.buffer.back()[0];
 		DTC_TLOG(TLVL_ReadNextDAQPacket) << "ReadNextDAQSubEventDMA daqDMAInfo_.currentReadPtr=" << (void*)daqDMAInfo_.currentReadPtr
@@ -1110,8 +1115,8 @@ std::unique_ptr<DTCLib::DTC_SubEvent> DTCLib::DTC::ReadNextDAQSubEventDMA(int tm
 			// Try and see if we're merely stuck...hopefully, all the data is out of the buffers...
 			device_.read_release(DTC_DMA_Engine_DAQ, 1);
 			DTC_TLOG(TLVL_WARN)
-				<< "ReadNextDAQSubEventDMA: New buffer was the same as old. Released buffer and returning nullptr";
-			return nullptr;
+				<< "ReadNextDAQSubEventDMA: New buffer was the same as old. Released buffer and returning false";
+			return false;
 		}
 		daqDMAInfo_.bufferIndex++;
 
@@ -1140,161 +1145,205 @@ std::unique_ptr<DTCLib::DTC_SubEvent> DTCLib::DTC::ReadNextDAQSubEventDMA(int tm
 	}
 
 	// Utilities::PrintBuffer(daqDMAInfo_.currentReadPtr, 128, TLVL_ReadNextDAQPacket);
-	auto res = std::make_unique<DTC_SubEvent>(daqDMAInfo_.currentReadPtr);  // only does setup of SubEvent header!
 
-	auto subEventByteCount = res->GetSubEventByteCount();
-	if (subEventByteCount < sizeof(DTC_SubEventHeader))
+	size_t inBufferByteCount = CFOandDTC_DMAs::GetBufferByteCount(&daqDMAInfo_, index);
+	// Use DMA descriptor byte count from ReadBuffer (dont use the in-buffer DMA transfer size count because the DTC stacks sub-transfers!)
+	// Subtract 1 for tlast byte, but NOT when buffer is completely full (no room for tlast)
+	size_t remainingBufferSize = metaBufferSize < sizeof(mu2e_databuff_t) ? metaBufferSize - 1 : metaBufferSize;
+	DTC_TLOG(TLVL_ReadNextDAQPacket) << "sizeof(DTC_SubEventHeader) = " << sizeof(DTC_SubEventHeader) << " GetBufferByteCount=" << inBufferByteCount
+									 << " metaBufferSize=" << metaBufferSize;
+
+	// Extract multiple subevents from buffer
+	while (remainingBufferSize >= sizeof(DTC_SubEventHeader))
 	{
-		__SS__ << "SubEvent inclusive byte count cannot be less than the size of the subevent header (" << sizeof(DTC_SubEventHeader) << "-bytes)!" << __E__;
-		__SS_THROW__;
-	}
-	size_t remainingBufferSize = CFOandDTC_DMAs::GetBufferByteCount(&daqDMAInfo_, index);
-	DTC_TLOG(TLVL_ReadNextDAQPacket) << "sizeof(DTC_SubEventHeader) = " << sizeof(DTC_SubEventHeader) << " GetBufferByteCount=" << remainingBufferSize;
+		remainingBufferSize -= sizeof(uint64_t);  // remove per-subevent DMA transfer size from remaining byte count
 
-	remainingBufferSize -= sizeof(uint64_t);
+		auto res = std::make_unique<DTC_SubEvent>(daqDMAInfo_.currentReadPtr);  // only does setup of SubEvent header!
 
-	DTC_TLOG(TLVL_ReadNextDAQPacket) << "subevent tag=" << res->GetEventWindowTag().GetEventWindowTag(true) << std::hex << "(0x" << res->GetEventWindowTag().GetEventWindowTag(true) << ")"
-									 << " inclusive byte count: 0x" << std::hex << subEventByteCount << " (" << std::dec << subEventByteCount << ") inclusive packets " << subEventByteCount / 16 << ", remaining buffer size: 0x" << std::hex << remainingBufferSize << " (" << std::dec << remainingBufferSize << ") this buffer packets = " << (remainingBufferSize - sizeof(DTC_SubEventHeader)) / 16 << ". "
-									 << "Total subevent packet count: " << (subEventByteCount - sizeof(DTC_SubEventHeader)) / 16;
-
-	// Check for continued DMA
-	if (subEventByteCount > remainingBufferSize)
-	{
-		DTC_TLOG(TLVL_ReadNextDAQPacket) << "subevent needs more data by bytes " << std::hex << subEventByteCount - remainingBufferSize << " (" << std::dec << subEventByteCount - remainingBufferSize << ") packets " << (subEventByteCount - remainingBufferSize) / 16 << ". subEventByteCount=" << subEventByteCount << " remainingBufferSize=" << remainingBufferSize;
-
-		// We're going to set lastReadPtr here, so that if this buffer isn't used by GetData, we start at the beginning of this event next time
-		daqDMAInfo_.lastReadPtr = static_cast<uint8_t*>(daqDMAInfo_.currentReadPtr);
-
-		auto inmem = std::make_unique<DTC_SubEvent>(subEventByteCount);
-
-		if (0)  // for deubbging
+		auto subEventByteCount = res->GetSubEventByteCount();
+		if (subEventByteCount < sizeof(DTC_SubEventHeader))
 		{
-			std::cout << "1st DMA buffer res size=" << remainingBufferSize << "\n";
-			auto ptr = reinterpret_cast<const uint8_t*>(res->GetRawBufferPointer());
-			for (size_t i = 0; i < remainingBufferSize + 16; i += 4)
-				std::cout << std::dec << "res#" << i << "/" << remainingBufferSize << "(" << i / 16 << "/" << remainingBufferSize / 16 << ")" << std::hex << std::setw(8) << std::setfill('0') << *((uint32_t*)(&(ptr[i]))) << std::endl;
-		}
-
-		memcpy(const_cast<void*>(inmem->GetRawBufferPointer()), res->GetRawBufferPointer(), remainingBufferSize);
-
-		if (0)  // for deubbging
-		{
-			std::cout << "1st DMA buffer inmem size=" << remainingBufferSize << "\n";
-			auto ptr = reinterpret_cast<const uint8_t*>(inmem->GetRawBufferPointer());
-			for (size_t i = 0; i < remainingBufferSize + 16; i += 4)
-				std::cout << std::dec << "inmem#" << i << "(" << i / 16 << ")" << std::hex << std::setw(8) << std::setfill('0') << *((uint32_t*)(&(ptr[i]))) << std::endl;
-		}
-
-		auto bytes_read = remainingBufferSize;
-		while (bytes_read < subEventByteCount)
-		{
-			DTC_TLOG(TLVL_ReadNextDAQPacket) << "ReadNextDAQSubEventDMA tag=" << inmem->GetEventWindowTag().GetEventWindowTag(true) << std::hex << "(0x" << inmem->GetEventWindowTag().GetEventWindowTag(true) << ")"
-											 << " Obtaining new DAQ Buffer, bytes_read=" << bytes_read << ", subEventByteCount=" << subEventByteCount;
-
-			void* oldBufferPtr = nullptr;
-			if (daqDMAInfo_.buffer.size() > 0) oldBufferPtr = &daqDMAInfo_.buffer.back()[0];
-
-			if (0)  // for deubbging
-			{
-				std::cout << "1st DMA buffer\n";
-				auto ptr = reinterpret_cast<const uint8_t*>(&daqDMAInfo_.buffer.back()[0]);
-				for (size_t i = 0; i < bytes_read + sizeof(DTCLib::DTC_SubEventHeader); i += 4)
-					std::cout << std::dec << "#" << i << "(" << i / 16 << ")" << std::hex << std::setw(8) << std::setfill('0') << *((uint32_t*)(&(ptr[i]))) << std::endl;
-			}
-
-			int sts;
-			int retry = 10;
-			// timeout is an exception at this point because no way to resolve partial subevent record!
-			while ((sts = ReadBuffer(DTC_DMA_Engine_DAQ, 10 /* retries */))  // does return code
-					   <= 0 &&
-				   --retry > 0) usleep(1000);
-
-			if (sts <= 0)
-			{
-				__SS__ << "Timeout of " << tmo_ms << " ms after receiving only partial subevent! Subevent tag=" << inmem->GetEventWindowTag().GetEventWindowTag(true) << std::hex << "(0x" << inmem->GetEventWindowTag().GetEventWindowTag(true) << ")";
-				__SS_THROW__;
-			}
-
-			daqDMAInfo_.currentReadPtr = &daqDMAInfo_.buffer.back()[0];
-			DTC_TLOG(TLVL_ReadNextDAQPacket) << "ReadNextDAQSubEventDMA daqDMAInfo_.currentReadPtr=" << (void*)daqDMAInfo_.currentReadPtr
-											 << " *daqDMAInfo_.currentReadPtr=0x" << std::hex << *(unsigned*)daqDMAInfo_.currentReadPtr
-											 << " lastReadPtr=" << (void*)daqDMAInfo_.lastReadPtr;
-
-			if (0)  // for deubbging
-			{
-				std::cout << "1st buffer\n";
-				auto ptr = reinterpret_cast<const uint8_t*>(inmem->GetRawBufferPointer());
-				for (size_t i = 0; i < bytes_read + 16; i += 4)
-					std::cout << std::dec << "#" << i << "(" << i / 16 << ")" << std::hex << std::setw(8) << std::setfill('0') << *((uint32_t*)(&(ptr[i]))) << std::endl;
-			}
-
-			void* bufferIndexPointer = static_cast<uint8_t*>(daqDMAInfo_.currentReadPtr) + 4;
-			if (daqDMAInfo_.currentReadPtr == oldBufferPtr && daqDMAInfo_.bufferIndex == *static_cast<uint32_t*>(bufferIndexPointer))
-			{
-				// We didn't actually get a new buffer...this probably means there's no more data
-				// timeout is an exception at this point because no way to resolve partial subevent record!
-				__SS__ << "Received same buffer twice, only received partial subevent!! Subevent tag=" << inmem->GetEventWindowTag().GetEventWindowTag(true) << std::hex << "(0x" << inmem->GetEventWindowTag().GetEventWindowTag(true) << ")";
-				__SS_THROW__;
-			}
-			daqDMAInfo_.bufferIndex++;
-
-			size_t buffer_size = *static_cast<uint16_t*>(daqDMAInfo_.currentReadPtr);
-			daqDMAInfo_.currentReadPtr = static_cast<uint8_t*>(daqDMAInfo_.currentReadPtr) + 4;
-			*static_cast<uint32_t*>(daqDMAInfo_.currentReadPtr) = daqDMAInfo_.bufferIndex;
-			daqDMAInfo_.currentReadPtr = static_cast<uint8_t*>(daqDMAInfo_.currentReadPtr) + 4;
-
-			size_t remainingEventSize = subEventByteCount - bytes_read;
-			size_t copySize = remainingEventSize < buffer_size - 8 ? remainingEventSize : buffer_size - 8;
-
-			if (0)  // for deubbging
-			{
-				std::cout << "2nd buffer\n";
-				auto ptr = reinterpret_cast<const uint8_t*>(daqDMAInfo_.currentReadPtr);
-				for (size_t i = 0; i < copySize; i += 4)
-					std::cout << std::dec << "#" << i << "(" << i / 16 << ")" << std::hex << std::setw(8) << std::setfill('0') << *((uint32_t*)(&(ptr[i]))) << std::endl;
-			}
-
-			DTC_TLOG(TLVL_ReadNextDAQPacket) << "ReadNextDAQSubEventDMA bytes_read = " << bytes_read << " packets = " << bytes_read / 16 - sizeof(DTC_SubEventHeader) / 16;
-			DTC_TLOG(TLVL_ReadNextDAQPacket) << "ReadNextDAQSubEventDMA copySize = " << copySize << " packets = " << copySize / 16;
-			memcpy(const_cast<uint8_t*>(static_cast<const uint8_t*>(inmem->GetRawBufferPointer()) + bytes_read), daqDMAInfo_.currentReadPtr, copySize);
-			bytes_read += buffer_size - 8;
-
-			// Increment by the size of the data block
-			daqDMAInfo_.currentReadPtr = reinterpret_cast<char*>(daqDMAInfo_.currentReadPtr) + copySize;
-		}  // end primary continuation of multi-DMA subevent transfers
-
-		res.swap(inmem);
-	}
-	else  // SubEvent not split over multiple DMAs
-	{
-		// Update the packet pointers
-
-		// lastReadPtr_ is easy...
-		daqDMAInfo_.lastReadPtr = daqDMAInfo_.currentReadPtr;
-
-		// Increment by the size of the data block
-		daqDMAInfo_.currentReadPtr = reinterpret_cast<char*>(daqDMAInfo_.currentReadPtr) + res->GetSubEventByteCount();
-	}
-
-	try
-	{
-		std::string accumulatedErrors = "";
-		auto ok = res->SetupSubEvent(accumulatedErrors);  // does setup of SubEvent header + all payload
-		if (!ok)
-		{
-			__SS__ << "SubEvent is corrupt! EWT=" << res->GetEventWindowTag() << ".\n\nAccumulated Errors: " << accumulatedErrors << __E__;
+			__SS__ << "SubEvent inclusive byte count cannot be less than the size of the subevent header (" << sizeof(DTC_SubEventHeader) << "-bytes)!" << __E__;
 			__SS_THROW__;
 		}
-	}
-	catch (...)
-	{
-		device_.spy(DTC_DMA_Engine_DAQ, 3 /* for once */ | 8 /* for wide view */);
-		DTC_TLOG(TLVL_ERROR) << otsStyleStackTrace();
-		throw;
-	}
 
-	DTC_TLOG(TLVL_ReadNextDAQPacket) << "ReadNextDAQSubEventDMA: RETURN ptr to next SubEvent";
-	return res;
+		DTC_TLOG(TLVL_ReadNextDAQPacket) << "subevent tag=" << res->GetEventWindowTag().GetEventWindowTag(true) << std::hex << "(0x" << res->GetEventWindowTag().GetEventWindowTag(true) << ")"
+										 << " inclusive byte count: 0x" << std::hex << subEventByteCount << " (" << std::dec << subEventByteCount << ") inclusive packets " << subEventByteCount / 16 << ", remaining buffer size: 0x" << std::hex << remainingBufferSize << " (" << std::dec << remainingBufferSize << ") this buffer in packets = " << (remainingBufferSize - sizeof(DTC_SubEventHeader)) / 16 << ". "
+										 << "Total subevent packet count: " << (subEventByteCount - sizeof(DTC_SubEventHeader)) / 16;
+
+		// Check for continued DMA
+		if (subEventByteCount > remainingBufferSize)
+		{
+			DTC_TLOG(TLVL_ReadNextDAQPacket) << "subevent needs more data by bytes " << std::hex << subEventByteCount - remainingBufferSize << " (" << std::dec << subEventByteCount - remainingBufferSize << ") packets " << (subEventByteCount - remainingBufferSize) / 16 << ". subEventByteCount=" << subEventByteCount << " remainingBufferSize=" << remainingBufferSize;
+
+			// We're going to set lastReadPtr here, so that if this buffer isn't used by GetData, we start at the beginning of this event next time
+			daqDMAInfo_.lastReadPtr = static_cast<uint8_t*>(daqDMAInfo_.currentReadPtr);
+
+			auto inmem = std::make_unique<DTC_SubEvent>(subEventByteCount);
+
+			if (0)  // for debugging
+			{
+				std::cout << "1st DMA buffer res size=" << remainingBufferSize << "\n";
+				auto ptr = reinterpret_cast<const uint8_t*>(res->GetRawBufferPointer());
+				for (size_t i = 0; i < remainingBufferSize /* + 16 */; i += 4)
+					std::cout << std::dec << "res#" << i << "/" << remainingBufferSize << "(" << i / 16 << "/" << remainingBufferSize / 16 << ")" << std::hex << std::setw(8) << std::setfill('0') << *((uint32_t*)(&(ptr[i]))) << std::endl;
+			}
+
+			memcpy(const_cast<void*>(inmem->GetRawBufferPointer()), res->GetRawBufferPointer(), remainingBufferSize);
+
+			if (0)  // for debugging
+			{
+				std::cout << "1st DMA buffer inmem size=" << remainingBufferSize << "\n";
+				auto ptr = reinterpret_cast<const uint8_t*>(inmem->GetRawBufferPointer());
+				for (size_t i = 0; i < remainingBufferSize + 16; i += 4)
+					std::cout << std::dec << "inmem#" << i << "(" << i / 16 << ")" << std::hex << std::setw(8) << std::setfill('0') << *((uint32_t*)(&(ptr[i]))) << std::endl;
+			}
+
+			auto bytes_read = remainingBufferSize;
+			size_t lastBufferPayloadSize = 0;
+			size_t lastCopySize = 0;
+
+			while (bytes_read < subEventByteCount)
+			{
+				DTC_TLOG(TLVL_ReadNextDAQPacket) << "ReadNextDAQSubEventDMA tag=" << inmem->GetEventWindowTag().GetEventWindowTag(true) << std::hex << "(0x" << inmem->GetEventWindowTag().GetEventWindowTag(true) << ")"
+												 << " Obtaining new DAQ Buffer, bytes_read=" << bytes_read << ", subEventByteCount=" << subEventByteCount;
+
+				void* oldBufferPtr = nullptr;
+				if (daqDMAInfo_.buffer.size() > 0) oldBufferPtr = &daqDMAInfo_.buffer.back()[0];
+
+				if (0)  // for debugging
+				{
+					std::cout << "1st DMA buffer\n";
+					auto ptr = reinterpret_cast<const uint8_t*>(&daqDMAInfo_.buffer.back()[0]);
+					for (size_t i = 0; i < bytes_read + sizeof(DTCLib::DTC_SubEventHeader); i += 4)
+						std::cout << std::dec << "#" << i << "(" << i / 16 << ")" << std::hex << std::setw(8) << std::setfill('0') << *((uint32_t*)(&(ptr[i]))) << std::endl;
+				}
+
+				int sts;
+				int retry = 10;
+				// timeout is an exception at this point because no way to resolve partial subevent record!
+				while ((sts = ReadBuffer(DTC_DMA_Engine_DAQ, 10 /* retries */))  // does return code
+						   <= 0 &&
+					   --retry > 0) usleep(1000);
+
+				if (sts <= 0)
+				{
+					__SS__ << "Timeout of " << tmo_ms << " ms after receiving only partial subevent! Subevent tag=" << inmem->GetEventWindowTag().GetEventWindowTag(true) << std::hex << "(0x" << inmem->GetEventWindowTag().GetEventWindowTag(true) << ")";
+					__SS_THROW__;
+				}
+
+				daqDMAInfo_.currentReadPtr = &daqDMAInfo_.buffer.back()[0];
+				DTC_TLOG(TLVL_ReadNextDAQPacket) << "ReadNextDAQSubEventDMA daqDMAInfo_.currentReadPtr=" << (void*)daqDMAInfo_.currentReadPtr
+												 << " *daqDMAInfo_.currentReadPtr=0x" << std::hex << *(unsigned*)daqDMAInfo_.currentReadPtr
+												 << " lastReadPtr=" << (void*)daqDMAInfo_.lastReadPtr;
+
+				if (0)  // for debugging
+				{
+					std::cout << "1st buffer\n";
+					auto ptr = reinterpret_cast<const uint8_t*>(inmem->GetRawBufferPointer());
+					for (size_t i = 0; i < bytes_read + 16; i += 4)
+						std::cout << std::dec << "#" << i << "(" << i / 16 << ")" << std::hex << std::setw(8) << std::setfill('0') << *((uint32_t*)(&(ptr[i]))) << std::endl;
+				}
+
+				if (daqDMAInfo_.currentReadPtr == oldBufferPtr)
+				{
+					// We didn't actually get a new buffer...this probably means there's no more data
+					// timeout is an exception at this point because no way to resolve partial subevent record!
+					__SS__ << "Received same buffer twice, only received partial subevent!! Subevent tag=" << inmem->GetEventWindowTag().GetEventWindowTag(true) << std::hex << "(0x" << inmem->GetEventWindowTag().GetEventWindowTag(true) << ")";
+					__SS_THROW__;
+				}
+				daqDMAInfo_.bufferIndex++;
+
+				// NOTE: continuation buffers do NOT have a per-sub-transfer DMA byte count header at offset 0
+				//  (unlike the initial buffer). The raw continuation data starts at offset 0.
+				//  Use the full sts (DMA descriptor byte count) as payload size.
+				size_t buffer_size = sts;
+
+				size_t remainingEventSize = subEventByteCount - bytes_read;
+				size_t copySize = remainingEventSize < buffer_size ? remainingEventSize : buffer_size;
+
+				if (0)  // for debugging
+				{
+					std::cout << "2nd buffer\n";
+					auto ptr = reinterpret_cast<const uint8_t*>(daqDMAInfo_.currentReadPtr);
+					for (size_t i = 0; i < copySize; i += 4)
+						std::cout << std::dec << "#" << i << "(" << i / 16 << "/" << copySize / 16 << ")" << std::hex << std::setw(8) << std::setfill('0') << *((uint32_t*)(&(ptr[i]))) << std::endl;
+				}
+
+				DTC_TLOG(TLVL_ReadNextDAQPacket) << "ReadNextDAQSubEventDMA got new buffer for subevent continuation, buffer_size=" << buffer_size << " copySize=" << copySize << " remainingEventSize=" << remainingEventSize;
+				DTC_TLOG(TLVL_ReadNextDAQPacket) << "ReadNextDAQSubEventDMA so far bytes_read = " << bytes_read << " packets = " << bytes_read / 16 - sizeof(DTC_SubEventHeader) / 16;
+				DTC_TLOG(TLVL_ReadNextDAQPacket) << "ReadNextDAQSubEventDMA copySize = " << copySize << " packets = " << copySize / 16;
+				memcpy(const_cast<uint8_t*>(static_cast<const uint8_t*>(inmem->GetRawBufferPointer()) + bytes_read), daqDMAInfo_.currentReadPtr, copySize);
+				bytes_read += buffer_size;
+
+				// Increment by the size of the data block
+				daqDMAInfo_.currentReadPtr = reinterpret_cast<char*>(daqDMAInfo_.currentReadPtr) + copySize;
+
+				lastBufferPayloadSize = buffer_size;
+				lastCopySize = copySize;
+			}  // end primary continuation of multi-DMA subevent transfers
+
+			res.swap(inmem);
+
+			try
+			{
+				std::string accumulatedErrors = "";
+				auto ok = res->SetupSubEvent(accumulatedErrors);  // does setup of SubEvent header + all payload
+				if (!ok)
+				{
+					__SS__ << "SubEvent is corrupt! EWT=" << res->GetEventWindowTag() << ".\n\nAccumulated Errors: " << accumulatedErrors << __E__;
+					__SS_THROW__;
+				}
+			}
+			catch (...)
+			{
+				device_.spy(DTC_DMA_Engine_DAQ, 3 /* for once */ | 8 /* for wide view */);
+				DTC_TLOG(TLVL_ERROR) << otsStyleStackTrace();
+				throw;
+			}
+
+			output.push_back(std::move(res));
+
+			// Update remaining buffer size for the last-read buffer to check for more subevents
+			remainingBufferSize = lastBufferPayloadSize - lastCopySize;
+
+			// Skip past the next sub-transfer DMA byte count header (same as single-buffer path)
+			daqDMAInfo_.currentReadPtr = reinterpret_cast<char*>(daqDMAInfo_.currentReadPtr) + sizeof(uint64_t);
+		}
+		else  // SubEvent not split over multiple DMAs
+		{
+			// Update the packet pointers
+
+			// lastReadPtr_ is easy...
+			daqDMAInfo_.lastReadPtr = daqDMAInfo_.currentReadPtr;
+
+			// Increment by the size of the data block + skip past next sub-transfer DMA byte count
+			daqDMAInfo_.currentReadPtr = reinterpret_cast<char*>(daqDMAInfo_.currentReadPtr) + subEventByteCount + sizeof(uint64_t);
+			remainingBufferSize -= subEventByteCount;
+
+			try
+			{
+				std::string accumulatedErrors = "";
+				auto ok = res->SetupSubEvent(accumulatedErrors);  // does setup of SubEvent header + all payload
+				if (!ok)
+				{
+					__SS__ << "SubEvent is corrupt! EWT=" << res->GetEventWindowTag() << ".\n\nAccumulated Errors: " << accumulatedErrors << __E__;
+					__SS_THROW__;
+				}
+			}
+			catch (...)
+			{
+				device_.spy(DTC_DMA_Engine_DAQ, 3 /* for once */ | 8 /* for wide view */);
+				DTC_TLOG(TLVL_ERROR) << otsStyleStackTrace();
+				throw;
+			}
+
+			output.push_back(std::move(res));
+		}
+	}  // end primary subevent extraction loop
+
+	DTC_TLOG(TLVL_ReadNextDAQPacket) << "ReadNextDAQSubEventDMA: RETURN " << output.size() << " SubEvents";
+	return output.size() > 0;
 }  // end ReadNextDAQSubEventDMA()
 
 std::unique_ptr<DTCLib::DTC_DCSReplyPacket> DTCLib::DTC::ReadNextDCSPacket(int tmo_ms)

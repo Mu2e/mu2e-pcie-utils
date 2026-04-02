@@ -232,13 +232,9 @@ bool CFOLib::CFO::ReadNextCFORecordDMA(std::vector<std::unique_ptr<CFO_Event>>& 
 									 << " GetBufferByteCount=" << remainingBufferSize
 									 << " metaBufferSize=" << metaBufferSize;
 
-	if (metaBufferSize == 65536)  // how was this happening? from 16 bits
-	{
-		__SS__ << "Impossible metaBufferSize of " << metaBufferSize << __E__;
-		__SS_THROW__;
-	}
-
-	remainingBufferSize = metaBufferSize - 1;  // reset to the meta data value (dont use the DMA transfer size count because the CFO stacks transfers!) minus one (for +1 tlast)
+	// Use DMA descriptor byte count from ReadBuffer (dont use the in-buffer DMA transfer size count because the CFO stacks transfers!)
+	// Subtract 1 for tlast byte, but NOT when buffer is completely full (no room for tlast)
+	remainingBufferSize = metaBufferSize < sizeof(mu2e_databuff_t) ? metaBufferSize - 1 : metaBufferSize;
 
 	// 	if (0)  // for deubbging
 	// 	{
