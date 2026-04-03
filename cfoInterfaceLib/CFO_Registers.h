@@ -20,10 +20,10 @@ enum CFO_Register : uint16_t
 {
 	DTCLIB_COMMON_REGISTERS,  // Moved here all registers in common with DTC
 
-	CFO_Register_SFPSERDESStatus           = 0x9140,
-	CFO_Register_BeamOnTimerPreset         = 0x9144,
-	CFO_Register_EnableBeamOnMode          = 0x9148,
-	CFO_Register_EnableBeamOffMode         = 0x914C,
+	CFO_Register_SFPSERDESStatus   = 0x9140,
+	CFO_Register_BeamOnTimerPreset = 0x9144,
+	CFO_Register_EnableBeamOnMode  = 0x9148,
+	CFO_Register_EnableBeamOffMode = 0x914C,
 	// LEGACY (register 0x9154 repurposed as RunPlanSubrunEvtLimit):
 	// CFO_Register_ClockMarkerIntervalCount  = 0x9154,
 	CFO_Register_RunPlanSubrunEvtLimit     = 0x9154,
