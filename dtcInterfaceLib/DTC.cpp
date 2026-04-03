@@ -213,6 +213,7 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 			DTC_TLOG(TLVL_ERROR) << "GetSubEventData: Error: DTC_SubEvent has wrong Event Window Tag! 0x" << std::hex << when.GetEventWindowTag(true)
 								 << "(expected) != 0x" << std::hex << output[0]->GetEventWindowTag().GetEventWindowTag(true);
 			daqDMAInfo_.currentReadPtr = daqDMAInfo_.lastReadPtr;
+			output.clear();
 			return output;
 		}
 	}
