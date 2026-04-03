@@ -24,8 +24,9 @@ enum CFO_Register : uint16_t
 	CFO_Register_BeamOnTimerPreset         = 0x9144,
 	CFO_Register_EnableBeamOnMode          = 0x9148,
 	CFO_Register_EnableBeamOffMode         = 0x914C,
-	CFO_Register_ClockMarkerIntervalCount  = 0x9154,
-	CFO_Register_RunPlanSubrunEvtLimit     = 0x9154,  // NOTE: same address as ClockMarkerIntervalCount
+	// LEGACY (register 0x9154 repurposed as RunPlanSubrunEvtLimit):
+	// CFO_Register_ClockMarkerIntervalCount  = 0x9154,
+	CFO_Register_RunPlanSubrunEvtLimit     = 0x9154,
 	CFO_Register_RunPlanSubrunPredOffset   = 0x9158,
 	CFO_Register_SERDESOscillatorFrequency = 0x9160,
 	CFO_Register_SERDESClock_IICBusControl = 0x9164,
@@ -505,22 +506,22 @@ class CFO_Registers : public DTCLib::CFOandDTC_Registers
 	/// <returns>RegisterFormatter object containing register information</returns>
 	RegisterFormatter FormatBeamOffMode();
 
-	// 40 MHz Clock Marker Interval Count Register
-	/// <summary>
-	/// Set the Clock Marker Interval Count for synchronizing the 240 MHz and 40 MHz clocks
-	/// </summary>
-	/// <param name="data">Interval to set</param>
-	void SetClockMarkerIntervalCount(uint32_t data);
-	/// <summary>
-	/// Read the Clock Marker Interval Count used for synchronizing the 240 MHz and 40 MHz clocks
-	/// </summary>
-	/// <returns>The Clock Marker Interval Count used for synchronizing the 240 MHz and 40 MHz clocks</returns>
-	uint32_t ReadClockMarkerIntervalCount(std::optional<uint32_t> val = std::nullopt);
-	/// <summary>
-	/// Formats the register's current value for register dumps
-	/// </summary>
-	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatClockMarkerIntervalCount();
+	// LEGACY: 40 MHz Clock Marker Interval Count Register (register 0x9154 repurposed as RunPlanSubrunEvtLimit)
+	// /// <summary>
+	// /// Set the Clock Marker Interval Count for synchronizing the 240 MHz and 40 MHz clocks
+	// /// </summary>
+	// /// <param name="data">Interval to set</param>
+	// void SetClockMarkerIntervalCount(uint32_t data);
+	// /// <summary>
+	// /// Read the Clock Marker Interval Count used for synchronizing the 240 MHz and 40 MHz clocks
+	// /// </summary>
+	// /// <returns>The Clock Marker Interval Count used for synchronizing the 240 MHz and 40 MHz clocks</returns>
+	// uint32_t ReadClockMarkerIntervalCount(std::optional<uint32_t> val = std::nullopt);
+	// /// <summary>
+	// /// Formats the register's current value for register dumps
+	// /// </summary>
+	// /// <returns>RegisterFormatter object containing register information</returns>
+	// RegisterFormatter FormatClockMarkerIntervalCount();
 
 	// SERDES Oscillator Registers
 	/// <summary>
@@ -1577,7 +1578,7 @@ class CFO_Registers : public DTCLib::CFOandDTC_Registers
 	    [this] { return this->FormatBeamOnTimerPreset(); },
 	    [this] { return this->FormatBeamOnMode(); },
 	    [this] { return this->FormatBeamOffMode(); },
-	    [this] { return this->FormatClockMarkerIntervalCount(); },
+	    // LEGACY: [this] { return this->FormatClockMarkerIntervalCount(); },  // register 0x9154 repurposed as RunPlanSubrunEvtLimit
 	    [this] { return this->FormatSERDESOscillatorFrequency(); },
 	    [this] { return this->FormatSERDESOscillatorControl(); },
 	    [this] { return this->FormatSERDESOscillatorParameterLow(); },

@@ -753,23 +753,26 @@ DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatBeamOffMode()
 	return form;
 }
 
-void CFOLib::CFO_Registers::SetClockMarkerIntervalCount(uint32_t data)
-{
-	WriteRegister_(data, CFO_Register_ClockMarkerIntervalCount);
-}
+// LEGACY: register 0x9154 repurposed as RunPlanSubrunEvtLimit; these functions are no longer valid
+// void CFOLib::CFO_Registers::SetClockMarkerIntervalCount(uint32_t data)
+// {
+// 	WriteRegister_(data, CFO_Register_ClockMarkerIntervalCount);
+// }
 
-uint32_t CFOLib::CFO_Registers::ReadClockMarkerIntervalCount(std::optional<uint32_t> val)
-{
-	return val.has_value() ? *val : ReadRegister_(CFO_Register_ClockMarkerIntervalCount);
-}
+// LEGACY: register 0x9154 repurposed as RunPlanSubrunEvtLimit; these functions are no longer valid
+// uint32_t CFOLib::CFO_Registers::ReadClockMarkerIntervalCount(std::optional<uint32_t> val)
+// {
+// 	return val.has_value() ? *val : ReadRegister_(CFO_Register_ClockMarkerIntervalCount);
+// }
 
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatClockMarkerIntervalCount()
-{
-	auto form = CreateFormatter(CFO_Register_ClockMarkerIntervalCount);
-	form.description = "40 MHz Clock Marker Interval Count Register";
-	form.vals.push_back(std::to_string(ReadClockMarkerIntervalCount()));
-	return form;
-}
+// LEGACY: register 0x9154 repurposed as RunPlanSubrunEvtLimit; these functions are no longer valid
+// DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatClockMarkerIntervalCount()
+// {
+// 	auto form = CreateFormatter(CFO_Register_ClockMarkerIntervalCount);
+// 	form.description = "40 MHz Clock Marker Interval Count Register";
+// 	form.vals.push_back(std::to_string(ReadClockMarkerIntervalCount()));
+// 	return form;
+// }
 
 // SEREDES Oscillator Registers
 uint32_t CFOLib::CFO_Registers::ReadSERDESOscillatorFrequency(std::optional<uint32_t> val)
@@ -3323,8 +3326,9 @@ void CFOLib::CFO_Registers::DisableAllOutputs()
 	DisableBeamOnMode(CFOLib::CFO_Link_ID::CFO_Link_ALL);
 	DisableBeamOffMode(CFOLib::CFO_Link_ID::CFO_Link_ALL);
 
-	__COUT_INFO__ << "CFO turn off 40MHz marker interval";
-	WriteRegister_(0, CFO_Register_ClockMarkerIntervalCount);
+	// LEGACY: register 0x9154 repurposed as RunPlanSubrunEvtLimit; no longer writing ClockMarkerIntervalCount
+	// __COUT_INFO__ << "CFO turn off 40MHz marker interval";
+	// WriteRegister_(0, CFO_Register_ClockMarkerIntervalCount);
 }
 
 // Private Functions
