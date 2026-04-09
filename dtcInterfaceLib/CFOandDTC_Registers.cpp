@@ -331,6 +331,30 @@ bool DTCLib::CFOandDTC_Registers::ReadResetSERDES(std::optional<uint32_t> val)
 }
 
 /// <summary>
+/// Read the Punched Clock Enable bit
+/// </summary>
+/// <returns>Whether punched clocks are enabled</returns>
+bool DTCLib::CFOandDTC_Registers::ReadPunchEnable(std::optional<uint32_t> val)
+{
+	std::bitset<32> data = val.has_value() ? *val : ReadRegister_(CFOandDTC_Register_Control);
+	return data[9];
+}
+
+void DTCLib::CFOandDTC_Registers::SetPunchEnable()
+{
+	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_Control);
+	data[9] = 1;
+	WriteRegister_(data.to_ulong(), CFOandDTC_Register_Control);
+}
+
+void DTCLib::CFOandDTC_Registers::ClearPunchEnable()
+{
+	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_Control);
+	data[9] = 0;
+	WriteRegister_(data.to_ulong(), CFOandDTC_Register_Control);
+}
+
+/// <summary>
 /// Runs the Loopback test of the CFO Emulator, inside the DTC, and broadcasts loopback markers to all ROCs.
 /// </summary>
 void DTCLib::CFOandDTC_Registers::RunCableDelayLoopbackTest()

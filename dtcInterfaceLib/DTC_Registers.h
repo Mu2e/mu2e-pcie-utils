@@ -432,9 +432,9 @@ class DTC_Registers : public CFOandDTC_Registers
 	void EnableDropDataToEmulateEventBuilding();                                          // B10
 	void DisableDropDataToEmulateEventBuilding();                                         // B10
 	bool ReadDropDataToEmulateEventBuilding(std::optional<uint32_t> val = std::nullopt);  // B10
-	void SetPunchEnable();                                                                // B9
-	void ClearPunchEnable();                                                              // B9
-	bool ReadPunchEnable(std::optional<uint32_t> val = std::nullopt);                     // B9
+	// void SetPunchEnable();                                                                // B9 implemented for CFO and DTC
+	// void ClearPunchEnable();                                                              // B9 implemented for CFO and DTC
+	// bool ReadPunchEnable(std::optional<uint32_t> val = std::nullopt);                     // B9 implemented for CFO and DTC
 	// void ResetSERDES();                       // B8 implemented for CFO and DTC
 	// bool ReadResetSERDES(std::optional<uint32_t> val = std::nullopt);                   // B8 implemented for CFO and DTC
 	void SetExternalCFOSampleEdgeMode(int forceCFOedge);                    // B6:5

@@ -240,6 +240,9 @@ class CFOandDTC_Registers
 	// CFO and DTC Control Register B31 is Soft Reset
 	void SoftReset();                                                  // B31
 	bool ReadSoftReset(std::optional<uint32_t> val = std::nullopt);    // B31
+	void SetPunchEnable();                                             // B9
+	void ClearPunchEnable();                                           // B9
+	bool ReadPunchEnable(std::optional<uint32_t> val = std::nullopt);  // B9
 	void ResetSERDES();                                                // B8
 	bool ReadResetSERDES(std::optional<uint32_t> val = std::nullopt);  // B8
 	void RunCableDelayLoopbackTest();                                  // B3
