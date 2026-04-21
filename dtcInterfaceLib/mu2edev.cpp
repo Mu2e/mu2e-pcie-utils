@@ -567,7 +567,7 @@ int mu2edev::release_all(DTC_DMA_Engine const& chn)
 	}
 	else
 	{
-		constexpr size_t kTimeCheckIntervalLoops = 1000;  // Recheck elapsed time every 1000 loop iterations to avoid hot-spin clock polling.
+		constexpr size_t kTimeCheckIntervalLoops = 100;  // Recheck elapsed time every 100 loop iterations to avoid hot-spin clock polling.
 		size_t time_check_counter = 0;
 		while (1)
 		{
@@ -580,7 +580,6 @@ int mu2edev::release_all(DTC_DMA_Engine const& chn)
 				__SS__ << "Failed mu2edev::release_all of chn=" << chn << " with M_IOC_GET_INFO... return " << sts << " which is not 0. " << strerror(errno) << __E__;
 				perror(ss.str().c_str());
 				__SS_THROW__;
-				// exit(1);
 			}
 			auto has_recv_data = mu2e_chn_info_delta_(activeDeviceIndex_, chn, C2S, &mu2e_channel_info_);  // reads cached value, need M_IOC_GET_INFO before to update
 
