@@ -19,6 +19,7 @@
 	CFOandDTC_Register_FPGA_VCCAUX                       = 0x9018,                      \
 	CFOandDTC_Register_FPGA_VCCBRAM                      = 0x901C,                      \
 	CFOandDTC_Register_FPGA_MonitorAlarm                 = 0x9020,                      \
+	CFOandDTC_Register_TimeAlive                         = 0x9024,                      \
 	CFOandDTC_Register_Scratch                           = 0x9030,                      \
 	CFOandDTC_Register_Control                           = 0x9100,                      \
 	CFOandDTC_Register_DMATransferLength                 = 0x9104,                      \
@@ -236,6 +237,12 @@ class CFOandDTC_Registers
 	bool              ReadFPGAUserTemperatureAlarm(std::optional<uint32_t> val = std::nullopt);
 	void              ResetFPGAUserTemperatureAlarm(std::optional<uint32_t> val = std::nullopt);
 	RegisterFormatter FormatFPGAAlarms();
+
+	// Time Alive Register
+	RegisterFormatter FormatDeviceTimeAlive();
+
+	// Scratch Register (Device Hash)
+	RegisterFormatter FormatDeviceHash();
 
 	// CFO and DTC Control Register B31 is Soft Reset
 	void SoftReset();                                                  // B31
