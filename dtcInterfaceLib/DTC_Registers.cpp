@@ -933,8 +933,7 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDTCControl()
 	// form.vals.push_back(std::string("Bit-25 Reset DDR Interface:             [") + (ReadResetDDR(form.value) ? "x" : " ") + "]");
 	// form.vals.push_back(std::string("Bit-24 CFO Emulator DRP Enable:         [") + (ReadCFOEmulatorDRP(form.value) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("Bit-23 DTC Autogenerate DRP:                 [") + (ReadAutogenDRP(form.value) ? "x" : " ") + "]");
-	// form.vals.push_back(std::string("Bit-22 Software DRP:                    [") + (ReadSoftwareDRP(form.value) ? "x" : " ") + "]");
-	// form.vals.push_back(std::string("Bit-22 Software DRP Enable:             [") + (ReadSoftwareDRP(form.value) ? "x" : " ") + "]");
+	// Bit-22 is currently defined as "Kill ROCs on 10x Timeouts" (legacy Software DRP meaning no longer applies).
 	form.vals.push_back(std::string("Bit-22 Kill ROCs on 10x Timeouts:            [") + (ReadKillTimeoutROCs(form.value) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("Bit-19 Down LED 0:                           [") + (ReadDownLED0State(form.value) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("Bit-18 Up LED 1:                             [") + (ReadUpLED1State(form.value) ? "x" : " ") + "]");
