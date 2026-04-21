@@ -215,6 +215,9 @@ class CFO_Registers : public DTCLib::CFOandDTC_Registers
 	void              EnableEmbeddedClockMarker();
 	void              DisableEmbeddedClockMarker();
 	bool              ReadEmbeddedClockMarkerEnable(std::optional<uint32_t> val = std::nullopt);
+	void              EnablePunchedClock();
+	void              DisablePunchedClock();
+	bool              ReadPunchedClockEnable(std::optional<uint32_t> val = std::nullopt);
 	RegisterFormatter FormatCFOControl();
 
 	// DMA Transfer Length Register

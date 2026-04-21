@@ -246,6 +246,7 @@ void CFOLib::CFO_Registers::EnableEmbeddedClockMarker()
 	WriteRegister_(data.to_ulong(), CFOandDTC_Register_Control);
 }
 
+
 void CFOLib::CFO_Registers::DisableEmbeddedClockMarker()
 {
 	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_Control);
@@ -257,6 +258,27 @@ bool CFOLib::CFO_Registers::ReadEmbeddedClockMarkerEnable(std::optional<uint32_t
 {
 	std::bitset<32> data = val.has_value() ? *val : ReadRegister_(CFOandDTC_Register_Control);
 	return data[1];
+}
+
+void CFOLib::CFO_Registers::EnablePunchedClock()
+{
+	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_Control);
+	data[9] = 1;
+	WriteRegister_(data.to_ulong(), CFOandDTC_Register_Control);
+}
+
+
+void CFOLib::CFO_Registers::DisablePunchedClock()
+{
+	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_Control);
+	data[9] = 0;
+	WriteRegister_(data.to_ulong(), CFOandDTC_Register_Control);
+}
+
+bool CFOLib::CFO_Registers::ReadPunchedClockEnable(std::optional<uint32_t> val)
+{
+	std::bitset<32> data = val.has_value() ? *val : ReadRegister_(CFOandDTC_Register_Control);
+	return data[9];
 }
 
 DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatCFOControl()
@@ -273,7 +295,8 @@ DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatCFOControl()
 	// 23	RW	0b0	Reserved (Formerly DRP Auto Generate Enable)
 	// 22-17	RO	0x00	Reserved
 	// 16	RW	0b0	Led 7
-	// 15-4	RO	0x0000	Reserved
+	// 15-10	RO	0x0000	Reserved
+	// 9	RW	0b0	Punched Clock Enable
 	// 8	RW	0b0	SERDES Global Reset
 	// 7-4	RO	0x0000	Reserved
 	// 3	RW	0b0	CFO Loopback Test Launch Control
@@ -285,6 +308,7 @@ DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatCFOControl()
 	// RAR: not just Soft Reset for resetting run plan
 	// form.vals.push_back(std::string("Bit-27 CFO Run Plan Reset:              [") + (ReadResetCFORunPlan(form.value) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("Bit-16 LED 7:                           [") + (ReadLED7State(form.value) ? "x" : " ") + "]");
+	form.vals.push_back(std::string("Bit-09 Punched Clock Enable:            [") + (ReadPunchedClockEnable(form.value) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("Bit-08 SERDES Global Reset:             [") + (CFOandDTC_Registers::ReadResetSERDES(form.value) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("Bit-02 Accelerator RF-0 Input Enable:   [") + (ReadAcceleratorRF0Enable(form.value) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("Bit-01 Embedded Clock Marker Enable:    [") + (ReadEmbeddedClockMarkerEnable(form.value) ? "x" : " ") + "]");
