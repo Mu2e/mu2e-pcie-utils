@@ -308,7 +308,7 @@ DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatCFOControl()
 	// RAR: not just Soft Reset for resetting run plan
 	// form.vals.push_back(std::string("Bit-27 CFO Run Plan Reset:              [") + (ReadResetCFORunPlan(form.value) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("Bit-16 LED 7:                           [") + (ReadLED7State(form.value) ? "x" : " ") + "]");
-	form.vals.push_back(std::string("Bit-09 Punched Clock Enable:            [") + (ReadPunchedClockEnable(form.value) ? "x" : " ") + "]");
+	form.vals.push_back(std::string("Bit-09 Punched Clock Enable:            [") + (CFOandDTC_Registers::ReadPunchEnable(form.value) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("Bit-08 SERDES Global Reset:             [") + (CFOandDTC_Registers::ReadResetSERDES(form.value) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("Bit-02 Accelerator RF-0 Input Enable:   [") + (ReadAcceleratorRF0Enable(form.value) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("Bit-01 Embedded Clock Marker Enable:    [") + (ReadEmbeddedClockMarkerEnable(form.value) ? "x" : " ") + "]");

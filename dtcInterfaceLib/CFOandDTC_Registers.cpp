@@ -331,6 +331,30 @@ bool DTCLib::CFOandDTC_Registers::ReadResetSERDES(std::optional<uint32_t> val)
 }
 
 /// <summary>
+/// Read the Punched Clock Enable bit
+/// </summary>
+/// <returns>Whether punched clocks are enabled</returns>
+bool DTCLib::CFOandDTC_Registers::ReadPunchEnable(std::optional<uint32_t> val)
+{
+	std::bitset<32> data = val.has_value() ? *val : ReadRegister_(CFOandDTC_Register_Control);
+	return data[9];
+}
+
+void DTCLib::CFOandDTC_Registers::SetPunchEnable()
+{
+	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_Control);
+	data[9] = 1;
+	WriteRegister_(data.to_ulong(), CFOandDTC_Register_Control);
+}
+
+void DTCLib::CFOandDTC_Registers::ClearPunchEnable()
+{
+	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_Control);
+	data[9] = 0;
+	WriteRegister_(data.to_ulong(), CFOandDTC_Register_Control);
+}
+
+/// <summary>
 /// Runs the Loopback test of the CFO Emulator, inside the DTC, and broadcasts loopback markers to all ROCs.
 /// </summary>
 void DTCLib::CFOandDTC_Registers::RunCableDelayLoopbackTest()
@@ -600,6 +624,44 @@ DTCLib::RegisterFormatter DTCLib::CFOandDTC_Registers::FormatFPGAAlarms()
 	form.vals.push_back(std::string("VCC INT Alarm:               [") + (ReadVCCINTAlarm(form.value) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("FPGA User Temperature Alarm: [") + (ReadFPGAUserTemperatureAlarm(form.value) ? "x" : " ") + "]");
 
+	return form;
+}
+
+/// <summary>
+/// Formats the device time alive register value as human-readable seconds
+/// </summary>
+/// <returns>RegisterFormatter object containing time alive information</returns>
+DTCLib::RegisterFormatter DTCLib::CFOandDTC_Registers::FormatDeviceTimeAlive()
+{
+	auto form = CreateFormatter(CFOandDTC_Register_TimeAlive);
+	form.description = "Device Time Alive";
+	std::stringstream oss;
+	// Resolution is 1/250MHz * 2^18 per LSB = 2^18 / 250e6 seconds per count
+	double seconds = static_cast<double>(form.value) * (static_cast<double>(1 << 18) / 250e6);
+	int days = static_cast<int>(seconds / 86400);
+	int hours = static_cast<int>(seconds / 3600) % 24;
+	int minutes = static_cast<int>(seconds / 60) % 60;
+	double secs = seconds - static_cast<int>(seconds / 60) * 60;
+	oss << std::setprecision(3) << std::fixed;
+	if (days > 0) oss << days << " d, ";
+	if (hours > 0) oss << hours << " h, ";
+	if (minutes > 0) oss << minutes << " m, ";
+	oss << secs << " s";
+	form.vals.push_back(oss.str());
+	return form;
+}
+
+/// <summary>
+/// Formats the device hash of node + pcie index
+/// </summary>
+/// <returns>RegisterFormatter object containing hash information</returns>
+DTCLib::RegisterFormatter DTCLib::CFOandDTC_Registers::FormatDeviceHash()
+{
+	auto form = CreateFormatter(CFOandDTC_Register_Scratch);
+	form.description = "Device Hash";
+	std::stringstream oss;
+	oss << "Hash of Device Node and PCIe Index: 0x" << std::hex << mu2e_host_hash(device_.getDeviceIndex(), nullptr /* this host */) << std::dec;
+	form.vals.push_back(oss.str());
 	return form;
 }
 
