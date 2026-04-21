@@ -20,11 +20,14 @@ enum CFO_Register : uint16_t
 {
 	DTCLIB_COMMON_REGISTERS,  // Moved here all registers in common with DTC
 
-	CFO_Register_SFPSERDESStatus           = 0x9140,
-	CFO_Register_BeamOnTimerPreset         = 0x9144,
-	CFO_Register_EnableBeamOnMode          = 0x9148,
-	CFO_Register_EnableBeamOffMode         = 0x914C,
-	CFO_Register_ClockMarkerIntervalCount  = 0x9154,
+	CFO_Register_SFPSERDESStatus   = 0x9140,
+	CFO_Register_BeamOnTimerPreset = 0x9144,
+	CFO_Register_EnableBeamOnMode  = 0x9148,
+	CFO_Register_EnableBeamOffMode = 0x914C,
+	// LEGACY (register 0x9154 repurposed as RunPlanSubrunEvtLimit):
+	// CFO_Register_ClockMarkerIntervalCount  = 0x9154,
+	CFO_Register_RunPlanSubrunEvtLimit     = 0x9154,
+	CFO_Register_RunPlanSubrunPredOffset   = 0x9158,
 	CFO_Register_SERDESOscillatorFrequency = 0x9160,
 	CFO_Register_SERDESClock_IICBusControl = 0x9164,
 	CFO_Register_TimestampPreset0          = 0x9180,
@@ -506,22 +509,22 @@ class CFO_Registers : public DTCLib::CFOandDTC_Registers
 	/// <returns>RegisterFormatter object containing register information</returns>
 	RegisterFormatter FormatBeamOffMode();
 
-	// 40 MHz Clock Marker Interval Count Register
-	/// <summary>
-	/// Set the Clock Marker Interval Count for synchronizing the 240 MHz and 40 MHz clocks
-	/// </summary>
-	/// <param name="data">Interval to set</param>
-	void SetClockMarkerIntervalCount(uint32_t data);
-	/// <summary>
-	/// Read the Clock Marker Interval Count used for synchronizing the 240 MHz and 40 MHz clocks
-	/// </summary>
-	/// <returns>The Clock Marker Interval Count used for synchronizing the 240 MHz and 40 MHz clocks</returns>
-	uint32_t ReadClockMarkerIntervalCount(std::optional<uint32_t> val = std::nullopt);
-	/// <summary>
-	/// Formats the register's current value for register dumps
-	/// </summary>
-	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatClockMarkerIntervalCount();
+	// LEGACY: 40 MHz Clock Marker Interval Count Register (register 0x9154 repurposed as RunPlanSubrunEvtLimit)
+	// /// <summary>
+	// /// Set the Clock Marker Interval Count for synchronizing the 240 MHz and 40 MHz clocks
+	// /// </summary>
+	// /// <param name="data">Interval to set</param>
+	// void SetClockMarkerIntervalCount(uint32_t data);
+	// /// <summary>
+	// /// Read the Clock Marker Interval Count used for synchronizing the 240 MHz and 40 MHz clocks
+	// /// </summary>
+	// /// <returns>The Clock Marker Interval Count used for synchronizing the 240 MHz and 40 MHz clocks</returns>
+	// uint32_t ReadClockMarkerIntervalCount(std::optional<uint32_t> val = std::nullopt);
+	// /// <summary>
+	// /// Formats the register's current value for register dumps
+	// /// </summary>
+	// /// <returns>RegisterFormatter object containing register information</returns>
+	// RegisterFormatter FormatClockMarkerIntervalCount();
 
 	// SERDES Oscillator Registers
 	/// <summary>
@@ -1110,6 +1113,40 @@ class CFO_Registers : public DTCLib::CFOandDTC_Registers
 	/// <returns>RegisterFormatter object containing the current tag information.</returns>
 	RegisterFormatter FormatRunPlanCurrentTag();
 
+	// Run Plan Subrun Event Limit Register
+	/// <summary>
+	/// Set the Run Plan Subrun Event Limit
+	/// </summary>
+	/// <param name="limit">Subrun event limit value</param>
+	void SetRunPlanSubrunEvtLimit(uint32_t limit);
+	/// <summary>
+	/// Read the Run Plan Subrun Event Limit
+	/// </summary>
+	/// <returns>Current subrun event limit value</returns>
+	uint32_t ReadRunPlanSubrunEvtLimit(std::optional<uint32_t> val = std::nullopt);
+	/// <summary>
+	/// Formats the register's current value for register dumps
+	/// </summary>
+	/// <returns>RegisterFormatter object containing register information</returns>
+	RegisterFormatter FormatRunPlanSubrunEvtLimit();
+
+	// Run Plan Subrun Prediction Offset Register
+	/// <summary>
+	/// Set the Run Plan Subrun Prediction Offset
+	/// </summary>
+	/// <param name="offset">Subrun prediction offset value</param>
+	void SetRunPlanSubrunPredOffset(uint32_t offset);
+	/// <summary>
+	/// Read the Run Plan Subrun Prediction Offset
+	/// </summary>
+	/// <returns>Current subrun prediction offset value</returns>
+	uint32_t ReadRunPlanSubrunPredOffset(std::optional<uint32_t> val = std::nullopt);
+	/// <summary>
+	/// Formats the register's current value for register dumps
+	/// </summary>
+	/// <returns>RegisterFormatter object containing register information</returns>
+	RegisterFormatter FormatRunPlanSubrunPredOffset();
+
 	// Firefly CSR Register
 	/// <summary>
 	/// Read the present bit for the TX/RX Firefly
@@ -1544,7 +1581,7 @@ class CFO_Registers : public DTCLib::CFOandDTC_Registers
 	    [this] { return this->FormatBeamOnTimerPreset(); },
 	    [this] { return this->FormatBeamOnMode(); },
 	    [this] { return this->FormatBeamOffMode(); },
-	    [this] { return this->FormatClockMarkerIntervalCount(); },
+	    // LEGACY: [this] { return this->FormatClockMarkerIntervalCount(); },  // register 0x9154 repurposed as RunPlanSubrunEvtLimit
 	    [this] { return this->FormatSERDESOscillatorFrequency(); },
 	    [this] { return this->FormatSERDESOscillatorControl(); },
 	    [this] { return this->FormatSERDESOscillatorParameterLow(); },
@@ -1563,6 +1600,8 @@ class CFO_Registers : public DTCLib::CFOandDTC_Registers
 	    [this] { return this->FormatDMAReadByteCount(); },
 	    [this] { return this->FormatRunPlanBeamOnBaseAddress(); },
 	    [this] { return this->FormatRunPlanBeamOffBaseAddress(); },
+	    [this] { return this->FormatRunPlanSubrunEvtLimit(); },
+	    [this] { return this->FormatRunPlanSubrunPredOffset(); },
 	    [this] { return this->FormatFireflyCSR(); },
 	    [this] { return this->FormatSERDESPRBSControlLink0(); },
 	    [this] { return this->FormatSERDESPRBSControlLink1(); },

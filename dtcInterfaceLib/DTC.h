@@ -252,11 +252,13 @@ class DTC : public DTC_Registers
 	 */
 	std::unique_ptr<DTC_Event> ReadNextDAQDMA(int tmo_ms);
 	/**
-	 * @brief Read the next DMA from the DAQ channel as a Sub Event. If no data is present, will return nullptr
+	 * @brief Read SubEvents from the next DMA buffer(s) from the DAQ channel. Multiple subevents may be returned
+	 * from a single buffer. If a subevent spans multiple DMA buffers, this function blocks until complete.
+	 * @param output Vector to append extracted SubEvents to
 	 * @param tmo_ms Timeout
-	 * @return A DTC_SubEvent representing the data in a single DMA, or nullptr if no data/timeout
+	 * @return True if one or more SubEvents were extracted, false if no data/timeout
 	 */
-	std::unique_ptr<DTC_SubEvent> ReadNextDAQSubEventDMA(int tmo_ms);
+	bool ReadNextDAQSubEventDMA(std::vector<std::unique_ptr<DTC_SubEvent>>& output, int tmo_ms);
 	/// <summary>
 	/// DCS packets are read one-at-a-time, this function reads the next one from the DTC
 	/// </summary>
