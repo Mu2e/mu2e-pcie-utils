@@ -56,8 +56,6 @@ DTCLib::DTC_Registers::DTC_Registers(DTC_SimMode mode, int dtc, std::string simF
 	}
 
 	SetSimMode(expectedDesignVersion, simMode_, dtc, simFileName, rocMask, skipInit, (uid == "" ? ("DTC" + std::to_string(dtc)) : uid));
-
-	__COUT_INFO__ << otsStyleStackTrace();
 }  // end constructor()
 
 /// <summary>
