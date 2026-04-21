@@ -660,7 +660,7 @@ DTCLib::RegisterFormatter DTCLib::CFOandDTC_Registers::FormatDeviceHash()
 	auto form = CreateFormatter(CFOandDTC_Register_Scratch);
 	form.description = "Device Hash";
 	std::stringstream oss;
-	oss << "Hash of Device Node and PCIe Index: 0x" << std::hex << mu2e_host_hash(device_.getDeviceIndex(), NULL /* this host */) << std::dec;
+	oss << "Hash of Device Node and PCIe Index: 0x" << std::hex << mu2e_host_hash(device_.getDeviceIndex(), nullptr /* this host */) << std::dec;
 	form.vals.push_back(oss.str());
 	return form;
 }
