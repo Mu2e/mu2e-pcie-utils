@@ -567,7 +567,7 @@ int mu2edev::release_all(DTC_DMA_Engine const& chn)
 	}
 	else
 	{
-		constexpr size_t kTimeCheckIntervalLoops = 100;  // Recheck elapsed time every 100 loop iterations to avoid hot-spin clock polling.
+		constexpr size_t kTimeCheckIntervalLoops = 1000;  // Recheck elapsed time every 1000 loop iterations to avoid hot-spin clock polling.
 		size_t time_check_counter = 0;
 		while (1)
 		{
@@ -599,14 +599,13 @@ int mu2edev::release_all(DTC_DMA_Engine const& chn)
 				if (!has_recv_data && nano_since_last_data > 10000000)  // 10 milliseconds is default ROC data tmo
 				{
 					TRACE(TLVL_RELEASE_ALL, UID_ + " - release_all done after buffers idle...");
-
 					break;
 				}
 
 				auto nano_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>(now - start).count();
 				if (nano_since_start > 5000000000LL)  // 5 seconds
 				{
-					__SS__ << "mu2edev::release_all of chn=" << chn << " timed out after 5 seconds while attempting to release buffers." << __E__;
+					__SS__ << "mu2edev::release_all of chn=" << chn << " timed out after 5 seconds while attempting to release buffers (but still receiving data)." << __E__;
 					__SS_THROW__;
 				}
 			}
