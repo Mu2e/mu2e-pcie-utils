@@ -274,7 +274,7 @@ DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatCFOControl()
 	// 22-17	RO	0x00	Reserved
 	// 16	RW	0b0	Led 7
 	// 15-10	RO	0x0000	Reserved
-	// 9	RW	0b0	Enable Punched Markers
+	// 9	RW	0b0	Punched Clock Enable
 	// 8	RW	0b0	SERDES Global Reset
 	// 7-4	RO	0x0000	Reserved
 	// 3	RW	0b0	CFO Loopback Test Launch Control
