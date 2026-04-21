@@ -595,6 +595,13 @@ int mu2edev::release_all(DTC_DMA_Engine const& chn)
 
 				break;
 			}
+
+			auto nano_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start).count();
+			if (nano_since_start > 5000000000LL)  // 5 seconds
+			{
+				__SS__ << "mu2edev::release_all of chn=" << chn << " timed out after 5 seconds -- has_recv_data is continuously true, indicating data is still being received and buffers cannot be fully released." << __E__;
+				__SS_THROW__;
+			}
 		}
 
 		// releaseBuffersHeld if allowing multiple buffers to be held by user space (e.g. for Data DMA channel, which is different for CFO vs DTC)

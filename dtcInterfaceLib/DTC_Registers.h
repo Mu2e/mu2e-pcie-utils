@@ -396,8 +396,11 @@ class DTC_Registers : public CFOandDTC_Registers
 	void         DisableAutogenDRP();                                                   // B23
 	bool         ReadAutogenDRP(std::optional<uint32_t> val = std::nullopt);            // B23
 	void         EnableSoftwareDRP();                                                   // alias to  DisableAutogenDRP()
-	void         DisableSoftwareDRP();                                                  // alias to  EnableAutogenDRP()
-	bool         ReadSoftwareDRP(std::optional<uint32_t> val = std::nullopt);
+	void         DisableSoftwareDRP();                                                  // B23
+	bool         ReadSoftwareDRP(std::optional<uint32_t> val = std::nullopt);			// alias to  EnableAutogenDRP()
+	void		 EnableKillTimeoutROCs();                                               // B22
+	void		 DisableKillTimeoutROCs();												// B22
+	bool         ReadKillTimeoutROCs(std::optional<uint32_t> val = std::nullopt);   	// B22
 	virtual void ResetPCIe() override;                                       // B21
 	bool         ReadResetPCIe(std::optional<uint32_t> val = std::nullopt);  // B21
 	// Bit 20 Reserved
