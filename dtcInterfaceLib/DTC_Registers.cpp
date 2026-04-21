@@ -56,6 +56,8 @@ DTCLib::DTC_Registers::DTC_Registers(DTC_SimMode mode, int dtc, std::string simF
 	}
 
 	SetSimMode(expectedDesignVersion, simMode_, dtc, simFileName, rocMask, skipInit, (uid == "" ? ("DTC" + std::to_string(dtc)) : uid));
+
+	__COUT_INFO__ << otsStyleStackTrace();
 }  // end constructor()
 
 /// <summary>
@@ -116,7 +118,7 @@ DTCLib::DTC_SimMode DTCLib::DTC_Registers::SetSimMode(std::string expectedDesign
 	// if (skipInit || true)
 	if (skipInit)
 	{
-		__COUT_INFO__ << "SKIPPING Initializing device";
+		__COUT_INFO__ << "SKIPPING Initializing device";		
 		return simMode_;
 	}
 
@@ -466,6 +468,36 @@ void DTCLib::DTC_Registers::DisableSoftwareDRP()
 bool DTCLib::DTC_Registers::ReadSoftwareDRP(std::optional<uint32_t> val)
 {
 	return !ReadAutogenDRP(val);
+}
+
+/// <summary>
+/// Enable kill of ROCs on 10x timeouts
+/// </summary>
+void DTCLib::DTC_Registers::EnableKillTimeoutROCs()
+{
+	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_Control);
+	data[22] = 1;
+	WriteRegister_(data.to_ulong(), CFOandDTC_Register_Control);
+}
+
+/// <summary>
+/// Disable kill of ROCs on 10x timeouts
+/// </summary>
+void DTCLib::DTC_Registers::DisableKillTimeoutROCs()
+{
+	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_Control);
+	data[22] = 0;
+	WriteRegister_(data.to_ulong(), CFOandDTC_Register_Control);
+}
+
+/// <summary>
+/// Read whether kill of ROCs on 10x timeouts is enabled
+/// </summary>
+/// <returns>True if kill of ROCs on 10x timeouts is enabled, false otherwise</returns>
+bool DTCLib::DTC_Registers::ReadKillTimeoutROCs(std::optional<uint32_t> val)
+{
+	std::bitset<32> data = val.has_value() ? *val : ReadRegister_(CFOandDTC_Register_Control);
+	return data[22];
 }
 
 /// <summary>
@@ -903,6 +935,7 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDTCControl()
 	form.vals.push_back(std::string("Bit-23 DTC Autogenerate DRP:                 [") + (ReadAutogenDRP(form.value) ? "x" : " ") + "]");
 	// form.vals.push_back(std::string("Bit-22 Software DRP:                    [") + (ReadSoftwareDRP(form.value) ? "x" : " ") + "]");
 	// form.vals.push_back(std::string("Bit-22 Software DRP Enable:             [") + (ReadSoftwareDRP(form.value) ? "x" : " ") + "]");
+	form.vals.push_back(std::string("Bit-22 Kill ROCs on 10x Timeouts:            [") + (ReadKillTimeoutROCs(form.value) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("Bit-19 Down LED 0:                           [") + (ReadDownLED0State(form.value) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("Bit-18 Up LED 1:                             [") + (ReadUpLED1State(form.value) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("Bit-17 Up LED 0:                             [") + (ReadUpLED0State(form.value) ? "x" : " ") + "]");
