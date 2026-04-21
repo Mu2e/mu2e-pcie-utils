@@ -397,12 +397,12 @@ class DTC_Registers : public CFOandDTC_Registers
 	bool         ReadAutogenDRP(std::optional<uint32_t> val = std::nullopt);            // B23
 	void         EnableSoftwareDRP();                                                   // alias to  DisableAutogenDRP()
 	void         DisableSoftwareDRP();                                                  // B23
-	bool         ReadSoftwareDRP(std::optional<uint32_t> val = std::nullopt);			// alias to  EnableAutogenDRP()
-	void		 EnableKillTimeoutROCs();                                               // B22
-	void		 DisableKillTimeoutROCs();												// B22
-	bool         ReadKillTimeoutROCs(std::optional<uint32_t> val = std::nullopt);   	// B22
-	virtual void ResetPCIe() override;                                       // B21
-	bool         ReadResetPCIe(std::optional<uint32_t> val = std::nullopt);  // B21
+	bool         ReadSoftwareDRP(std::optional<uint32_t> val = std::nullopt);           // alias to  EnableAutogenDRP()
+	void         EnableKillTimeoutROCs();                                               // B22
+	void         DisableKillTimeoutROCs();                                              // B22
+	bool         ReadKillTimeoutROCs(std::optional<uint32_t> val = std::nullopt);       // B22
+	virtual void ResetPCIe() override;                                                  // B21
+	bool         ReadResetPCIe(std::optional<uint32_t> val = std::nullopt);             // B21
 	// Bit 20 Reserved
 	void         EnableDownLED0();                                               // B19
 	void         DisableDownLED0();                                              // B19
@@ -1204,8 +1204,8 @@ class DTC_Registers : public CFOandDTC_Registers
 	virtual const std::vector<std::function<RegisterFormatter()>>& getFormattedSimpleDumpFunctions() override { return formattedSimpleDumpFunctions_; };  // pure virtual
 
 	const std::vector<std::function<RegisterFormatter()>> formattedSimpleDumpFunctions_{
-		[this] { return this->FormatDeviceHash(); }, // mu2e_host_hash
-		[this] { return this->FormatDeviceTimeAlive(); },
+	    [this] { return this->FormatDeviceHash(); },  // mu2e_host_hash
+	    [this] { return this->FormatDeviceTimeAlive(); },
 	    [this] { return this->FormatDTCControl(); },
 	    [this] { return this->FormatJitterAttenuatorCSR(); },
 	    [this] { return this->FormatSERDESPLLLocked(); },

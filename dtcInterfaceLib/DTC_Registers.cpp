@@ -118,7 +118,7 @@ DTCLib::DTC_SimMode DTCLib::DTC_Registers::SetSimMode(std::string expectedDesign
 	// if (skipInit || true)
 	if (skipInit)
 	{
-		__COUT_INFO__ << "SKIPPING Initializing device";		
+		__COUT_INFO__ << "SKIPPING Initializing device";
 		return simMode_;
 	}
 
