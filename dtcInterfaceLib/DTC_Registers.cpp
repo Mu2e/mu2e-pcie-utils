@@ -469,6 +469,36 @@ bool DTCLib::DTC_Registers::ReadSoftwareDRP(std::optional<uint32_t> val)
 }
 
 /// <summary>
+/// Enable kill of ROCs on 10x timeouts
+/// </summary>
+void DTCLib::DTC_Registers::EnableKillTimeoutROCs()
+{
+	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_Control);
+	data[22] = 1;
+	WriteRegister_(data.to_ulong(), CFOandDTC_Register_Control);
+}
+
+/// <summary>
+/// Disable kill of ROCs on 10x timeouts
+/// </summary>
+void DTCLib::DTC_Registers::DisableKillTimeoutROCs()
+{
+	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_Control);
+	data[22] = 0;
+	WriteRegister_(data.to_ulong(), CFOandDTC_Register_Control);
+}
+
+/// <summary>
+/// Read whether kill of ROCs on 10x timeouts is enabled
+/// </summary>
+/// <returns>True if kill of ROCs on 10x timeouts is enabled, false otherwise</returns>
+bool DTCLib::DTC_Registers::ReadKillTimeoutROCs(std::optional<uint32_t> val)
+{
+	std::bitset<32> data = val.has_value() ? *val : ReadRegister_(CFOandDTC_Register_Control);
+	return data[22];
+}
+
+/// <summary>
 /// Reset the PCIe interface
 /// </summary>
 void DTCLib::DTC_Registers::ResetPCIe()
@@ -765,26 +795,6 @@ bool DTCLib::DTC_Registers::ReadDropDataToEmulateEventBuilding(std::optional<uin
 	return data[10];
 }
 
-void DTCLib::DTC_Registers::SetPunchEnable()
-{
-	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_Control);
-	data[9] = 1;
-	WriteRegister_(data.to_ulong(), CFOandDTC_Register_Control);
-}
-
-void DTCLib::DTC_Registers::ClearPunchEnable()
-{
-	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_Control);
-	data[9] = 0;
-	WriteRegister_(data.to_ulong(), CFOandDTC_Register_Control);
-}
-
-bool DTCLib::DTC_Registers::ReadPunchEnable(std::optional<uint32_t> val)
-{
-	std::bitset<32> data = val.has_value() ? *val : ReadRegister_(CFOandDTC_Register_Control);
-	return data[9];
-}
-
 /// This offset should be set 'permanently' for the DTC in response to
 ///		the sample measurement at bits [18:16] of DTC_Register_CFOLinkErrorFlags
 void DTCLib::DTC_Registers::SetCFOSamplePermanentOffset(int permanentOffset)
@@ -921,8 +931,8 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDTCControl()
 	// form.vals.push_back(std::string("Bit-25 Reset DDR Interface:             [") + (ReadResetDDR(form.value) ? "x" : " ") + "]");
 	// form.vals.push_back(std::string("Bit-24 CFO Emulator DRP Enable:         [") + (ReadCFOEmulatorDRP(form.value) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("Bit-23 DTC Autogenerate DRP:                 [") + (ReadAutogenDRP(form.value) ? "x" : " ") + "]");
-	// form.vals.push_back(std::string("Bit-22 Software DRP:                    [") + (ReadSoftwareDRP(form.value) ? "x" : " ") + "]");
-	// form.vals.push_back(std::string("Bit-22 Software DRP Enable:             [") + (ReadSoftwareDRP(form.value) ? "x" : " ") + "]");
+	// Bit-22 is currently defined as "Kill ROCs on 10x Timeouts" (legacy Software DRP meaning no longer applies).
+	form.vals.push_back(std::string("Bit-22 Kill ROCs on 10x Timeouts:            [") + (ReadKillTimeoutROCs(form.value) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("Bit-19 Down LED 0:                           [") + (ReadDownLED0State(form.value) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("Bit-18 Up LED 1:                             [") + (ReadUpLED1State(form.value) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("Bit-17 Up LED 0:                             [") + (ReadUpLED0State(form.value) ? "x" : " ") + "]");
@@ -935,7 +945,7 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDTCControl()
 	// form.vals.push_back(std::string("Bit-31 Sequence Number Disable:         [") + (ReadSequenceNumberDisable(form.value) ? "x" : " ") + "]");
 	// form.vals.push_back(std::string("Bit-31 Punch Enable:                    [") + (ReadPunchEnable(form.value) ? "x" : " ") + "]");
 
-	form.vals.push_back(std::string("Bit-09 Punched Clock Enable:                 [") + (ReadPunchEnable(form.value) ? "x" : " ") + "]");
+	form.vals.push_back(std::string("Bit-09 Punched Clock Enable:                 [") + (CFOandDTC_Registers::ReadPunchEnable(form.value) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("Bit-08 SERDES Global Reset:                  [") + (CFOandDTC_Registers::ReadResetSERDES(form.value) ? "x" : " ") + "]");
 
 	form.vals.push_back(std::string("Bit-06 Enable CFO-RTF Offset Control:        [") + (((ReadExternalCFOSampleEdgeMode(form.value) >> 1) & 1) ? "x" : " ") + "]");

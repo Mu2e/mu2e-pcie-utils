@@ -396,10 +396,13 @@ class DTC_Registers : public CFOandDTC_Registers
 	void         DisableAutogenDRP();                                                   // B23
 	bool         ReadAutogenDRP(std::optional<uint32_t> val = std::nullopt);            // B23
 	void         EnableSoftwareDRP();                                                   // alias to  DisableAutogenDRP()
-	void         DisableSoftwareDRP();                                                  // alias to  EnableAutogenDRP()
-	bool         ReadSoftwareDRP(std::optional<uint32_t> val = std::nullopt);
-	virtual void ResetPCIe() override;                                       // B21
-	bool         ReadResetPCIe(std::optional<uint32_t> val = std::nullopt);  // B21
+	void         DisableSoftwareDRP();                                                  // B23
+	bool         ReadSoftwareDRP(std::optional<uint32_t> val = std::nullopt);           // alias to  EnableAutogenDRP()
+	void         EnableKillTimeoutROCs();                                               // B22
+	void         DisableKillTimeoutROCs();                                              // B22
+	bool         ReadKillTimeoutROCs(std::optional<uint32_t> val = std::nullopt);       // B22
+	virtual void ResetPCIe() override;                                                  // B21
+	bool         ReadResetPCIe(std::optional<uint32_t> val = std::nullopt);             // B21
 	// Bit 20 Reserved
 	void         EnableDownLED0();                                               // B19
 	void         DisableDownLED0();                                              // B19
@@ -432,9 +435,9 @@ class DTC_Registers : public CFOandDTC_Registers
 	void EnableDropDataToEmulateEventBuilding();                                          // B10
 	void DisableDropDataToEmulateEventBuilding();                                         // B10
 	bool ReadDropDataToEmulateEventBuilding(std::optional<uint32_t> val = std::nullopt);  // B10
-	void SetPunchEnable();                                                                // B9
-	void ClearPunchEnable();                                                              // B9
-	bool ReadPunchEnable(std::optional<uint32_t> val = std::nullopt);                     // B9
+	// void SetPunchEnable();                                                                // B9 implemented for CFO and DTC
+	// void ClearPunchEnable();                                                              // B9 implemented for CFO and DTC
+	// bool ReadPunchEnable(std::optional<uint32_t> val = std::nullopt);                     // B9 implemented for CFO and DTC
 	// void ResetSERDES();                       // B8 implemented for CFO and DTC
 	// bool ReadResetSERDES(std::optional<uint32_t> val = std::nullopt);                   // B8 implemented for CFO and DTC
 	void SetExternalCFOSampleEdgeMode(int forceCFOedge);                    // B6:5
@@ -1201,6 +1204,8 @@ class DTC_Registers : public CFOandDTC_Registers
 	virtual const std::vector<std::function<RegisterFormatter()>>& getFormattedSimpleDumpFunctions() override { return formattedSimpleDumpFunctions_; };  // pure virtual
 
 	const std::vector<std::function<RegisterFormatter()>> formattedSimpleDumpFunctions_{
+	    [this] { return this->FormatDeviceHash(); },  // mu2e_host_hash
+	    [this] { return this->FormatDeviceTimeAlive(); },
 	    [this] { return this->FormatDTCControl(); },
 	    [this] { return this->FormatJitterAttenuatorCSR(); },
 	    [this] { return this->FormatSERDESPLLLocked(); },

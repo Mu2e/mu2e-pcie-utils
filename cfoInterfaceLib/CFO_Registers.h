@@ -1546,6 +1546,8 @@ class CFO_Registers : public DTCLib::CFOandDTC_Registers
 	virtual const std::vector<std::function<RegisterFormatter()>>& getFormattedSimpleDumpFunctions() override { return formattedSimpleDumpFunctions_; };
 
 	const std::vector<std::function<RegisterFormatter()>> formattedSimpleDumpFunctions_{
+	    [this] { return this->FormatDeviceHash(); },  // mu2e_host_hash
+	    [this] { return this->FormatDeviceTimeAlive(); },
 	    [this] { return this->FormatCFOControl(); },
 	    [this] { return this->FormatBeamOffMode(); },
 	    [this] { return this->FormatBeamOnMode(); },

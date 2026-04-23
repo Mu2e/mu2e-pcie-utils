@@ -567,6 +567,8 @@ int mu2edev::release_all(DTC_DMA_Engine const& chn)
 	}
 	else
 	{
+		constexpr size_t kTimeCheckIntervalLoops = 100;  // Recheck elapsed time every 100 loop iterations to avoid hot-spin clock polling.
+		size_t time_check_counter = 0;
 		while (1)
 		{
 			auto _tmo_ms = mu2e_channel_info_[activeDeviceIndex_][chn][C2S].tmo_ms;
@@ -578,7 +580,6 @@ int mu2edev::release_all(DTC_DMA_Engine const& chn)
 				__SS__ << "Failed mu2edev::release_all of chn=" << chn << " with M_IOC_GET_INFO... return " << sts << " which is not 0. " << strerror(errno) << __E__;
 				perror(ss.str().c_str());
 				__SS_THROW__;
-				// exit(1);
 			}
 			auto has_recv_data = mu2e_chn_info_delta_(activeDeviceIndex_, chn, C2S, &mu2e_channel_info_);  // reads cached value, need M_IOC_GET_INFO before to update
 
@@ -588,12 +589,24 @@ int mu2edev::release_all(DTC_DMA_Engine const& chn)
 				read_release(chn, has_recv_data);
 				time_last_data = std::chrono::steady_clock::now();
 			}
-			auto nano_since_last_data = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - time_last_data).count();
-			if (!has_recv_data && nano_since_last_data > 10000000)  // 100 microseconds is default ROC data tmo
-			{
-				TRACE(TLVL_RELEASE_ALL, UID_ + " - release_all done after buffers idle...");
 
-				break;
+			if (++time_check_counter >= kTimeCheckIntervalLoops)
+			{
+				time_check_counter = 0;
+				auto now = std::chrono::steady_clock::now();
+				auto nano_since_last_data = std::chrono::duration_cast<std::chrono::nanoseconds>(now - time_last_data).count();
+				if (!has_recv_data && nano_since_last_data > 10000000)  // 10 milliseconds is default ROC data tmo
+				{
+					TRACE(TLVL_RELEASE_ALL, UID_ + " - release_all done after buffers idle...");
+					break;
+				}
+
+				auto nano_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>(now - start).count();
+				if (nano_since_start > 5000000000LL)  // 5 seconds
+				{
+					__SS__ << "mu2edev::release_all of chn=" << chn << " timed out after 5 seconds while attempting to release buffers (but still receiving data)." << __E__;
+					__SS_THROW__;
+				}
 			}
 		}
 
