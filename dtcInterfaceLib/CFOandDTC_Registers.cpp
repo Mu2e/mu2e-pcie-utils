@@ -638,15 +638,14 @@ DTCLib::RegisterFormatter DTCLib::CFOandDTC_Registers::FormatDeviceTimeAlive()
 	std::stringstream oss;
 	// Resolution is 1/250MHz * 2^18 per LSB = 2^18 / 250e6 seconds per count
 	double seconds = static_cast<double>(form.value) * (static_cast<double>(1 << 18) / 250e6);
-	int days = static_cast<int>(seconds / 86400);
-	int hours = static_cast<int>(seconds / 3600) % 24;
-	int minutes = static_cast<int>(seconds / 60) % 60;
-	double secs = seconds - static_cast<int>(seconds / 60) * 60;
-	oss << std::setprecision(3) << std::fixed;
-	if (days > 0) oss << days << " d, ";
-	if (hours > 0) oss << hours << " h, ";
-	if (minutes > 0) oss << minutes << " m, ";
-	oss << secs << " s";
+	int totalSeconds = static_cast<int>(seconds);
+	int days = totalSeconds / 86400;
+	int hours = (totalSeconds / 3600) % 24;
+	int minutes = (totalSeconds / 60) % 60;
+	double secs = seconds - days * 86400 - hours * 3600 - minutes * 60;
+	oss << std::setfill('0') << days << " days " << std::setw(2) << hours << ":"
+		<< std::setw(2) << minutes << ":" << std::setw(6) << std::fixed << std::setprecision(3)
+		<< secs << " (Firmware Version: " << ReadDesignDate() << ")";
 	form.vals.push_back(oss.str());
 	return form;
 }
