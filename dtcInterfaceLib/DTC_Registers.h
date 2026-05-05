@@ -337,6 +337,13 @@ enum DTC_Register : uint16_t
 	DTC_Register_TXEventWindowMarkerCount_Link5    = 0xA414,
 	DTC_Register_CFOTXEventWindowMarkerCount_Link6 = 0xA418,
 
+	DTC_Register_TXNullHeartbeatCount_Link0 = 0xA440,
+	DTC_Register_TXNullHeartbeatCount_Link1 = 0xA444,
+	DTC_Register_TXNullHeartbeatCount_Link2 = 0xA448,
+	DTC_Register_TXNullHeartbeatCount_Link3 = 0xA44C,
+	DTC_Register_TXNullHeartbeatCount_Link4 = 0xA450,
+	DTC_Register_TXNullHeartbeatCount_Link5 = 0xA454,
+
 	DTC_Register_Invalid,
 	// };
 };  // end DTC_Register enum
@@ -1141,6 +1148,11 @@ class DTC_Registers : public CFOandDTC_Registers
 	RegisterFormatter FormatTXEventWindowMarkerCountLink(DTC_Link_ID const& link);
 	DTC_Register      GetTXEventWindowMarkerCountLinkRegister(DTC_Link_ID const& link);
 
+	// TX Null Heartbeat Packet Count
+	uint32_t          ReadTXNullHeartbeatCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
+	RegisterFormatter FormatTXNullHeartbeatCountLink(DTC_Link_ID const& link);
+	DTC_Register      GetTXNullHeartbeatCountLinkRegister(DTC_Link_ID const& link);
+
 	// RX Data Header Packet Count
 	uint32_t          ReadRXDataHeaderPacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
 	RegisterFormatter FormatRXDataHeaderPacketCountLink(DTC_Link_ID const& link);
@@ -1443,6 +1455,13 @@ class DTC_Registers : public CFOandDTC_Registers
 	    [this] { return this->FormatTXHeartbeatPacketCountLink(DTC_Link_3); },
 	    [this] { return this->FormatTXHeartbeatPacketCountLink(DTC_Link_4); },
 	    [this] { return this->FormatTXHeartbeatPacketCountLink(DTC_Link_5); },
+
+	    [this] { return this->FormatTXNullHeartbeatCountLink(DTC_Link_0); },
+	    [this] { return this->FormatTXNullHeartbeatCountLink(DTC_Link_1); },
+	    [this] { return this->FormatTXNullHeartbeatCountLink(DTC_Link_2); },
+	    [this] { return this->FormatTXNullHeartbeatCountLink(DTC_Link_3); },
+	    [this] { return this->FormatTXNullHeartbeatCountLink(DTC_Link_4); },
+	    [this] { return this->FormatTXNullHeartbeatCountLink(DTC_Link_5); },
 
 	    [this] { return this->FormatRXDataHeaderPacketCountLink(DTC_Link_0); },
 	    [this] { return this->FormatRXDataHeaderPacketCountLink(DTC_Link_1); },
