@@ -1259,6 +1259,30 @@ uint32_t DTCLib::DTC_Registers::ReadLinkEnabledData()
 	return ReadRegister_(CFOandDTC_Register_LinkEnable);
 }
 
+bool DTCLib::DTC_Registers::ReadBlockNullHeartbeatsToROC(std::optional<uint32_t> val)
+{
+	std::bitset<32> dataSet = val.has_value() ? *val : ReadRegister_(CFOandDTC_Register_LinkEnable);
+	return dataSet[24];
+}
+void DTCLib::DTC_Registers::SetBlockNullHeartbeatsToROC(bool enable)
+{
+	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_LinkEnable);
+	data[24] = enable;
+	WriteRegister_(data.to_ulong(), CFOandDTC_Register_LinkEnable);
+}
+
+bool DTCLib::DTC_Registers::ReadResequenceNonNullEvents(std::optional<uint32_t> val)
+{
+	std::bitset<32> dataSet = val.has_value() ? *val : ReadRegister_(CFOandDTC_Register_LinkEnable);
+	return dataSet[25];
+}
+void DTCLib::DTC_Registers::SetResequenceNonNullEvents(bool enable)
+{
+	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_LinkEnable);
+	data[25] = enable;
+	WriteRegister_(data.to_ulong(), CFOandDTC_Register_LinkEnable);
+}
+
 /// <summary>
 /// Formats the register's current value for register dumps
 /// </summary>
@@ -1284,6 +1308,10 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatLinkEnable()
 		form.vals.push_back(std::string("EVB:    [") + (ee.TransmitEnable ? "x" : ".") + "" +
 							(ee.ReceiveEnable ? "x" : ".") + "]");
 	}
+	form.vals.push_back(std::string("Block Null Heartbeats to ALL ROCs: [") +
+						(ReadBlockNullHeartbeatsToROC(form.value) ? "x" : ".") + "]");
+	form.vals.push_back(std::string("Resequence Non-null Events for ALL ROCs:   [") +
+						(ReadResequenceNonNullEvents(form.value) ? "x" : ".") + "]");
 	return form;
 }
 

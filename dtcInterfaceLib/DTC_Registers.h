@@ -497,6 +497,10 @@ class DTC_Registers : public CFOandDTC_Registers
 	void               DisableLink(DTC_Link_ID const& link, const DTC_LinkEnableMode& mode = DTC_LinkEnableMode());
 	DTC_LinkEnableMode ReadLinkEnabled(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
 	uint32_t           ReadLinkEnabledData();
+	bool               ReadBlockNullHeartbeatsToROC(std::optional<uint32_t> val = std::nullopt);
+	void               SetBlockNullHeartbeatsToROC(bool enable);
+	bool               ReadResequenceNonNullEvents(std::optional<uint32_t> val = std::nullopt);
+	void               SetResequenceNonNullEvents(bool enable);
 	RegisterFormatter  FormatLinkEnable();
 
 	// SERDES Reset Register
