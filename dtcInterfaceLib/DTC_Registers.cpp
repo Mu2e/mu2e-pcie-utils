@@ -1259,6 +1259,30 @@ uint32_t DTCLib::DTC_Registers::ReadLinkEnabledData()
 	return ReadRegister_(CFOandDTC_Register_LinkEnable);
 }
 
+bool DTCLib::DTC_Registers::ReadBlockNullHeartbeatsToROC(std::optional<uint32_t> val)
+{
+	std::bitset<32> dataSet = val.has_value() ? *val : ReadRegister_(CFOandDTC_Register_LinkEnable);
+	return dataSet[24];
+}
+void DTCLib::DTC_Registers::SetBlockNullHeartbeatsToROC(bool enable)
+{
+	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_LinkEnable);
+	data[24] = enable;
+	WriteRegister_(data.to_ulong(), CFOandDTC_Register_LinkEnable);
+}
+
+bool DTCLib::DTC_Registers::ReadResequenceNonNullEvents(std::optional<uint32_t> val)
+{
+	std::bitset<32> dataSet = val.has_value() ? *val : ReadRegister_(CFOandDTC_Register_LinkEnable);
+	return dataSet[25];
+}
+void DTCLib::DTC_Registers::SetResequenceNonNullEvents(bool enable)
+{
+	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_LinkEnable);
+	data[25] = enable;
+	WriteRegister_(data.to_ulong(), CFOandDTC_Register_LinkEnable);
+}
+
 /// <summary>
 /// Formats the register's current value for register dumps
 /// </summary>
@@ -1284,6 +1308,10 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatLinkEnable()
 		form.vals.push_back(std::string("EVB:    [") + (ee.TransmitEnable ? "x" : ".") + "" +
 							(ee.ReceiveEnable ? "x" : ".") + "]");
 	}
+	form.vals.push_back(std::string("Block Null Heartbeats to ALL ROCs: [") +
+						(ReadBlockNullHeartbeatsToROC(form.value) ? "x" : ".") + "]");
+	form.vals.push_back(std::string("Resequence Non-null Events for ALL ROCs:   [") +
+						(ReadResequenceNonNullEvents(form.value) ? "x" : ".") + "]");
 	return form;
 }
 
@@ -7304,6 +7332,58 @@ DTCLib::DTC_Register DTCLib::DTC_Registers::GetTXEventWindowMarkerCountLinkRegis
 	}
 	return reg;
 }  // end GetTXEventWindowMarkerCountLinkRegister()
+
+// TX Null Heartbeat Packet Count
+uint32_t DTCLib::DTC_Registers::ReadTXNullHeartbeatCount(DTC_Link_ID const& link, std::optional<uint32_t> val)
+{
+	return val.has_value() ? *val : ReadRegister_(GetTXNullHeartbeatCountLinkRegister(link));
+}  // end ReadTXNullHeartbeatCount()
+
+DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatTXNullHeartbeatCountLink(DTC_Link_ID const& link)
+{
+	auto form = CreateFormatter(GetTXNullHeartbeatCountLinkRegister(link));
+	form.description = "Tx Null HBPs on Link " +
+					   std::to_string((GetTXNullHeartbeatCountLinkRegister(link) -
+									   GetTXNullHeartbeatCountLinkRegister(DTC_Link_0)) /
+									  4);
+	std::stringstream o;
+	o << std::dec << ReadTXNullHeartbeatCount(link, form.value);
+	form.vals.push_back(o.str());
+	return form;
+}  // end FormatTXNullHeartbeatCountLink()
+
+DTCLib::DTC_Register DTCLib::DTC_Registers::GetTXNullHeartbeatCountLinkRegister(DTC_Link_ID const& link)
+{
+	DTC_Register reg;
+	switch (link)
+	{
+		case DTC_Link_0:
+			reg = DTC_Register_TXNullHeartbeatCount_Link0;
+			break;
+		case DTC_Link_1:
+			reg = DTC_Register_TXNullHeartbeatCount_Link1;
+			break;
+		case DTC_Link_2:
+			reg = DTC_Register_TXNullHeartbeatCount_Link2;
+			break;
+		case DTC_Link_3:
+			reg = DTC_Register_TXNullHeartbeatCount_Link3;
+			break;
+		case DTC_Link_4:
+			reg = DTC_Register_TXNullHeartbeatCount_Link4;
+			break;
+		case DTC_Link_5:
+			reg = DTC_Register_TXNullHeartbeatCount_Link5;
+			break;
+		default: {
+			__SS__ << "Illegal link index provided: " << link << __E__;
+			ss << "\n\nThe stack trace is as follows:\n"
+			   << otsStyleStackTrace() << __E__;
+			__SS_THROW__;
+		}
+	}
+	return reg;
+}  // end GetTXNullHeartbeatCountLinkRegister()
 
 // TX Data Request Packet Count
 uint32_t DTCLib::DTC_Registers::ReadTXDataRequestPacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val)
