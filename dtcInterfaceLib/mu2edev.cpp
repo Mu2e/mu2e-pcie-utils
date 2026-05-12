@@ -820,6 +820,15 @@ void mu2edev::spy(int chn, unsigned optsmsk)
 				{
 					std::cout << " " << std::hex << std::setw(16) << std::setfill('0') << datap[dd];
 				}
+				if (optsmsk & 8)
+				{
+					constexpr size_t totalQwords = sizeof(mu2e_databuff_t) / sizeof(uint64_t);  // 8192
+					std::cout << " ...";
+					for (size_t dd = totalQwords - 13; dd < totalQwords; ++dd)
+					{
+						std::cout << " " << std::hex << std::setw(16) << std::setfill('0') << datap[dd];
+					}
+				}
 				if (!(bufIdx < MU2E_NUM_RECV_BUFFS)) break;
 				if (buf < 3) std::cout << "   ";
 			}

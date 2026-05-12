@@ -317,6 +317,9 @@ class DTC : public DTC_Registers
 	CFOandDTC_DMAs::DMAInfo daqDMAInfo_;
 	CFOandDTC_DMAs::DMAInfo dcsDMAInfo_;
 
+	DTC_SubEventHeader lastGoodSubEventHeader_{};  ///< Persists across GetSubEventData calls for diagnostics on exception
+	bool               hasLastGoodSubEventHeader_{false};
+
 	uint8_t lastDTCErrorBitsValue_ = 0;
 };
 }  // namespace DTCLib
