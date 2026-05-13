@@ -172,9 +172,15 @@ class mu2edev
 	/// <summary>
 	/// For this DTC, "spy" on C2S buffers associated with chn.
 	/// Output a small protion of each buffer to stdout until ^C.
+	/// Only executes once per instance lifetime (or until resetSpyHasOccurred() is called) to avoid log-file chaos.
 	/// </summary>
 	/// <returns>No value is returned.</returns>
 	void spy(int chn, unsigned flags);
+
+	/// <summary>
+	/// Reset the spy-has-occurred flag so that spy() will produce output again on the next call.
+	/// </summary>
+	void resetSpyHasOccurred() { spyHasOccurred_ = false; }
 
   private:
 	// unsigned delta_(int chn, int dir);
@@ -199,6 +205,7 @@ class mu2edev
 	std::string                           UID_;
 	FILE*                                 debugFp_ = 0;
 	std::chrono::steady_clock::time_point lastWriteTime_;
+	bool                                  spyHasOccurred_ = false;  ///< Limits spy() printout to a single invocation per instance lifetime (or until resetSpyHasOccurred() is called) to avoid log-file chaos.
 };
 
 #endif
