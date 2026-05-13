@@ -259,26 +259,6 @@ bool CFOLib::CFO_Registers::ReadEmbeddedClockMarkerEnable(std::optional<uint32_t
 	return data[1];
 }
 
-void CFOLib::CFO_Registers::EnablePunchedClock()
-{
-	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_Control);
-	data[9] = 1;
-	WriteRegister_(data.to_ulong(), CFOandDTC_Register_Control);
-}
-
-void CFOLib::CFO_Registers::DisablePunchedClock()
-{
-	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_Control);
-	data[9] = 0;
-	WriteRegister_(data.to_ulong(), CFOandDTC_Register_Control);
-}
-
-bool CFOLib::CFO_Registers::ReadPunchedClockEnable(std::optional<uint32_t> val)
-{
-	std::bitset<32> data = val.has_value() ? *val : ReadRegister_(CFOandDTC_Register_Control);
-	return data[9];
-}
-
 DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatCFOControl()
 {
 	auto form = CreateFormatter(CFOandDTC_Register_Control);
