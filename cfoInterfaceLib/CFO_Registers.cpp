@@ -246,7 +246,6 @@ void CFOLib::CFO_Registers::EnableEmbeddedClockMarker()
 	WriteRegister_(data.to_ulong(), CFOandDTC_Register_Control);
 }
 
-
 void CFOLib::CFO_Registers::DisableEmbeddedClockMarker()
 {
 	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_Control);
@@ -266,7 +265,6 @@ void CFOLib::CFO_Registers::EnablePunchedClock()
 	data[9] = 1;
 	WriteRegister_(data.to_ulong(), CFOandDTC_Register_Control);
 }
-
 
 void CFOLib::CFO_Registers::DisablePunchedClock()
 {

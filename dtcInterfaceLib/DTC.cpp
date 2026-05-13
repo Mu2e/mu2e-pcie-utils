@@ -190,7 +190,7 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 				}
 
 				// Save the last good subevent header (member variable persists across calls)
-				lastGoodSubEventHeader_    = *output.back()->GetHeader();
+				lastGoodSubEventHeader_ = *output.back()->GetHeader();
 				hasLastGoodSubEventHeader_ = true;
 
 				DTC_TLOG(TLVL_GetData) << "GetSubEventData after ReadNextDAQSubEventDMA, found " << output.size() << " subevents"
@@ -233,7 +233,8 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 			for (size_t i = 0; i < sizeof(DTC_SubEventHeader); i += 4)
 				rawSS << std::hex << std::setw(8) << std::setfill('0') << *reinterpret_cast<const uint32_t*>(&ptr[i]) << ' ';
 			DTC_TLOG(TLVL_ERROR) << rawSS.str();
-			DTC_TLOG(TLVL_ERROR) << "Last good subevent header JSON:\n" << lastGoodSubEventHeader_.toJson();
+			DTC_TLOG(TLVL_ERROR) << "Last good subevent header JSON:\n"
+								 << lastGoodSubEventHeader_.toJson();
 		}
 		else
 			DTC_TLOG(TLVL_ERROR) << "No last good subevent header available.";
@@ -252,7 +253,8 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 			for (size_t i = 0; i < sizeof(DTC_SubEventHeader); i += 4)
 				rawSS << std::hex << std::setw(8) << std::setfill('0') << *reinterpret_cast<const uint32_t*>(&ptr[i]) << ' ';
 			DTC_TLOG(TLVL_ERROR) << rawSS.str();
-			DTC_TLOG(TLVL_ERROR) << "Last good subevent header JSON:\n" << lastGoodSubEventHeader_.toJson();
+			DTC_TLOG(TLVL_ERROR) << "Last good subevent header JSON:\n"
+								 << lastGoodSubEventHeader_.toJson();
 		}
 		else
 			DTC_TLOG(TLVL_ERROR) << "No last good subevent header available.";
@@ -271,7 +273,8 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 			for (size_t i = 0; i < sizeof(DTC_SubEventHeader); i += 4)
 				rawSS << std::hex << std::setw(8) << std::setfill('0') << *reinterpret_cast<const uint32_t*>(&ptr[i]) << ' ';
 			DTC_TLOG(TLVL_ERROR) << rawSS.str();
-			DTC_TLOG(TLVL_ERROR) << "Last good subevent header JSON:\n" << lastGoodSubEventHeader_.toJson();
+			DTC_TLOG(TLVL_ERROR) << "Last good subevent header JSON:\n"
+								 << lastGoodSubEventHeader_.toJson();
 		}
 		else
 			DTC_TLOG(TLVL_ERROR) << "No last good subevent header available.";
@@ -1562,7 +1565,7 @@ bool DTCLib::DTC::ReadNextDAQSubEventDMA(std::vector<std::unique_ptr<DTC_SubEven
 				output.push_back(std::move(res));
 			}
 		}  // end subevent header fully in current buffer
-	}  // end primary subevent extraction loop
+	}      // end primary subevent extraction loop
 
 	DTC_TLOG(TLVL_ReadNextDAQPacket) << "ReadNextDAQSubEventDMA: RETURN " << output.size() << " SubEvents";
 	return output.size() > 0;
