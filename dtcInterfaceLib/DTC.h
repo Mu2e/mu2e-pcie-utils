@@ -98,6 +98,8 @@ class DTC : public DTC_Registers
 	/// <param name="when">Desired event window tag for readout. Default means use whatever event window tag is next</param>
 	/// <returns>A vector of DTC_SubEvent objects, but only one DTC_SubEvent is expected</returns>
 	std::vector<std::unique_ptr<DTC_SubEvent>> GetSubEventData(DTC_EventWindowTag when = DTC_EventWindowTag(), bool matchEventWindowTag = false);
+	std::vector<std::unique_ptr<DTC_SubEvent>> GetSubEventData2(DTC_EventWindowTag when = DTC_EventWindowTag(), bool matchEventWindowTag = false);
+
 
 	/// <summary>
 	/// Read a file into the DTC memory. Will truncate the file so that it fits in the DTC memory.
@@ -319,6 +321,11 @@ class DTC : public DTC_Registers
 
 	DTC_SubEventHeader lastGoodSubEventHeader_{};  ///< Persists across GetSubEventData calls for diagnostics on exception
 	bool               hasLastGoodSubEventHeader_{false};
+
+	// State for GetSubEventData2: cross-buffer pending subevent assembly
+	std::vector<uint8_t> pendingSubEventBytes_{};       ///< Partial subevent bytes carried over from the previous DMA buffer
+	size_t               pendingSubEventTotalBytes_{0}; ///< Expected total byte count of the pending subevent (0 = header not yet complete)
+	bool                 lastDMABufferWasFull_{false};  ///< True when the last DMA buffer was completely full (dmaBytes==sizeof(mu2e_databuff_t)); next buffer is a raw continuation with no framing prefix
 
 	uint8_t lastDTCErrorBitsValue_ = 0;
 };
