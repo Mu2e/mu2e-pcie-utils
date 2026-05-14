@@ -100,7 +100,6 @@ class DTC : public DTC_Registers
 	std::vector<std::unique_ptr<DTC_SubEvent>> GetSubEventData(DTC_EventWindowTag when = DTC_EventWindowTag(), bool matchEventWindowTag = false);
 	std::vector<std::unique_ptr<DTC_SubEvent>> GetSubEventData2(DTC_EventWindowTag when = DTC_EventWindowTag(), bool matchEventWindowTag = false);
 
-
 	/// <summary>
 	/// Read a file into the DTC memory. Will truncate the file so that it fits in the DTC memory.
 	/// </summary>
@@ -323,9 +322,9 @@ class DTC : public DTC_Registers
 	bool               hasLastGoodSubEventHeader_{false};
 
 	// State for GetSubEventData2: cross-buffer pending subevent assembly
-	std::vector<uint8_t> pendingSubEventBytes_{};       ///< Partial subevent bytes carried over from the previous DMA buffer
-	size_t               pendingSubEventTotalBytes_{0}; ///< Expected total byte count of the pending subevent (0 = header not yet complete)
-	bool                 lastDMABufferWasFull_{false};  ///< True when the last DMA buffer was completely full (dmaBytes==sizeof(mu2e_databuff_t)); next buffer is a raw continuation with no framing prefix
+	std::vector<uint8_t> pendingSubEventBytes_{};        ///< Partial subevent bytes carried over from the previous DMA buffer
+	size_t               pendingSubEventTotalBytes_{0};  ///< Expected total byte count of the pending subevent (0 = header not yet complete)
+	bool                 lastDMABufferWasFull_{false};   ///< True when the last DMA buffer was completely full (dmaBytes==sizeof(mu2e_databuff_t)); next buffer is a raw continuation with no framing prefix
 
 	uint8_t lastDTCErrorBitsValue_ = 0;
 };

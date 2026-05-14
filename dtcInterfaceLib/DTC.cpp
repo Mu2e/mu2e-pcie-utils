@@ -176,7 +176,7 @@ std::vector<std::unique_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetData(DTC_EventWi
 //     with a buffer we release it via read_release.
 // ---------------------------------------------------------------------------
 std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData2(
-    DTC_EventWindowTag when, bool matchEventWindowTag)
+	DTC_EventWindowTag when, bool matchEventWindowTag)
 {
 	(void)matchEventWindowTag;  // not yet used; filtering can be added once basic flow works
 	std::vector<std::unique_ptr<DTC_SubEvent>> output;
@@ -185,9 +185,9 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData2
 	// Step 1: get the next DMA buffer from hardware
 	// ------------------------------------------------------------------
 	DTC_TLOG(TLVL_GetData) << "GetSubEventData2 BEGIN EWT=" << when.GetEventWindowTag(true)
-	                       << " pendingBytes=" << pendingSubEventBytes_.size()
-	                       << " pendingTotal=" << pendingSubEventTotalBytes_
-	                       << " daqBufs=" << daqDMAInfo_.buffer.size();
+						   << " pendingBytes=" << pendingSubEventBytes_.size()
+						   << " pendingTotal=" << pendingSubEventTotalBytes_
+						   << " daqBufs=" << daqDMAInfo_.buffer.size();
 
 	// Release the previous buffer NOW — we are done with it.
 	// (Pending bytes have already been copied out of it into pendingSubEventBytes_.)
@@ -227,17 +227,17 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData2
 	const size_t payloadBytes = (dmaBytes < sizeof(mu2e_databuff_t)) ? dmaBytes - 1 : dmaBytes;
 
 	DTC_TLOG(TLVL_GetData) << "GetSubEventData2: new buffer bufStart=" << (void*)bufStart
-	                       << " dmaBytes=" << dmaBytes
-	                       << " payloadBytes=" << payloadBytes
-	                       << " sizeof(mu2e_databuff_t)=" << sizeof(mu2e_databuff_t);
+						   << " dmaBytes=" << dmaBytes
+						   << " payloadBytes=" << payloadBytes
+						   << " sizeof(mu2e_databuff_t)=" << sizeof(mu2e_databuff_t);
 
 	// Print first and last 8 quad-words of buffer for orientation / continuity checking
 	{
 		std::stringstream ss;
 		ss << "GetSubEventData2: buffer first 8 qwords: ";
-		for (int i = 0; i < 8 && (size_t)(i*8) < payloadBytes; ++i)
+		for (int i = 0; i < 8 && (size_t)(i * 8) < payloadBytes; ++i)
 			ss << std::hex << std::setw(16) << std::setfill('0')
-			   << *reinterpret_cast<const uint64_t*>(bufStart + i*8) << " ";
+			   << *reinterpret_cast<const uint64_t*>(bufStart + i * 8) << " ";
 		DTC_TLOG(TLVL_GetData) << ss.str();
 	}
 	{
@@ -267,24 +267,24 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData2
 			if (payloadBytes < sizeof(uint64_t))
 			{
 				DTC_TLOG(TLVL_ERROR) << "GetSubEventData2: continuation buffer too small ("
-				                     << payloadBytes << " bytes) to hold prefix -- dropping";
+									 << payloadBytes << " bytes) to hold prefix -- dropping";
 				ReleaseBuffers(DTC_DMA_Engine_DAQ);
 				return output;
 			}
 			DTC_TLOG(TLVL_GetData) << "GetSubEventData2: skipping 8-byte prefix on continuation buffer @ bufOffset=0"
-			                       << " prefixVal=" << *reinterpret_cast<const uint64_t*>(bufStart)
-			                       << " remaining=(" << (payloadBytes - sizeof(uint64_t)) << ")";
+								   << " prefixVal=" << *reinterpret_cast<const uint64_t*>(bufStart)
+								   << " remaining=(" << (payloadBytes - sizeof(uint64_t)) << ")";
 			bufOffset = sizeof(uint64_t);
 		}
 		else
 		{
 			DTC_TLOG(TLVL_GetData) << "GetSubEventData2: no prefix on continuation buffer (prev was full)"
-			                       << " bufOffset stays 0 payloadBytes=" << payloadBytes;
+								   << " bufOffset stays 0 payloadBytes=" << payloadBytes;
 		}
 
 		DTC_TLOG(TLVL_GetData) << "GetSubEventData2: completing pending subevent"
-		                       << " have=" << pendingSubEventBytes_.size()
-		                       << " pendingTotal=" << pendingSubEventTotalBytes_;
+							   << " have=" << pendingSubEventBytes_.size()
+							   << " pendingTotal=" << pendingSubEventTotalBytes_;
 
 		// If we stored a partial header last time (pendingSubEventTotalBytes_==0),
 		// try to complete the header first using bytes from the new buffer.
@@ -297,25 +297,25 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData2
 			{
 				// Still not enough for header — absorb and wait
 				DTC_TLOG(TLVL_GetData) << "GetSubEventData2: still can't complete header,"
-				                       << " have=" << have << " need " << headerBytesNeeded
-				                       << " more but only " << avail << " available";
+									   << " have=" << have << " need " << headerBytesNeeded
+									   << " more but only " << avail << " available";
 				pendingSubEventBytes_.insert(pendingSubEventBytes_.end(),
-				                             bufStart + bufOffset, bufStart + payloadBytes);
+											 bufStart + bufOffset, bufStart + payloadBytes);
 				ReleaseBuffers(DTC_DMA_Engine_DAQ);
 				return output;
 			}
 			// Complete the header, extract total byte count
 			pendingSubEventBytes_.insert(pendingSubEventBytes_.end(),
-			                             bufStart + bufOffset, bufStart + bufOffset + headerBytesNeeded);
+										 bufStart + bufOffset, bufStart + bufOffset + headerBytesNeeded);
 			pendingSubEventTotalBytes_ = static_cast<size_t>(
 				*reinterpret_cast<const uint32_t*>(pendingSubEventBytes_.data()) & 0x1FFFFFF);
 			bufOffset += headerBytesNeeded;
 			DTC_TLOG(TLVL_GetData) << "GetSubEventData2: header completed, subEventByteCount="
-			                       << pendingSubEventTotalBytes_ << " bufOffset=" << bufOffset;
+								   << pendingSubEventTotalBytes_ << " bufOffset=" << bufOffset;
 		}
 
-		const size_t have  = pendingSubEventBytes_.size();
-		const size_t need  = pendingSubEventTotalBytes_;
+		const size_t have = pendingSubEventBytes_.size();
+		const size_t need = pendingSubEventTotalBytes_;
 		const size_t still = (need > have) ? need - have : 0;
 
 		if (still > (payloadBytes - bufOffset))
@@ -323,9 +323,9 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData2
 			// Still not enough — absorb rest of new buffer and keep pending
 			const size_t absorb = payloadBytes - bufOffset;
 			DTC_TLOG(TLVL_GetData) << "GetSubEventData2: pending subevent still incomplete after new buffer"
-			                       << " still=" << still << " absorbing=" << absorb;
+								   << " still=" << still << " absorbing=" << absorb;
 			pendingSubEventBytes_.insert(pendingSubEventBytes_.end(),
-			                             bufStart + bufOffset, bufStart + bufOffset + absorb);
+										 bufStart + bufOffset, bufStart + bufOffset + absorb);
 			// Release this buffer immediately — data is copied
 			ReleaseBuffers(DTC_DMA_Engine_DAQ);
 			return output;  // come back next call
@@ -333,17 +333,17 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData2
 
 		// We have enough — copy the remainder from this buffer
 		pendingSubEventBytes_.insert(pendingSubEventBytes_.end(),
-		                             bufStart + bufOffset, bufStart + bufOffset + still);
+									 bufStart + bufOffset, bufStart + bufOffset + still);
 		bufOffset += still;
 
 		DTC_TLOG(TLVL_GetData) << "GetSubEventData2: pending subevent complete"
-		                       << " totalBytes=" << need
-		                       << " bufOffset now=" << bufOffset;
+							   << " totalBytes=" << need
+							   << " bufOffset now=" << bufOffset;
 
 		// Construct the completed subevent from the assembled bytes
 		auto inmem = std::make_unique<DTC_SubEvent>(need);
 		memcpy(const_cast<void*>(inmem->GetRawBufferPointer()),
-		       pendingSubEventBytes_.data(), need);
+			   pendingSubEventBytes_.data(), need);
 		pendingSubEventBytes_.clear();
 		pendingSubEventTotalBytes_ = 0;
 
@@ -358,7 +358,7 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData2
 			else
 			{
 				DTC_TLOG(TLVL_GetData) << "GetSubEventData2: completed pending subevent tag="
-				                       << inmem->GetEventWindowTag().GetEventWindowTag(true);
+									   << inmem->GetEventWindowTag().GetEventWindowTag(true);
 				output.push_back(std::move(inmem));
 			}
 		}
@@ -382,14 +382,14 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData2
 	{
 		// Skip the 8-byte DTC framing prefix — do not use its value
 		DTC_TLOG(TLVL_GetData) << "GetSubEventData2: skipping 8-byte prefix @ bufOffset=" << bufOffset
-		                       << " prefixVal=" << *reinterpret_cast<const uint64_t*>(bufStart + bufOffset)
-		                       << " remaining=(" << payloadBytes - bufOffset << ")";
+							   << " prefixVal=" << *reinterpret_cast<const uint64_t*>(bufStart + bufOffset)
+							   << " remaining=(" << payloadBytes - bufOffset << ")";
 		bufOffset += sizeof(uint64_t);
 
 		// The subevent inclusive byte count lives in the first 4 bytes of the header
 		// (bits 24:0 = inclusive byte count incl. the header itself)
 		const uint8_t* sePtr = bufStart + bufOffset;
-		const size_t   seAvail = payloadBytes - bufOffset;  // bytes remaining in this buffer
+		const size_t seAvail = payloadBytes - bufOffset;  // bytes remaining in this buffer
 
 		// Print first 8 qwords at this subevent boundary for diagnostics
 		{
@@ -398,9 +398,9 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData2
 			   << " seAvail(dist to payload end)=" << seAvail
 			   << " distToMaxBufEnd=" << (sizeof(mu2e_databuff_t) - bufOffset)
 			   << " first 8 qwords: ";
-			for (int i = 0; i < 8 && (size_t)(i*8) < seAvail; ++i)
+			for (int i = 0; i < 8 && (size_t)(i * 8) < seAvail; ++i)
 				ss << std::hex << std::setw(16) << std::setfill('0')
-				   << *reinterpret_cast<const uint64_t*>(sePtr + i*8) << " ";
+				   << *reinterpret_cast<const uint64_t*>(sePtr + i * 8) << " ";
 			DTC_TLOG(TLVL_GetData) << ss.str();
 		}
 
@@ -415,8 +415,8 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData2
 			// Partial header in this buffer — need to read from next buffer
 			// We have fewer than 48 header bytes.  Store what we have and return.
 			DTC_TLOG(TLVL_GetData) << "GetSubEventData2: partial header at bufOffset=" << bufOffset
-			                       << " seAvail=" << seAvail << " < sizeof(DTC_SubEventHeader)=" << sizeof(DTC_SubEventHeader)
-			                       << " -- saving " << seAvail << " partial bytes";
+								   << " seAvail=" << seAvail << " < sizeof(DTC_SubEventHeader)=" << sizeof(DTC_SubEventHeader)
+								   << " -- saving " << seAvail << " partial bytes";
 			pendingSubEventBytes_.assign(sePtr, sePtr + seAvail);
 			// We don't yet know the total byte count — mark it 0 meaning "header incomplete"
 			pendingSubEventTotalBytes_ = 0;
@@ -434,14 +434,14 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData2
 		if (subEventByteCount < sizeof(DTC_SubEventHeader))
 		{
 			DTC_TLOG(TLVL_ERROR) << "GetSubEventData2: subEventByteCount=" << subEventByteCount
-			                     << " < sizeof(DTC_SubEventHeader)=" << sizeof(DTC_SubEventHeader)
-			                     << " at bufOffset=" << bufOffset << " -- stopping parse";
+								 << " < sizeof(DTC_SubEventHeader)=" << sizeof(DTC_SubEventHeader)
+								 << " at bufOffset=" << bufOffset << " -- stopping parse";
 			break;
 		}
 
 		DTC_TLOG(TLVL_GetData) << "GetSubEventData2: subevent @ bufOffset=" << bufOffset
-		                       << " subEventByteCount=" << subEventByteCount
-		                       << " seAvail=" << seAvail;
+							   << " subEventByteCount=" << subEventByteCount
+							   << " seAvail=" << seAvail;
 
 		if (subEventByteCount <= seAvail)
 		{
@@ -453,13 +453,13 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData2
 				if (!res->SetupSubEvent(errs))
 				{
 					DTC_TLOG(TLVL_ERROR) << "GetSubEventData2: corrupt subevent at bufOffset=" << bufOffset
-					                     << " errs=" << errs;
+										 << " errs=" << errs;
 				}
 				else
 				{
 					DTC_TLOG(TLVL_GetData) << "GetSubEventData2: subevent OK tag="
-					                       << res->GetEventWindowTag().GetEventWindowTag(true)
-					                       << " bytes=" << subEventByteCount;
+										   << res->GetEventWindowTag().GetEventWindowTag(true)
+										   << " bytes=" << subEventByteCount;
 					output.push_back(std::move(res));
 				}
 			}
@@ -473,10 +473,10 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData2
 		{
 			// Subevent crosses buffer boundary — save what we have and return
 			DTC_TLOG(TLVL_GetData) << "GetSubEventData2: subevent crosses boundary"
-			                       << " have=" << seAvail
-			                       << " need=" << subEventByteCount
-			                       << " missing=" << (subEventByteCount - seAvail)
-			                       << " -- saving partial subevent";
+								   << " have=" << seAvail
+								   << " need=" << subEventByteCount
+								   << " missing=" << (subEventByteCount - seAvail)
+								   << " -- saving partial subevent";
 			pendingSubEventBytes_.assign(sePtr, sePtr + seAvail);
 			pendingSubEventTotalBytes_ = subEventByteCount;
 			break;  // done with this buffer
@@ -487,8 +487,8 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData2
 	// Step 4: report and return
 	// ------------------------------------------------------------------
 	DTC_TLOG(TLVL_GetData) << "GetSubEventData2 RETURN output.size()=" << output.size()
-	                       << " pendingBytes=" << pendingSubEventBytes_.size()
-	                       << " pendingTotal=" << pendingSubEventTotalBytes_;
+						   << " pendingBytes=" << pendingSubEventBytes_.size()
+						   << " pendingTotal=" << pendingSubEventTotalBytes_;
 	return output;
 }  // GetSubEventData2
 
