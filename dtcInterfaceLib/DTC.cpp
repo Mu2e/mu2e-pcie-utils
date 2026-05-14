@@ -175,7 +175,7 @@ std::vector<std::unique_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetData(DTC_EventWi
 //     referenced by pending data, plus the new one).  As soon as we are done
 //     with a buffer we release it via read_release.
 // ---------------------------------------------------------------------------
-std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData2(
+std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData( //2
 	DTC_EventWindowTag when, bool matchEventWindowTag)
 {
 	(void)matchEventWindowTag;  // not yet used; filtering can be added once basic flow works
@@ -492,132 +492,132 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData2
 	return output;
 }  // GetSubEventData2
 
-// GetSubEventData ~~
-//	Similar to CFO GetData() -- retrieves one or more SubEvents from a single DMA buffer read.
-//	This is appropriate for SW Event building or more basic tests.
-std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(DTC_EventWindowTag when, bool matchEventWindowTag)
-{
-	DTC_TLOG(TLVL_GetData) << "GetSubEventData begin EventWindowTag=" << when.GetEventWindowTag(true) << ", doMatching=" << (matchEventWindowTag ? "true" : "false");
-	std::vector<std::unique_ptr<DTC_SubEvent>> output;
-	bool result = false;
+// // GetSubEventData ~~
+// //	Similar to CFO GetData() -- retrieves one or more SubEvents from a single DMA buffer read.
+// //	This is appropriate for SW Event building or more basic tests.
+// std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(DTC_EventWindowTag when, bool matchEventWindowTag)
+// {
+// 	DTC_TLOG(TLVL_GetData) << "GetSubEventData begin EventWindowTag=" << when.GetEventWindowTag(true) << ", doMatching=" << (matchEventWindowTag ? "true" : "false");
+// 	std::vector<std::unique_ptr<DTC_SubEvent>> output;
+// 	bool result = false;
 
-	// Release read buffers here "I am done with everything I read before" (because the return may be pointers to the raw data, not copies)
-	ReleaseBuffers(DTC_DMA_Engine_DAQ);  // Currently race condition because GetCurrentBuffer(info) is used inside to decide how many buffers to release.
+// 	// Release read buffers here "I am done with everything I read before" (because the return may be pointers to the raw data, not copies)
+// 	ReleaseBuffers(DTC_DMA_Engine_DAQ);  // Currently race condition because GetCurrentBuffer(info) is used inside to decide how many buffers to release.
 
-	try
-	{
-		// Read SubEvent(s) from the next DMA buffer(s)
-		auto tries = 0;
-		while (!result && tries < 3)
-		{
-			DTC_TLOG(TLVL_GetData) << "GetSubEventData before ReadNextDAQSubEventDMA(...), tries = " << tries;
-			result = ReadNextDAQSubEventDMA(output, 100 /* ms */);
-			if (result)
-			{
-				if (output.size() == 0)
-				{
-					__SS__ << "Impossible empty output vector after returned success!" << __E__;
-					__SS_THROW__;
-				}
+// 	try
+// 	{
+// 		// Read SubEvent(s) from the next DMA buffer(s)
+// 		auto tries = 0;
+// 		while (!result && tries < 3)
+// 		{
+// 			DTC_TLOG(TLVL_GetData) << "GetSubEventData before ReadNextDAQSubEventDMA(...), tries = " << tries;
+// 			result = ReadNextDAQSubEventDMA(output, 100 /* ms */);
+// 			if (result)
+// 			{
+// 				if (output.size() == 0)
+// 				{
+// 					__SS__ << "Impossible empty output vector after returned success!" << __E__;
+// 					__SS_THROW__;
+// 				}
 
-				// Save the last good subevent header (member variable persists across calls)
-				lastGoodSubEventHeader_ = *output.back()->GetHeader();
-				hasLastGoodSubEventHeader_ = true;
+// 				// Save the last good subevent header (member variable persists across calls)
+// 				lastGoodSubEventHeader_ = *output.back()->GetHeader();
+// 				hasLastGoodSubEventHeader_ = true;
 
-				DTC_TLOG(TLVL_GetData) << "GetSubEventData after ReadNextDAQSubEventDMA, found " << output.size() << " subevents"
-									   << ", first tag = " << output[0]->GetEventWindowTag().GetEventWindowTag(true)
-									   << " (0x" << std::hex << output[0]->GetEventWindowTag().GetEventWindowTag(true) << ")"
-									   << ", expected tag = " << std::dec << when.GetEventWindowTag(true)
-									   << " (0x" << std::hex << when.GetEventWindowTag(true) << ")";
-			}
-			else
-				DTC_TLOG(TLVL_GetData) << "GetSubEventData after ReadNextDAQSubEventDMA, no data";
-			tries++;
-		}
+// 				DTC_TLOG(TLVL_GetData) << "GetSubEventData after ReadNextDAQSubEventDMA, found " << output.size() << " subevents"
+// 									   << ", first tag = " << output[0]->GetEventWindowTag().GetEventWindowTag(true)
+// 									   << " (0x" << std::hex << output[0]->GetEventWindowTag().GetEventWindowTag(true) << ")"
+// 									   << ", expected tag = " << std::dec << when.GetEventWindowTag(true)
+// 									   << " (0x" << std::hex << when.GetEventWindowTag(true) << ")";
+// 			}
+// 			else
+// 				DTC_TLOG(TLVL_GetData) << "GetSubEventData after ReadNextDAQSubEventDMA, no data";
+// 			tries++;
+// 		}
 
-		// return if no data found
-		if (!result)
-		{
-			DTC_TLOG(TLVL_GetData) << "GetSubEventData: Timeout Occurred! no data found; RETURNing output.size()=" << output.size();
-			return output;
-		}
+// 		// return if no data found
+// 		if (!result)
+// 		{
+// 			DTC_TLOG(TLVL_GetData) << "GetSubEventData: Timeout Occurred! no data found; RETURNing output.size()=" << output.size();
+// 			return output;
+// 		}
 
-		// return if failed to match
-		if (matchEventWindowTag && output[0]->GetEventWindowTag() != when)
-		{
-			DTC_TLOG(TLVL_ERROR) << "GetSubEventData: Error: DTC_SubEvent has wrong Event Window Tag! 0x" << std::hex << when.GetEventWindowTag(true)
-								 << "(expected) != 0x" << std::hex << output[0]->GetEventWindowTag().GetEventWindowTag(true);
-			daqDMAInfo_.currentReadPtr = daqDMAInfo_.lastReadPtr;
-			output.clear();
-			return output;
-		}
-	}
-	catch (DTC_WrongPacketTypeException& ex)
-	{
-		daqDMAInfo_.currentReadPtr = nullptr;
-		DTC_TLOG(TLVL_ERROR) << "GetSubEventData: Bad omen: Wrong packet type at the current read position, last tag=" << (output.size() ? output.back()->GetEventWindowTag().GetEventWindowTag(true) : -1);
-		if (hasLastGoodSubEventHeader_)
-		{
-			auto ptr = reinterpret_cast<const uint8_t*>(&lastGoodSubEventHeader_);
-			std::stringstream rawSS;
-			rawSS << "Last good subevent header raw data (" << sizeof(DTC_SubEventHeader) << " bytes): 0x ";
-			for (size_t i = 0; i < sizeof(DTC_SubEventHeader); i += 4)
-				rawSS << std::hex << std::setw(8) << std::setfill('0') << *reinterpret_cast<const uint32_t*>(&ptr[i]) << ' ';
-			DTC_TLOG(TLVL_ERROR) << rawSS.str();
-			DTC_TLOG(TLVL_ERROR) << "Last good subevent header JSON:\n"
-								 << lastGoodSubEventHeader_.toJson();
-		}
-		else
-			DTC_TLOG(TLVL_ERROR) << "No last good subevent header available.";
-		device_.spy(DTC_DMA_Engine_DAQ, 3 /* for once */ | 8 /* for wide view */ | 16 /* for stack trace */);
-		throw;
-	}
-	catch (DTC_IOErrorException& ex)
-	{
-		daqDMAInfo_.currentReadPtr = nullptr;
-		DTC_TLOG(TLVL_ERROR) << "GetSubEventData: IO Exception Occurred! last tag=" << (output.size() ? output.back()->GetEventWindowTag().GetEventWindowTag(true) : -1);
-		if (hasLastGoodSubEventHeader_)
-		{
-			auto ptr = reinterpret_cast<const uint8_t*>(&lastGoodSubEventHeader_);
-			std::stringstream rawSS;
-			rawSS << "Last good subevent header raw data (" << sizeof(DTC_SubEventHeader) << " bytes): 0x ";
-			for (size_t i = 0; i < sizeof(DTC_SubEventHeader); i += 4)
-				rawSS << std::hex << std::setw(8) << std::setfill('0') << *reinterpret_cast<const uint32_t*>(&ptr[i]) << ' ';
-			DTC_TLOG(TLVL_ERROR) << rawSS.str();
-			DTC_TLOG(TLVL_ERROR) << "Last good subevent header JSON:\n"
-								 << lastGoodSubEventHeader_.toJson();
-		}
-		else
-			DTC_TLOG(TLVL_ERROR) << "No last good subevent header available.";
-		device_.spy(DTC_DMA_Engine_DAQ, 3 /* for once */ | 8 /* for wide view */ | 16 /* for stack trace */);
-		throw;
-	}
-	catch (DTC_DataCorruptionException& ex)
-	{
-		daqDMAInfo_.currentReadPtr = nullptr;
-		DTC_TLOG(TLVL_ERROR) << "GetSubEventData: Data Corruption Exception Occurred! last tag=" << (output.size() ? output.back()->GetEventWindowTag().GetEventWindowTag(true) : -1);
-		if (hasLastGoodSubEventHeader_)
-		{
-			auto ptr = reinterpret_cast<const uint8_t*>(&lastGoodSubEventHeader_);
-			std::stringstream rawSS;
-			rawSS << "Last good subevent header raw data (" << sizeof(DTC_SubEventHeader) << " bytes): 0x ";
-			for (size_t i = 0; i < sizeof(DTC_SubEventHeader); i += 4)
-				rawSS << std::hex << std::setw(8) << std::setfill('0') << *reinterpret_cast<const uint32_t*>(&ptr[i]) << ' ';
-			DTC_TLOG(TLVL_ERROR) << rawSS.str();
-			DTC_TLOG(TLVL_ERROR) << "Last good subevent header JSON:\n"
-								 << lastGoodSubEventHeader_.toJson();
-		}
-		else
-			DTC_TLOG(TLVL_ERROR) << "No last good subevent header available.";
-		device_.spy(DTC_DMA_Engine_DAQ, 3 /* for once */ | 8 /* for wide view */ | 16 /* for stack trace */);
-		throw;
-	}
+// 		// return if failed to match
+// 		if (matchEventWindowTag && output[0]->GetEventWindowTag() != when)
+// 		{
+// 			DTC_TLOG(TLVL_ERROR) << "GetSubEventData: Error: DTC_SubEvent has wrong Event Window Tag! 0x" << std::hex << when.GetEventWindowTag(true)
+// 								 << "(expected) != 0x" << std::hex << output[0]->GetEventWindowTag().GetEventWindowTag(true);
+// 			daqDMAInfo_.currentReadPtr = daqDMAInfo_.lastReadPtr;
+// 			output.clear();
+// 			return output;
+// 		}
+// 	}
+// 	catch (DTC_WrongPacketTypeException& ex)
+// 	{
+// 		daqDMAInfo_.currentReadPtr = nullptr;
+// 		DTC_TLOG(TLVL_ERROR) << "GetSubEventData: Bad omen: Wrong packet type at the current read position, last tag=" << (output.size() ? output.back()->GetEventWindowTag().GetEventWindowTag(true) : -1);
+// 		if (hasLastGoodSubEventHeader_)
+// 		{
+// 			auto ptr = reinterpret_cast<const uint8_t*>(&lastGoodSubEventHeader_);
+// 			std::stringstream rawSS;
+// 			rawSS << "Last good subevent header raw data (" << sizeof(DTC_SubEventHeader) << " bytes): 0x ";
+// 			for (size_t i = 0; i < sizeof(DTC_SubEventHeader); i += 4)
+// 				rawSS << std::hex << std::setw(8) << std::setfill('0') << *reinterpret_cast<const uint32_t*>(&ptr[i]) << ' ';
+// 			DTC_TLOG(TLVL_ERROR) << rawSS.str();
+// 			DTC_TLOG(TLVL_ERROR) << "Last good subevent header JSON:\n"
+// 								 << lastGoodSubEventHeader_.toJson();
+// 		}
+// 		else
+// 			DTC_TLOG(TLVL_ERROR) << "No last good subevent header available.";
+// 		device_.spy(DTC_DMA_Engine_DAQ, 3 /* for once */ | 8 /* for wide view */ | 16 /* for stack trace */);
+// 		throw;
+// 	}
+// 	catch (DTC_IOErrorException& ex)
+// 	{
+// 		daqDMAInfo_.currentReadPtr = nullptr;
+// 		DTC_TLOG(TLVL_ERROR) << "GetSubEventData: IO Exception Occurred! last tag=" << (output.size() ? output.back()->GetEventWindowTag().GetEventWindowTag(true) : -1);
+// 		if (hasLastGoodSubEventHeader_)
+// 		{
+// 			auto ptr = reinterpret_cast<const uint8_t*>(&lastGoodSubEventHeader_);
+// 			std::stringstream rawSS;
+// 			rawSS << "Last good subevent header raw data (" << sizeof(DTC_SubEventHeader) << " bytes): 0x ";
+// 			for (size_t i = 0; i < sizeof(DTC_SubEventHeader); i += 4)
+// 				rawSS << std::hex << std::setw(8) << std::setfill('0') << *reinterpret_cast<const uint32_t*>(&ptr[i]) << ' ';
+// 			DTC_TLOG(TLVL_ERROR) << rawSS.str();
+// 			DTC_TLOG(TLVL_ERROR) << "Last good subevent header JSON:\n"
+// 								 << lastGoodSubEventHeader_.toJson();
+// 		}
+// 		else
+// 			DTC_TLOG(TLVL_ERROR) << "No last good subevent header available.";
+// 		device_.spy(DTC_DMA_Engine_DAQ, 3 /* for once */ | 8 /* for wide view */ | 16 /* for stack trace */);
+// 		throw;
+// 	}
+// 	catch (DTC_DataCorruptionException& ex)
+// 	{
+// 		daqDMAInfo_.currentReadPtr = nullptr;
+// 		DTC_TLOG(TLVL_ERROR) << "GetSubEventData: Data Corruption Exception Occurred! last tag=" << (output.size() ? output.back()->GetEventWindowTag().GetEventWindowTag(true) : -1);
+// 		if (hasLastGoodSubEventHeader_)
+// 		{
+// 			auto ptr = reinterpret_cast<const uint8_t*>(&lastGoodSubEventHeader_);
+// 			std::stringstream rawSS;
+// 			rawSS << "Last good subevent header raw data (" << sizeof(DTC_SubEventHeader) << " bytes): 0x ";
+// 			for (size_t i = 0; i < sizeof(DTC_SubEventHeader); i += 4)
+// 				rawSS << std::hex << std::setw(8) << std::setfill('0') << *reinterpret_cast<const uint32_t*>(&ptr[i]) << ' ';
+// 			DTC_TLOG(TLVL_ERROR) << rawSS.str();
+// 			DTC_TLOG(TLVL_ERROR) << "Last good subevent header JSON:\n"
+// 								 << lastGoodSubEventHeader_.toJson();
+// 		}
+// 		else
+// 			DTC_TLOG(TLVL_ERROR) << "No last good subevent header available.";
+// 		device_.spy(DTC_DMA_Engine_DAQ, 3 /* for once */ | 8 /* for wide view */ | 16 /* for stack trace */);
+// 		throw;
+// 	}
 
-	DTC_TLOG(TLVL_GetData) << "GetSubEventData RETURN output.size()=" << output.size()
-						   << " first tag=" << output[0]->GetEventWindowTag().GetEventWindowTag(true)
-						   << " last tag=" << output.back()->GetEventWindowTag().GetEventWindowTag(true);
-	return output;
-}  // GetSubEventData
+// 	DTC_TLOG(TLVL_GetData) << "GetSubEventData RETURN output.size()=" << output.size()
+// 						   << " first tag=" << output[0]->GetEventWindowTag().GetEventWindowTag(true)
+// 						   << " last tag=" << output.back()->GetEventWindowTag().GetEventWindowTag(true);
+// 	return output;
+// }  // GetSubEventData
 
 void DTCLib::DTC::WriteSimFileToDTC(std::string file, bool /*goForever*/, bool overwriteEnvironment,
 									std::string outputFileName, bool skipVerify)
