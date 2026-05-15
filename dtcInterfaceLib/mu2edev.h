@@ -171,7 +171,7 @@ class mu2edev
 
 	/// <summary>
 	/// For this DTC, "spy" on C2S buffers associated with chn.
-	/// Output a small protion of each buffer to stdout until ^C.
+	/// Output a small portion of each buffer to stdout until ^C.
 	/// Only executes once per instance lifetime (or until resetSpyHasOccurred() is called) to avoid log-file chaos.
 	/// </summary>
 	/// <returns>No value is returned.</returns>
