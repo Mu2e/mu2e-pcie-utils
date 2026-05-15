@@ -162,7 +162,7 @@ std::vector<std::unique_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetData(DTC_EventWi
 }  // GetData
 
 // ---------------------------------------------------------------------------
-// GetSubEventData2 -- simplified, one-buffer-per-call subevent extractor
+// GetSubEventData v2 -- simplified, one-buffer-per-call subevent extractor
 // ---------------------------------------------------------------------------
 // Design rules:
 //   • Each call reads exactly ONE new DMA buffer from hardware (or completes a
@@ -175,7 +175,7 @@ std::vector<std::unique_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetData(DTC_EventWi
 //     referenced by pending data, plus the new one).  As soon as we are done
 //     with a buffer we release it via read_release.
 // ---------------------------------------------------------------------------
-std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(  // 2
+std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 	DTC_EventWindowTag when, bool matchEventWindowTag)
 {
 	(void)matchEventWindowTag;  // not yet used; filtering can be added once basic flow works
@@ -490,7 +490,7 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 						   << " pendingBytes=" << pendingSubEventBytes_.size()
 						   << " pendingTotal=" << pendingSubEventTotalBytes_;
 	return output;
-}  // GetSubEventData2
+}  // endGetSubEventData() v2
 
 void DTCLib::DTC::WriteSimFileToDTC(std::string file, bool /*goForever*/, bool overwriteEnvironment,
 									std::string outputFileName, bool skipVerify)
