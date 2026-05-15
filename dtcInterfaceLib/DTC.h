@@ -319,7 +319,7 @@ class DTC : public DTC_Registers
 	DTC_SubEventHeader lastGoodSubEventHeader_{};  ///< Persists across GetSubEventData calls for diagnostics on exception
 	bool               hasLastGoodSubEventHeader_{false};
 
-	// State for GetSubEventData2: cross-buffer pending subevent assembly
+	// State for GetSubEventData v2: cross-buffer pending subevent assembly
 	std::vector<uint8_t> pendingSubEventBytes_{};        ///< Partial subevent bytes carried over from the previous DMA buffer
 	size_t               pendingSubEventTotalBytes_{0};  ///< Expected total byte count of the pending subevent (0 = header not yet complete)
 	bool                 lastDMABufferWasFull_{false};   ///< True when the last DMA buffer was completely full (dmaBytes==sizeof(mu2e_databuff_t)); next buffer is a raw continuation with no framing prefix
