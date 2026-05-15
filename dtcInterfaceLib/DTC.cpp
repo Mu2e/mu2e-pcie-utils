@@ -175,7 +175,7 @@ std::vector<std::unique_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetData(DTC_EventWi
 //     referenced by pending data, plus the new one).  As soon as we are done
 //     with a buffer we release it via read_release.
 // ---------------------------------------------------------------------------
-std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData( //2
+std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(  // 2
 	DTC_EventWindowTag when, bool matchEventWindowTag)
 {
 	(void)matchEventWindowTag;  // not yet used; filtering can be added once basic flow works
