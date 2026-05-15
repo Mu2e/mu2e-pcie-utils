@@ -232,7 +232,7 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 						   << " sizeof(mu2e_databuff_t)=" << sizeof(mu2e_databuff_t);
 
 	// Print first and last 8 quad-words of buffer for orientation / continuity checking
-	if(TTEST(TLVL_GetData - TLVL_DEBUG))
+	if (TTEST(TLVL_GetData - TLVL_DEBUG))
 	{
 		std::stringstream ss;
 		ss << "GetSubEventData: buffer first 8 qwords: ";
@@ -241,7 +241,7 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 			   << *reinterpret_cast<const uint64_t*>(bufStart + i * 8) << " ";
 		DTC_TLOG(TLVL_GetData) << ss.str();
 	}
-	if(TTEST(TLVL_GetData - TLVL_DEBUG))
+	if (TTEST(TLVL_GetData - TLVL_DEBUG))
 	{
 		std::stringstream ss;
 		ss << "GetSubEventData: buffer last  8 qwords: ";
@@ -394,7 +394,7 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 		const size_t seAvail = payloadBytes - bufOffset;  // bytes remaining in this buffer
 
 		// Print first 8 qwords at this subevent boundary for diagnostics
-		if(TTEST(TLVL_GetData - TLVL_DEBUG))
+		if (TTEST(TLVL_GetData - TLVL_DEBUG))
 		{
 			std::stringstream ss;
 			ss << "GetSubEventData: subevent boundary @ bufOffset=" << bufOffset
