@@ -98,8 +98,6 @@ class DTC : public DTC_Registers
 	/// <param name="when">Desired event window tag for readout. Default means use whatever event window tag is next</param>
 	/// <returns>A vector of DTC_SubEvent objects, but only one DTC_SubEvent is expected</returns>
 	std::vector<std::unique_ptr<DTC_SubEvent>> GetSubEventData(DTC_EventWindowTag when = DTC_EventWindowTag(), bool matchEventWindowTag = false);
-	// std::vector<std::unique_ptr<DTC_SubEvent>> GetSubEventData2(DTC_EventWindowTag when = DTC_EventWindowTag(), bool matchEventWindowTag = false);
-
 	/// <summary>
 	/// Read a file into the DTC memory. Will truncate the file so that it fits in the DTC memory.
 	/// </summary>
