@@ -14,6 +14,7 @@
 #define TLVL_VerifySimFileInDTC2 TLVL_DEBUG + 13
 #define TLVL_VerifySimFileInDTC3 TLVL_DEBUG + 14
 #define TLVL_WriteSimFileToDTC TLVL_DEBUG + 15
+#define TLVL_Crossover TLVL_DEBUG + 30
 #define TLVL_WriteSimFileToDTC2 TLVL_DEBUG + 16
 #define TLVL_WriteSimFileToDTC3 TLVL_DEBUG + 17
 #define TLVL_WriteDetectorEmulatorData TLVL_DEBUG + 18
@@ -187,6 +188,7 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 	DTC_TLOG(TLVL_GetData) << "GetSubEventData BEGIN EWT=" << when.GetEventWindowTag(true)
 						   << " pendingBytes=" << pendingSubEventBytes_.size()
 						   << " pendingTotal=" << pendingSubEventTotalBytes_
+						   << " pendingPrefixConsumed=" << pendingPrefixConsumed_
 						   << " daqBufs=" << daqDMAInfo_.buffer.size();
 
 	// Release the previous buffer NOW — we are done with it.
@@ -214,10 +216,8 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 	// sts = number of bytes the DMA engine transferred into this buffer
 	const size_t dmaBytes = static_cast<size_t>(sts);
 
-	// Remember whether the PREVIOUS buffer was full before overwriting the flag.
-	// A full previous buffer means THIS buffer is a raw continuation — no framing prefix.
+	// Track whether PREVIOUS buffer was full (for diagnostics) and update for this buffer.
 	const bool prevBufferWasFull = lastDMABufferWasFull_;
-	// Update for the NEXT call: a full buffer means the next one has no prefix.
 	lastDMABufferWasFull_ = (dmaBytes == sizeof(mu2e_databuff_t));
 
 	const uint8_t* bufStart = reinterpret_cast<const uint8_t*>(&daqDMAInfo_.buffer.back()[0]);
@@ -234,22 +234,28 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 	// Print first and last 8 quad-words of buffer for orientation / continuity checking
 	if (TTEST(TLVL_GetData - TLVL_DEBUG))
 	{
-		std::stringstream ss;
-		ss << "GetSubEventData: buffer first 8 qwords: ";
-		for (int i = 0; i < 8 && (size_t)(i * 8) < payloadBytes; ++i)
-			ss << std::hex << std::setw(16) << std::setfill('0')
-			   << *reinterpret_cast<const uint64_t*>(bufStart + i * 8) << " ";
-		DTC_TLOG(TLVL_GetData) << ss.str();
-	}
-	if (TTEST(TLVL_GetData - TLVL_DEBUG))
-	{
-		std::stringstream ss;
-		ss << "GetSubEventData: buffer last  8 qwords: ";
-		const size_t lastStart = (payloadBytes >= 64) ? payloadBytes - 64 : 0;
-		for (size_t i = lastStart; i + 8 <= payloadBytes; i += 8)
-			ss << std::hex << std::setw(16) << std::setfill('0')
-			   << *reinterpret_cast<const uint64_t*>(bufStart + i) << " ";
-		DTC_TLOG(TLVL_GetData) << ss.str();
+		{
+			std::stringstream ss;
+			// TLOG_SCOPED(TLVL_GetData) << 
+			ss << "GetSubEventData: buffer first 8 qwords: ";
+			for (int i = 0; i < 8 && (size_t)(i * 8) < payloadBytes; ++i)
+				// TLOG_ADD 
+				ss << std::hex << std::setw(16) << std::setfill('0')
+				<< *reinterpret_cast<const uint64_t*>(bufStart + i * 8) << " ";		
+			DTC_TLOG(TLVL_GetData) << ss.str();
+		}
+	
+		{
+			std::stringstream ss;
+			// TLOG_SCOPED(TLVL_GetData) << 
+			ss << "GetSubEventData: buffer last  8 qwords: ";
+			const size_t lastStart = (payloadBytes >= 64) ? payloadBytes - 64 : 0;
+			for (size_t i = lastStart; i + 8 <= payloadBytes; i += 8)
+				// TLOG_ADD
+				ss << std::hex << std::setw(16) << std::setfill('0')
+				<< *reinterpret_cast<const uint64_t*>(bufStart + i) << " ";
+			DTC_TLOG(TLVL_GetData) << ss.str();
+		}
 	}
 
 	// ------------------------------------------------------------------
@@ -258,31 +264,71 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 	// ------------------------------------------------------------------
 	size_t bufOffset = 0;  // our walk position within this buffer
 
-	if (!pendingSubEventBytes_.empty())
+	if (!pendingSubEventBytes_.empty() || pendingPrefixConsumed_)
 	{
-		// A continuation buffer has a framing prefix only when the PREVIOUS buffer was
-		// NOT completely full (dmaBytes < sizeof(mu2e_databuff_t)).  When the previous
-		// buffer was full the hardware fills it to the brim with raw subevent data and
-		// the very next buffer carries on with no prefix.
-		if (!prevBufferWasFull)
+		// Prefix handling for continuation buffers:
+		//
+		// When the previous buffer was completely full (prevBufferWasFull == true),
+		// the hardware split mid-sub-transfer.  This buffer is a raw continuation —
+		// NO framing prefix at offset 0.  bufOffset = 0.
+		//
+		// When the previous buffer was NOT full (had tlast, prevBufferWasFull == false),
+		// the sub-transfer completed.  This buffer starts a NEW sub-transfer with an
+		// 8-byte per-sub-transfer byte count prefix.  bufOffset = 8.
+		//
+		// When pendingPrefixConsumed_ is true, the prefix was already consumed in the
+		// previous buffer's Step 3.  This buffer starts at offset 0.
+
+		// Use TLVL_Crossover only for the interesting cases (header/prefix crossover).
+		const bool isHeaderOrPrefixCrossover = (pendingSubEventTotalBytes_ == 0) || pendingPrefixConsumed_;
+		const auto crossoverLogLevel = isHeaderOrPrefixCrossover ? TLVL_Crossover : TLVL_GetData;
+
+		if (pendingPrefixConsumed_)
 		{
+			// Prefix was already consumed in previous buffer's Step 3
+			bufOffset = 0;
+		}
+		else if (prevBufferWasFull)
+		{
+			// Previous buffer was full — raw continuation, no prefix
+			bufOffset = 0;
+		}
+		else
+		{
+			// Previous buffer was NOT full — new sub-transfer with 8-byte prefix
 			if (payloadBytes < sizeof(uint64_t))
 			{
 				DTC_TLOG(TLVL_ERROR) << "GetSubEventData: continuation buffer too small ("
 									 << payloadBytes << " bytes) to hold prefix -- dropping";
+				pendingSubEventBytes_.clear();
+				pendingSubEventTotalBytes_ = 0;
+				pendingPrefixConsumed_ = false;
 				ReleaseBuffers(DTC_DMA_Engine_DAQ);
 				return output;
 			}
-			DTC_TLOG(TLVL_GetData) << "GetSubEventData: skipping 8-byte prefix on continuation buffer @ bufOffset=0"
-								   << " prefixVal=" << *reinterpret_cast<const uint64_t*>(bufStart)
-								   << " remaining=(" << (payloadBytes - sizeof(uint64_t)) << ")";
 			bufOffset = sizeof(uint64_t);
 		}
-		else
+
+		DTC_TLOG(crossoverLogLevel) << "===== SUBEVENT CROSSOVER: continuation buffer ====="
+							   << " pendingBytes=" << pendingSubEventBytes_.size()
+							   << " pendingTotal=" << pendingSubEventTotalBytes_
+							   << " pendingPrefixConsumed=" << pendingPrefixConsumed_
+							   << " prevBufferWasFull=" << prevBufferWasFull
+							   << " bufOffset=" << bufOffset
+							   << " payloadBytes=" << payloadBytes
+							   << " firstQword=0x" << std::hex
+							   << *reinterpret_cast<const uint64_t*>(bufStart) << std::dec;
+		// Dump first 8 qwords of continuation buffer so we can verify what's there
 		{
-			DTC_TLOG(TLVL_GetData) << "GetSubEventData: no prefix on continuation buffer (prev was full)"
-								   << " bufOffset stays 0 payloadBytes=" << payloadBytes;
+			std::stringstream ss;
+			ss << "===== CROSSOVER: continuation buffer first 8 qwords: ";
+			for (int i = 0; i < 8 && (size_t)(i * 8) < payloadBytes; ++i)
+				ss << std::hex << std::setw(16) << std::setfill('0')
+				   << *reinterpret_cast<const uint64_t*>(bufStart + i * 8) << " ";
+			DTC_TLOG(crossoverLogLevel) << ss.str();
 		}
+
+		pendingPrefixConsumed_ = false;  // consumed
 
 		DTC_TLOG(TLVL_GetData) << "GetSubEventData: completing pending subevent"
 							   << " have=" << pendingSubEventBytes_.size()
@@ -312,62 +358,168 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 			pendingSubEventTotalBytes_ = static_cast<size_t>(
 				*reinterpret_cast<const uint32_t*>(pendingSubEventBytes_.data()) & 0x1FFFFFF);
 			bufOffset += headerBytesNeeded;
-			DTC_TLOG(TLVL_GetData) << "GetSubEventData: header completed, subEventByteCount="
-								   << pendingSubEventTotalBytes_ << " bufOffset=" << bufOffset;
+			DTC_TLOG(TLVL_Crossover) << "===== CROSSOVER: header assembled from partial bytes ====="
+								   << " subEventByteCount=" << pendingSubEventTotalBytes_
+								   << " (0x" << std::hex << pendingSubEventTotalBytes_ << std::dec << ")"
+								   << " bufOffset=" << bufOffset;
+			// Dump assembled header for verification
+			{
+				std::stringstream ss;
+				ss << "===== CROSSOVER: assembled header (" << pendingSubEventBytes_.size() << " bytes): ";
+				for (size_t i = 0; i < pendingSubEventBytes_.size() && i < sizeof(DTC_SubEventHeader); i += 4)
+					ss << std::hex << std::setw(8) << std::setfill('0')
+					   << *reinterpret_cast<const uint32_t*>(&pendingSubEventBytes_[i]) << " ";
+				// Show format version field location for quick visual check
+				if (pendingSubEventBytes_.size() >= sizeof(DTC_SubEventHeader))
+				{
+					auto* hdr = reinterpret_cast<const DTC_SubEventHeader*>(pendingSubEventBytes_.data());
+					ss << " | fmt_ver=" << hdr->subevent_format_version
+					   << " num_rocs=" << hdr->num_rocs
+					   << " tag=" << (hdr->event_tag_low | (static_cast<uint64_t>(hdr->event_tag_high) << 32));
+				}
+				DTC_TLOG(TLVL_Crossover) << ss.str();
+			}
+
+			// Sanity check: the inclusive byte count must be at least the header size
+			if (pendingSubEventTotalBytes_ < sizeof(DTC_SubEventHeader))
+			{
+				DTC_TLOG(TLVL_ERROR) << "GetSubEventData: completed pending header has invalid"
+									 << " subEventByteCount=" << pendingSubEventTotalBytes_
+									 << " < sizeof(DTC_SubEventHeader)=" << sizeof(DTC_SubEventHeader)
+									 << " -- discarding corrupt pending data";
+				pendingSubEventBytes_.clear();
+				pendingSubEventTotalBytes_ = 0;
+				// Fall through to Step 3 to continue parsing the rest of this buffer
+			}
 		}
 
-		const size_t have = pendingSubEventBytes_.size();
-		const size_t need = pendingSubEventTotalBytes_;
-		const size_t still = (need > have) ? need - have : 0;
-
-		if (still > (payloadBytes - bufOffset))
+		// If the sanity check above cleared pendingSubEventBytes_, skip assembly
+		if (!pendingSubEventBytes_.empty())
 		{
-			// Still not enough — absorb rest of new buffer and keep pending
-			const size_t absorb = payloadBytes - bufOffset;
-			DTC_TLOG(TLVL_GetData) << "GetSubEventData: pending subevent still incomplete after new buffer"
-								   << " still=" << still << " absorbing=" << absorb;
+			const size_t have = pendingSubEventBytes_.size();
+			const size_t need = pendingSubEventTotalBytes_;
+			const size_t still = (need > have) ? need - have : 0;
+
+			if (still > (payloadBytes - bufOffset))
+			{
+				// Still not enough — absorb rest of new buffer and keep pending
+				const size_t absorb = payloadBytes - bufOffset;
+				DTC_TLOG(TLVL_GetData) << "GetSubEventData: pending subevent still incomplete after new buffer"
+									   << " still=" << still << " absorbing=" << absorb;
+				pendingSubEventBytes_.insert(pendingSubEventBytes_.end(),
+											 bufStart + bufOffset, bufStart + bufOffset + absorb);
+				// Release this buffer immediately — data is copied
+				ReleaseBuffers(DTC_DMA_Engine_DAQ);
+				return output;  // come back next call
+			}
+
+			// We have enough — copy the remainder from this buffer
 			pendingSubEventBytes_.insert(pendingSubEventBytes_.end(),
-										 bufStart + bufOffset, bufStart + bufOffset + absorb);
-			// Release this buffer immediately — data is copied
-			ReleaseBuffers(DTC_DMA_Engine_DAQ);
-			return output;  // come back next call
-		}
+										 bufStart + bufOffset, bufStart + bufOffset + still);
+			bufOffset += still;
 
-		// We have enough — copy the remainder from this buffer
-		pendingSubEventBytes_.insert(pendingSubEventBytes_.end(),
-									 bufStart + bufOffset, bufStart + bufOffset + still);
-		bufOffset += still;
-
-		DTC_TLOG(TLVL_GetData) << "GetSubEventData: pending subevent complete"
-							   << " totalBytes=" << need
-							   << " bufOffset now=" << bufOffset;
-
-		// Construct the completed subevent from the assembled bytes
-		auto inmem = std::make_unique<DTC_SubEvent>(need);
-		memcpy(const_cast<void*>(inmem->GetRawBufferPointer()),
-			   pendingSubEventBytes_.data(), need);
-		pendingSubEventBytes_.clear();
-		pendingSubEventTotalBytes_ = 0;
-
-		try
-		{
-			std::string errs;
-			if (!inmem->SetupSubEvent(errs))
+			DTC_TLOG(crossoverLogLevel) << "===== CROSSOVER: pending subevent fully assembled ====="
+								   << " totalBytes=" << need
+								   << " (0x" << std::hex << need << std::dec << ")"
+								   << " bufOffset now=" << bufOffset;
+			// Dump assembled subevent header for final verification before construction
 			{
-				DTC_TLOG(TLVL_ERROR) << "GetSubEventData: corrupt pending subevent: " << errs;
-				// don't throw — log and continue parsing rest of buffer
+				std::stringstream ss;
+				ss << "===== CROSSOVER: assembled subevent header: ";
+				size_t dumpLen = std::min(need, sizeof(DTC_SubEventHeader));
+				for (size_t i = 0; i < dumpLen; i += 4)
+					ss << std::hex << std::setw(8) << std::setfill('0')
+					   << *reinterpret_cast<const uint32_t*>(&pendingSubEventBytes_[i]) << " ";
+				if (need >= sizeof(DTC_SubEventHeader))
+				{
+					auto* hdr = reinterpret_cast<const DTC_SubEventHeader*>(pendingSubEventBytes_.data());
+					ss << " | fmt_ver=" << hdr->subevent_format_version
+					   << " num_rocs=" << hdr->num_rocs
+					   << " tag=" << (hdr->event_tag_low | (static_cast<uint64_t>(hdr->event_tag_high) << 32));
+				}
+				DTC_TLOG(crossoverLogLevel) << ss.str();
 			}
-			else
+
+			// Snapshot assembled header for diagnostics on failure
+			std::vector<uint8_t> assembledSnapshot(pendingSubEventBytes_.begin(),
+				pendingSubEventBytes_.begin() + std::min(pendingSubEventBytes_.size(), sizeof(DTC_SubEventHeader)));
+
+			// Construct the completed subevent from the assembled bytes
+			auto inmem = std::make_unique<DTC_SubEvent>(need);
+			memcpy(const_cast<void*>(inmem->GetRawBufferPointer()),
+				   pendingSubEventBytes_.data(), need);
+			pendingSubEventBytes_.clear();
+			pendingSubEventTotalBytes_ = 0;
+
+			try
 			{
-				DTC_TLOG(TLVL_GetData) << "GetSubEventData: completed pending subevent tag="
-									   << inmem->GetEventWindowTag().GetEventWindowTag(true);
-				output.push_back(std::move(inmem));
+				std::string errs;
+				if (!inmem->SetupSubEvent(errs))
+				{
+					DTC_TLOG(TLVL_ERROR) << "GetSubEventData: corrupt pending subevent: " << errs;
+					// don't throw — log and continue parsing rest of buffer
+				}
+				else
+				{
+					// Track last good subevent header for diagnostics
+					lastGoodSubEventHeader_ = *inmem->GetHeader();
+					hasLastGoodSubEventHeader_ = true;
+
+					DTC_TLOG(TLVL_GetData) << "GetSubEventData: completed pending subevent tag="
+										   << inmem->GetEventWindowTag().GetEventWindowTag(true);
+					output.push_back(std::move(inmem));
+				}
 			}
-		}
-		catch (...)
-		{
-			DTC_TLOG(TLVL_ERROR) << "GetSubEventData: exception setting up pending subevent";
-		}
+			catch (...)
+			{
+				// Dump full diagnostic context before re-throwing
+				DTC_TLOG(TLVL_ERROR) << "GetSubEventData: EXCEPTION setting up pending (cross-buffer) subevent!"
+									 << " assembled totalBytes=" << need << " (0x" << std::hex << need << std::dec << ")"
+									 << " prevBufferWasFull=" << prevBufferWasFull
+									 << " pendingPrefixConsumed(was)=" << pendingPrefixConsumed_
+									 << " bufOffset=" << bufOffset
+									 << " payloadBytes=" << payloadBytes
+									 << " firstQword=0x" << std::hex
+									 << *reinterpret_cast<const uint64_t*>(bufStart) << std::dec;
+				// Dump assembled header bytes
+				{
+					std::stringstream ss;
+					ss << "  Assembled header bytes: ";
+					for (size_t i = 0; i < assembledSnapshot.size(); i += 4)
+						ss << std::hex << std::setw(8) << std::setfill('0')
+						   << *reinterpret_cast<const uint32_t*>(&assembledSnapshot[i]) << " ";
+					DTC_TLOG(TLVL_ERROR) << ss.str();
+				}
+				// Dump last good subevent header if available
+				if (hasLastGoodSubEventHeader_)
+				{
+					std::stringstream ss;
+					ss << "  Last GOOD subevent header: ";
+					auto* p = reinterpret_cast<const uint32_t*>(&lastGoodSubEventHeader_);
+					for (size_t i = 0; i < sizeof(DTC_SubEventHeader) / 4; ++i)
+						ss << std::hex << std::setw(8) << std::setfill('0') << p[i] << " ";
+					ss << " | fmt_ver=" << lastGoodSubEventHeader_.subevent_format_version
+					   << " num_rocs=" << lastGoodSubEventHeader_.num_rocs
+					   << " tag=" << (lastGoodSubEventHeader_.event_tag_low | (static_cast<uint64_t>(lastGoodSubEventHeader_.event_tag_high) << 32));
+					DTC_TLOG(TLVL_ERROR) << ss.str();
+				}
+				else
+					DTC_TLOG(TLVL_ERROR) << "  No last good subevent header available";
+				// Dump continuation buffer context around the boundary
+				{
+					std::stringstream ss;
+					ss << "  Continuation buffer first 16 qwords (raw): ";
+					for (int i = 0; i < 16 && (size_t)(i * 8) < payloadBytes; ++i)
+						ss << std::hex << std::setw(16) << std::setfill('0')
+						   << *reinterpret_cast<const uint64_t*>(bufStart + i * 8) << " ";
+					DTC_TLOG(TLVL_ERROR) << ss.str();
+				}
+				// Dump DMA buffers via spy for full hardware state
+				DTC_TLOG(TLVL_ERROR) << "  Calling spy() for DMA buffer dump...";
+				device_.spy(DTC_DMA_Engine_DAQ, 3 /* for once */ | 8 /* for wide view */ | 16 /* stack trace */);
+				throw;  // re-throw to propagate up the chain
+			}
+		}  // end if pendingSubEventBytes_ not empty after header validation
 	}
 
 	// ------------------------------------------------------------------
@@ -417,20 +569,70 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 		{
 			// Partial header in this buffer — need to read from next buffer
 			// We have fewer than 48 header bytes.  Store what we have and return.
-			DTC_TLOG(TLVL_GetData) << "GetSubEventData: partial header at bufOffset=" << bufOffset
+			DTC_TLOG(TLVL_Crossover) << "===== SUBEVENT HEADER CROSSOVER DETECTED ====="
+								   << " partial header at bufOffset=" << bufOffset
 								   << " seAvail=" << seAvail << " < sizeof(DTC_SubEventHeader)=" << sizeof(DTC_SubEventHeader)
-								   << " -- saving " << seAvail << " partial bytes";
+								   << " -- saving " << seAvail << " partial bytes, will complete on next buffer";
+			// Dump the partial header bytes being cached
+			{
+				std::stringstream ss;
+				ss << "===== CROSSOVER: caching partial header bytes: ";
+				for (size_t i = 0; i < seAvail; i += 4)
+				{
+					if (i + 4 <= seAvail)
+						ss << std::hex << std::setw(8) << std::setfill('0')
+						   << *reinterpret_cast<const uint32_t*>(sePtr + i) << " ";
+					else
+						for (size_t j = i; j < seAvail; ++j)
+							ss << std::hex << std::setw(2) << std::setfill('0')
+							   << static_cast<unsigned>(sePtr[j]) << " ";
+				}
+				DTC_TLOG(TLVL_Crossover) << ss.str();
+			}
 			pendingSubEventBytes_.assign(sePtr, sePtr + seAvail);
-			// We don't yet know the total byte count — mark it 0 meaning "header incomplete"
-			pendingSubEventTotalBytes_ = 0;
+
+			// If we have at least 4 bytes, we can extract and validate the byte count early
+			if (seAvail >= sizeof(uint32_t))
+			{
+				pendingSubEventTotalBytes_ = static_cast<size_t>(
+					*reinterpret_cast<const uint32_t*>(sePtr) & 0x1FFFFFF);
+				if (pendingSubEventTotalBytes_ < sizeof(DTC_SubEventHeader))
+				{
+					DTC_TLOG(TLVL_ERROR) << "GetSubEventData: partial header has invalid"
+										 << " subEventByteCount=" << pendingSubEventTotalBytes_
+										 << " < sizeof(DTC_SubEventHeader)=" << sizeof(DTC_SubEventHeader)
+										 << " -- discarding corrupt partial header";
+					pendingSubEventBytes_.clear();
+					pendingSubEventTotalBytes_ = 0;
+					break;
+				}
+				DTC_TLOG(TLVL_GetData) << "GetSubEventData: partial header early byteCount="
+									   << pendingSubEventTotalBytes_;
+				// Note: pendingSubEventTotalBytes_ is set but header is still incomplete
+				// (pendingSubEventBytes_.size() < sizeof(DTC_SubEventHeader)).
+				// Step 2 on next call will complete the header before assembling payload.
+			}
+			else
+			{
+				// Fewer than 4 bytes — can't extract byte count yet
+				pendingSubEventTotalBytes_ = 0;
+			}
 			break;  // done with this buffer
 		}
 		else
 		{
-			// Exactly 0 bytes remain after the prefix — subevent fully in next buffer
-			DTC_TLOG(TLVL_GetData) << "GetSubEventData: prefix-only at end of buffer (0 subevent bytes here)";
-			pendingSubEventBytes_.clear();
+			// Exactly 0 bytes remain after the prefix — subevent fully in next buffer.
+			// The prefix was consumed here, so the next buffer is a continuation buffer
+			// that starts with raw subevent header data at offset 0 (no prefix).
+			// Mark this so the next call's Step 2 knows to treat it as a continuation.
+			DTC_TLOG(TLVL_Crossover) << "===== SUBEVENT PREFIX-ONLY CROSSOVER DETECTED ====="
+								   << " prefix at end of buffer, 0 subevent bytes here"
+								   << " -- next buffer is a continuation with no prefix";
+			pendingSubEventBytes_.resize(0);  // empty but see note below
 			pendingSubEventTotalBytes_ = 0;
+			// Set pendingPrefixConsumed_ so the next call enters Step 2
+			// (continuation path) instead of Step 3 (which would incorrectly skip a prefix).
+			pendingPrefixConsumed_ = true;
 			break;
 		}
 
@@ -448,10 +650,14 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 
 		if (subEventByteCount <= seAvail)
 		{
-			// Entire subevent fits in this buffer — construct it in-place
-			auto res = std::make_unique<DTC_SubEvent>(sePtr);
+			// Entire subevent fits in this buffer — copy it out so the DMA buffer
+			// can be safely released without use-after-free.  (The pointer-based
+			// DTC_SubEvent(sePtr) constructor stores a raw pointer into the DMA
+			// buffer, which becomes dangling after ReleaseBuffers.)
 			try
 			{
+				auto res = std::make_unique<DTC_SubEvent>(subEventByteCount);
+				memcpy(const_cast<void*>(res->GetRawBufferPointer()), sePtr, subEventByteCount);
 				std::string errs;
 				if (!res->SetupSubEvent(errs))
 				{
@@ -460,6 +666,10 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 				}
 				else
 				{
+					// Track last good subevent header for diagnostics
+					lastGoodSubEventHeader_ = *res->GetHeader();
+					hasLastGoodSubEventHeader_ = true;
+
 					DTC_TLOG(TLVL_GetData) << "GetSubEventData: subevent OK tag="
 										   << res->GetEventWindowTag().GetEventWindowTag(true)
 										   << " bytes=" << subEventByteCount;
@@ -468,18 +678,70 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 			}
 			catch (...)
 			{
-				DTC_TLOG(TLVL_ERROR) << "GetSubEventData: exception setting up subevent at bufOffset=" << bufOffset;
+				DTC_TLOG(TLVL_ERROR) << "GetSubEventData: EXCEPTION constructing/setting up in-place subevent!"
+									 << " bufOffset=" << bufOffset
+									 << " subEventByteCount=" << subEventByteCount
+									 << " (0x" << std::hex << subEventByteCount << std::dec << ")"
+									 << " seAvail=" << seAvail
+									 << " prevBufferWasFull=" << prevBufferWasFull
+									 << " payloadBytes=" << payloadBytes
+									 << " firstQword=0x" << std::hex
+									 << *reinterpret_cast<const uint64_t*>(bufStart) << std::dec;
+				// Dump the subevent header bytes at this location
+				{
+					std::stringstream ss;
+					ss << "  Subevent header bytes at bufOffset=" << bufOffset << ": ";
+					size_t dumpLen = std::min(seAvail, sizeof(DTC_SubEventHeader));
+					for (size_t i = 0; i < dumpLen; i += 4)
+						ss << std::hex << std::setw(8) << std::setfill('0')
+						   << *reinterpret_cast<const uint32_t*>(sePtr + i) << " ";
+					DTC_TLOG(TLVL_ERROR) << ss.str();
+				}
+				// Dump context: 8 qwords before and 8 qwords after the subevent start
+				{
+					std::stringstream ss;
+					ss << "  Context around bufOffset=" << bufOffset << ": BEFORE: ";
+					size_t beforeStart = (bufOffset >= 64) ? bufOffset - 64 : 0;
+					for (size_t i = beforeStart; i + 8 <= bufOffset; i += 8)
+						ss << std::hex << std::setw(16) << std::setfill('0')
+						   << *reinterpret_cast<const uint64_t*>(bufStart + i) << " ";
+					ss << " | AFTER: ";
+					for (size_t i = bufOffset; i + 8 <= payloadBytes && i < bufOffset + 64; i += 8)
+						ss << std::hex << std::setw(16) << std::setfill('0')
+						   << *reinterpret_cast<const uint64_t*>(bufStart + i) << " ";
+					DTC_TLOG(TLVL_ERROR) << ss.str();
+				}
+				// Dump last good subevent header if available
+				if (hasLastGoodSubEventHeader_)
+				{
+					std::stringstream ss;
+					ss << "  Last GOOD subevent header: ";
+					auto* p = reinterpret_cast<const uint32_t*>(&lastGoodSubEventHeader_);
+					for (size_t i = 0; i < sizeof(DTC_SubEventHeader) / 4; ++i)
+						ss << std::hex << std::setw(8) << std::setfill('0') << p[i] << " ";
+					ss << " | fmt_ver=" << lastGoodSubEventHeader_.subevent_format_version
+					   << " num_rocs=" << lastGoodSubEventHeader_.num_rocs
+					   << " tag=" << (lastGoodSubEventHeader_.event_tag_low | (static_cast<uint64_t>(lastGoodSubEventHeader_.event_tag_high) << 32));
+					DTC_TLOG(TLVL_ERROR) << ss.str();
+				}
+				else
+					DTC_TLOG(TLVL_ERROR) << "  No last good subevent header available";
+				// Dump DMA buffers via spy for full hardware state
+				DTC_TLOG(TLVL_ERROR) << "  Calling spy() for DMA buffer dump...";
+				device_.spy(DTC_DMA_Engine_DAQ, 3 /* for once */ | 8 /* for wide view */ | 16 /* stack trace */);
+				throw;  // re-throw to propagate up the chain
 			}
 			bufOffset += subEventByteCount;
 		}
 		else
 		{
 			// Subevent crosses buffer boundary — save what we have and return
-			DTC_TLOG(TLVL_GetData) << "GetSubEventData: subevent crosses boundary"
+			DTC_TLOG(TLVL_GetData) << "===== SUBEVENT BODY CROSSOVER DETECTED ====="
 								   << " have=" << seAvail
 								   << " need=" << subEventByteCount
+								   << " (0x" << std::hex << subEventByteCount << std::dec << ")"
 								   << " missing=" << (subEventByteCount - seAvail)
-								   << " -- saving partial subevent";
+								   << " -- saving partial subevent, will continue on next buffer";
 			pendingSubEventBytes_.assign(sePtr, sePtr + seAvail);
 			pendingSubEventTotalBytes_ = subEventByteCount;
 			break;  // done with this buffer
@@ -487,11 +749,31 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 	}
 
 	// ------------------------------------------------------------------
+	// Step 3b: check for leftover bytes that didn't fit in the while-loop
+	// ------------------------------------------------------------------
+	// The while-loop requires at least 8 bytes (sizeof(uint64_t)) to enter,
+	// since every subevent is preceded by an 8-byte framing prefix.  If fewer
+	// than 8 bytes remain after the last complete subevent (or partial-header
+	// caching), they would otherwise be silently dropped.
+	if (pendingSubEventBytes_.empty() && !pendingPrefixConsumed_ && bufOffset < payloadBytes)
+	{
+		const size_t leftover = payloadBytes - bufOffset;
+		// For non-full buffers, leftover bytes < 8 are most likely a partial
+		// framing prefix or alignment padding — the next buffer starts fresh.
+		// Log at WARNING level so this is visible in diagnostics.
+		DTC_TLOG(TLVL_WARNING) << "GetSubEventData: " << leftover
+							   << " leftover byte(s) at end of buffer (bufOffset=" << bufOffset
+							   << " payloadBytes=" << payloadBytes
+							   << " bufferFull=" << lastDMABufferWasFull_ << ")";
+	}
+
+	// ------------------------------------------------------------------
 	// Step 4: report and return
 	// ------------------------------------------------------------------
 	DTC_TLOG(TLVL_GetData) << "GetSubEventData RETURN output.size()=" << output.size()
 						   << " pendingBytes=" << pendingSubEventBytes_.size()
-						   << " pendingTotal=" << pendingSubEventTotalBytes_;
+						   << " pendingTotal=" << pendingSubEventTotalBytes_
+						   << " pendingPrefixConsumed=" << pendingPrefixConsumed_;
 	return output;
 }  // endGetSubEventData() v2
 
