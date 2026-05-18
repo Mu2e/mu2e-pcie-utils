@@ -1,6 +1,7 @@
 #ifndef DTC_H
 #define DTC_H
 
+#include <array>
 #include <list>
 #include <memory>
 #include <vector>
@@ -318,6 +319,9 @@ class DTC : public DTC_Registers
 
 	DTC_SubEventHeader lastGoodSubEventHeader_{};  ///< Persists across GetSubEventData calls for diagnostics on exception
 	bool               hasLastGoodSubEventHeader_{false};
+	std::array<uint64_t, 8> lastBufferTailQwords_{};  ///< Last up to 8 qwords of the most recently processed DMA buffer; saved at every return path for cross-buffer exception diagnostics
+	size_t              lastBufferTailCount_{0};       ///< Valid entry count in lastBufferTailQwords_
+	uint64_t            totalSubEventsParsed_{0};      ///< Lifetime count of successfully-parsed subevents; included in diagnostic prints so we can tell whether parsing ever made progress
 
 	// State for GetSubEventData v2: cross-buffer pending subevent assembly
 	std::vector<uint8_t> pendingSubEventBytes_{};        ///< Partial subevent bytes carried over from the previous DMA buffer

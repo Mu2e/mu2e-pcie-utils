@@ -258,6 +258,24 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 		}
 	}
 
+	// Capture this buffer's tail (last up to 8 qwords) for the next call's diagnostic printout.
+	// Called at every return path so lastBufferTailQwords_ always reflects the most recently
+	// processed buffer by the time the next call enters Step 2.
+	auto saveBufferTail = [&]() {
+		const size_t tailStart = (payloadBytes >= 64) ? payloadBytes - 64 : 0;
+		lastBufferTailCount_ = 0;
+		for (size_t i = tailStart; i + 8 <= payloadBytes && lastBufferTailCount_ < 8; i += 8)
+			lastBufferTailQwords_[lastBufferTailCount_++] =
+				*reinterpret_cast<const uint64_t*>(bufStart + i);
+	};
+
+	// Returns the last good event window tag as a string, or "-1" if unavailable.
+	auto ewtTag = [&]() -> std::string {
+		if (!hasLastGoodSubEventHeader_) return "-1";
+		return std::to_string(lastGoodSubEventHeader_.event_tag_low |
+		                      (static_cast<uint64_t>(lastGoodSubEventHeader_.event_tag_high) << 32));
+	};
+
 	// ------------------------------------------------------------------
 	// Step 2: if we have a pending (cross-buffer) subevent, finish it
 	//         using data from the new buffer before parsing the rest
@@ -299,10 +317,12 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 			if (payloadBytes < sizeof(uint64_t))
 			{
 				DTC_TLOG(TLVL_ERROR) << "GetSubEventData: continuation buffer too small ("
-									 << payloadBytes << " bytes) to hold prefix -- dropping";
+									 << payloadBytes << " bytes) to hold prefix -- dropping"
+									 << " [last EWT=" << ewtTag() << " totalParsed=" << totalSubEventsParsed_ << "]";
 				pendingSubEventBytes_.clear();
 				pendingSubEventTotalBytes_ = 0;
 				pendingPrefixConsumed_ = false;
+				saveBufferTail();
 				ReleaseBuffers(DTC_DMA_Engine_DAQ);
 				return output;
 			}
@@ -349,6 +369,7 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 									   << " more but only " << avail << " available";
 				pendingSubEventBytes_.insert(pendingSubEventBytes_.end(),
 											 bufStart + bufOffset, bufStart + payloadBytes);
+				saveBufferTail();
 				ReleaseBuffers(DTC_DMA_Engine_DAQ);
 				return output;
 			}
@@ -386,7 +407,7 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 				DTC_TLOG(TLVL_ERROR) << "GetSubEventData: completed pending header has invalid"
 									 << " subEventByteCount=" << pendingSubEventTotalBytes_
 									 << " < sizeof(DTC_SubEventHeader)=" << sizeof(DTC_SubEventHeader)
-									 << " -- discarding corrupt pending data";
+									 << " -- discarding corrupt pending data"  << " [last EWT=" << ewtTag() << " totalParsed=" << totalSubEventsParsed_ << "]";
 				pendingSubEventBytes_.clear();
 				pendingSubEventTotalBytes_ = 0;
 				// Fall through to Step 3 to continue parsing the rest of this buffer
@@ -409,6 +430,7 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 				pendingSubEventBytes_.insert(pendingSubEventBytes_.end(),
 											 bufStart + bufOffset, bufStart + bufOffset + absorb);
 				// Release this buffer immediately — data is copied
+				saveBufferTail();
 				ReleaseBuffers(DTC_DMA_Engine_DAQ);
 				return output;  // come back next call
 			}
@@ -456,7 +478,7 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 				std::string errs;
 				if (!inmem->SetupSubEvent(errs))
 				{
-					DTC_TLOG(TLVL_ERROR) << "GetSubEventData: corrupt pending subevent: " << errs;
+					DTC_TLOG(TLVL_ERROR) << "GetSubEventData: corrupt pending subevent: " << errs << " [last EWT=" << ewtTag() << " totalParsed=" << totalSubEventsParsed_ << "]";
 					// don't throw — log and continue parsing rest of buffer
 				}
 				else
@@ -464,6 +486,7 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 					// Track last good subevent header for diagnostics
 					lastGoodSubEventHeader_ = *inmem->GetHeader();
 					hasLastGoodSubEventHeader_ = true;
+					++totalSubEventsParsed_;
 
 					DTC_TLOG(TLVL_GetData) << "GetSubEventData: completed pending subevent tag="
 										   << inmem->GetEventWindowTag().GetEventWindowTag(true);
@@ -480,7 +503,7 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 									 << " bufOffset=" << bufOffset
 									 << " payloadBytes=" << payloadBytes
 									 << " firstQword=0x" << std::hex
-									 << *reinterpret_cast<const uint64_t*>(bufStart) << std::dec;
+									 << *reinterpret_cast<const uint64_t*>(bufStart) << std::dec  << " [last EWT=" << ewtTag() << " totalParsed=" << totalSubEventsParsed_ << "]";
 				// Dump assembled header bytes
 				{
 					std::stringstream ss;
@@ -488,7 +511,7 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 					for (size_t i = 0; i < assembledSnapshot.size(); i += 4)
 						ss << std::hex << std::setw(8) << std::setfill('0')
 						   << *reinterpret_cast<const uint32_t*>(&assembledSnapshot[i]) << " ";
-					DTC_TLOG(TLVL_ERROR) << ss.str();
+					DTC_TLOG(TLVL_ERROR) << ss.str() << " [last EWT=" << ewtTag() << " totalParsed=" << totalSubEventsParsed_ << "]";
 				}
 				// Dump last good subevent header if available
 				if (hasLastGoodSubEventHeader_)
@@ -501,10 +524,21 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 					ss << " | fmt_ver=" << lastGoodSubEventHeader_.subevent_format_version
 					   << " num_rocs=" << lastGoodSubEventHeader_.num_rocs
 					   << " tag=" << (lastGoodSubEventHeader_.event_tag_low | (static_cast<uint64_t>(lastGoodSubEventHeader_.event_tag_high) << 32));
-					DTC_TLOG(TLVL_ERROR) << ss.str();
+					DTC_TLOG(TLVL_ERROR) << ss.str() << " [last EWT=" << ewtTag() << " totalParsed=" << totalSubEventsParsed_ << "]";
 				}
 				else
 					DTC_TLOG(TLVL_ERROR) << "  No last good subevent header available";
+				// Dump previous buffer tail (last up to 8 qwords before the crossover boundary)
+				if (lastBufferTailCount_ > 0)
+				{
+					std::stringstream ss;
+					ss << "  Previous buffer last " << lastBufferTailCount_ << " qwords: ";
+					for (size_t i = 0; i < lastBufferTailCount_; ++i)
+						ss << std::hex << std::setw(16) << std::setfill('0') << lastBufferTailQwords_[i] << " ";
+					DTC_TLOG(TLVL_ERROR) << ss.str() << " [last EWT=" << ewtTag() << " totalParsed=" << totalSubEventsParsed_ << "]";
+				}
+				else
+					DTC_TLOG(TLVL_ERROR) << "  No previous buffer tail available";
 				// Dump continuation buffer context around the boundary
 				{
 					std::stringstream ss;
@@ -512,12 +546,23 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 					for (int i = 0; i < 16 && (size_t)(i * 8) < payloadBytes; ++i)
 						ss << std::hex << std::setw(16) << std::setfill('0')
 						   << *reinterpret_cast<const uint64_t*>(bufStart + i * 8) << " ";
-					DTC_TLOG(TLVL_ERROR) << ss.str();
+					DTC_TLOG(TLVL_ERROR) << ss.str() << " [last EWT=" << ewtTag() << " totalParsed=" << totalSubEventsParsed_ << "]";
 				}
 				// Dump DMA buffers via spy for full hardware state
-				DTC_TLOG(TLVL_ERROR) << "  Calling spy() for DMA buffer dump...";
+				DTC_TLOG(TLVL_ERROR) << "  Calling spy() for DMA buffer dump..." << " [last EWT=" << ewtTag() << " totalParsed=" << totalSubEventsParsed_ << "]";
 				device_.spy(DTC_DMA_Engine_DAQ, 3 /* for once */ | 8 /* for wide view */ | 16 /* stack trace */);
-				throw;  // re-throw to propagate up the chain
+				// Re-throw; if it's a DTC_WrongPacketTypeException, augment with last good event tag
+				try { throw; }
+				catch (const DTC_WrongPacketTypeException& e)
+				{
+					std::string augMsg = std::string(e.what());
+					if (hasLastGoodSubEventHeader_)
+						augMsg += " [last good EWT=" + std::to_string(
+							lastGoodSubEventHeader_.event_tag_low |
+							(static_cast<uint64_t>(lastGoodSubEventHeader_.event_tag_high) << 32)) + "]";
+					throw std::runtime_error(augMsg);
+				}
+				catch (...) { throw; }  // all other exception types: propagate unchanged
 			}
 		}  // end if pendingSubEventBytes_ not empty after header validation
 	}
@@ -601,7 +646,7 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 					DTC_TLOG(TLVL_ERROR) << "GetSubEventData: partial header has invalid"
 										 << " subEventByteCount=" << pendingSubEventTotalBytes_
 										 << " < sizeof(DTC_SubEventHeader)=" << sizeof(DTC_SubEventHeader)
-										 << " -- discarding corrupt partial header";
+										 << " -- discarding corrupt partial header" << " [last EWT=" << ewtTag() << " totalParsed=" << totalSubEventsParsed_ << "]";
 					pendingSubEventBytes_.clear();
 					pendingSubEventTotalBytes_ = 0;
 					break;
@@ -627,7 +672,7 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 			// Mark this so the next call's Step 2 knows to treat it as a continuation.
 			DTC_TLOG(TLVL_Crossover) << "===== SUBEVENT PREFIX-ONLY CROSSOVER DETECTED ====="
 								   << " prefix at end of buffer, 0 subevent bytes here"
-								   << " -- next buffer is a continuation with no prefix";
+								   << " -- next buffer is a continuation with no prefix" << " [last EWT=" << ewtTag() << " totalParsed=" << totalSubEventsParsed_ << "]";
 			pendingSubEventBytes_.resize(0);  // empty but see note below
 			pendingSubEventTotalBytes_ = 0;
 			// Set pendingPrefixConsumed_ so the next call enters Step 2
@@ -640,7 +685,8 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 		{
 			DTC_TLOG(TLVL_ERROR) << "GetSubEventData: subEventByteCount=" << subEventByteCount
 								 << " < sizeof(DTC_SubEventHeader)=" << sizeof(DTC_SubEventHeader)
-								 << " at bufOffset=" << bufOffset << " -- stopping parse";
+								 << " at bufOffset=" << bufOffset << " -- stopping parse"
+								 << " [last EWT=" << ewtTag() << " totalParsed=" << totalSubEventsParsed_ << "]";
 			break;
 		}
 
@@ -662,13 +708,14 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 				if (!res->SetupSubEvent(errs))
 				{
 					DTC_TLOG(TLVL_ERROR) << "GetSubEventData: corrupt subevent at bufOffset=" << bufOffset
-										 << " errs=" << errs;
+										 << " errs=" << errs << " [last EWT=" << ewtTag() << " totalParsed=" << totalSubEventsParsed_ << "]";
 				}
 				else
 				{
 					// Track last good subevent header for diagnostics
 					lastGoodSubEventHeader_ = *res->GetHeader();
 					hasLastGoodSubEventHeader_ = true;
+					++totalSubEventsParsed_;
 
 					DTC_TLOG(TLVL_GetData) << "GetSubEventData: subevent OK tag="
 										   << res->GetEventWindowTag().GetEventWindowTag(true)
@@ -686,7 +733,7 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 									 << " prevBufferWasFull=" << prevBufferWasFull
 									 << " payloadBytes=" << payloadBytes
 									 << " firstQword=0x" << std::hex
-									 << *reinterpret_cast<const uint64_t*>(bufStart) << std::dec;
+									 << *reinterpret_cast<const uint64_t*>(bufStart) << std::dec << " [last EWT=" << ewtTag() << " totalParsed=" << totalSubEventsParsed_ << "]";
 				// Dump the subevent header bytes at this location
 				{
 					std::stringstream ss;
@@ -695,7 +742,7 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 					for (size_t i = 0; i < dumpLen; i += 4)
 						ss << std::hex << std::setw(8) << std::setfill('0')
 						   << *reinterpret_cast<const uint32_t*>(sePtr + i) << " ";
-					DTC_TLOG(TLVL_ERROR) << ss.str();
+					DTC_TLOG(TLVL_ERROR) << ss.str() << " [last EWT=" << ewtTag() << " totalParsed=" << totalSubEventsParsed_ << "]";
 				}
 				// Dump context: 8 qwords before and 8 qwords after the subevent start
 				{
@@ -709,7 +756,7 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 					for (size_t i = bufOffset; i + 8 <= payloadBytes && i < bufOffset + 64; i += 8)
 						ss << std::hex << std::setw(16) << std::setfill('0')
 						   << *reinterpret_cast<const uint64_t*>(bufStart + i) << " ";
-					DTC_TLOG(TLVL_ERROR) << ss.str();
+					DTC_TLOG(TLVL_ERROR) << ss.str() << " [last EWT=" << ewtTag() << " totalParsed=" << totalSubEventsParsed_ << "]";
 				}
 				// Dump last good subevent header if available
 				if (hasLastGoodSubEventHeader_)
@@ -722,14 +769,36 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 					ss << " | fmt_ver=" << lastGoodSubEventHeader_.subevent_format_version
 					   << " num_rocs=" << lastGoodSubEventHeader_.num_rocs
 					   << " tag=" << (lastGoodSubEventHeader_.event_tag_low | (static_cast<uint64_t>(lastGoodSubEventHeader_.event_tag_high) << 32));
-					DTC_TLOG(TLVL_ERROR) << ss.str();
+					DTC_TLOG(TLVL_ERROR) << ss.str() << " [last EWT=" << ewtTag() << " totalParsed=" << totalSubEventsParsed_ << "]";
 				}
 				else
 					DTC_TLOG(TLVL_ERROR) << "  No last good subevent header available";
+				// Dump previous buffer tail (last up to 8 qwords from the buffer before this one)
+				if (lastBufferTailCount_ > 0)
+				{
+					std::stringstream ss;
+					ss << "  Previous buffer last " << lastBufferTailCount_ << " qwords: ";
+					for (size_t i = 0; i < lastBufferTailCount_; ++i)
+						ss << std::hex << std::setw(16) << std::setfill('0') << lastBufferTailQwords_[i] << " ";
+					DTC_TLOG(TLVL_ERROR) << ss.str() << " [last EWT=" << ewtTag() << " totalParsed=" << totalSubEventsParsed_ << "]";
+				}
+				else
+					DTC_TLOG(TLVL_ERROR) << "  No previous buffer tail available";
 				// Dump DMA buffers via spy for full hardware state
-				DTC_TLOG(TLVL_ERROR) << "  Calling spy() for DMA buffer dump...";
+				DTC_TLOG(TLVL_ERROR) << "  Calling spy() for DMA buffer dump..." << " [last EWT=" << ewtTag() << " totalParsed=" << totalSubEventsParsed_ << "]";
 				device_.spy(DTC_DMA_Engine_DAQ, 3 /* for once */ | 8 /* for wide view */ | 16 /* stack trace */);
-				throw;  // re-throw to propagate up the chain
+				// Re-throw; if it's a DTC_WrongPacketTypeException, augment with last good event tag
+				try { throw; }
+				catch (const DTC_WrongPacketTypeException& e)
+				{
+					std::string augMsg = std::string(e.what());
+					if (hasLastGoodSubEventHeader_)
+						augMsg += " [last good EWT=" + std::to_string(
+							lastGoodSubEventHeader_.event_tag_low |
+							(static_cast<uint64_t>(lastGoodSubEventHeader_.event_tag_high) << 32)) + "]";
+					throw std::runtime_error(augMsg);
+				}
+				catch (...) { throw; }  // all other exception types: propagate unchanged
 			}
 			bufOffset += subEventByteCount;
 		}
@@ -764,7 +833,22 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 		DTC_TLOG(TLVL_WARNING) << "GetSubEventData: " << leftover
 							   << " leftover byte(s) at end of buffer (bufOffset=" << bufOffset
 							   << " payloadBytes=" << payloadBytes
-							   << " bufferFull=" << lastDMABufferWasFull_ << ")";
+							   << " bufferFull=" << lastDMABufferWasFull_ << ")"
+							   << " [last EWT=" << ewtTag() << " totalParsed=" << totalSubEventsParsed_ << "]";
+		// Dump the first 8 qwords of the leftover region so we can see what stopped the parse
+		{
+			std::stringstream ss;
+			ss << "GetSubEventData: leftover region first 8 qwords @ bufOffset=" << bufOffset << ": ";
+			for (int i = 0; i < 8 && bufOffset + (size_t)(i * 8) + 8 <= payloadBytes; ++i)
+				ss << std::hex << std::setw(16) << std::setfill('0')
+				   << *reinterpret_cast<const uint64_t*>(bufStart + bufOffset + i * 8) << " ";
+			// Also show the raw 4-byte value that was (or would be) parsed as subEventByteCount
+			if (leftover >= sizeof(uint32_t))
+				ss << " | raw_byteCount_field=0x" << std::hex
+				   << (*reinterpret_cast<const uint32_t*>(bufStart + bufOffset) & 0x1FFFFFF)
+				   << std::dec;
+			DTC_TLOG(TLVL_WARNING) << ss.str();
+		}
 	}
 
 	// ------------------------------------------------------------------
@@ -774,6 +858,14 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 						   << " pendingBytes=" << pendingSubEventBytes_.size()
 						   << " pendingTotal=" << pendingSubEventTotalBytes_
 						   << " pendingPrefixConsumed=" << pendingPrefixConsumed_;
+	// Always refresh lastGoodSubEventHeader_ from the last successfully returned subevent
+	// so the member is current even if the inline saves were skipped (e.g. early-exit paths).
+	if (!output.empty() && output.back() && output.back()->GetHeader())
+	{
+		lastGoodSubEventHeader_    = *output.back()->GetHeader();
+		hasLastGoodSubEventHeader_ = true;
+	}
+	saveBufferTail();
 	return output;
 }  // endGetSubEventData() v2
 

@@ -801,7 +801,7 @@ void mu2edev::spy(int chn, unsigned optsmsk)
 {
 	if (spyHasOccurred_ && !TTEST(50))  // set debug+50 to re-enable if you know what you're doing and want to see more than the first spy() call for a given instance in the logs (which is usually enough and more can cause log-file chaos)
 	{
-		TLOG(TLVL_DEBUG) << "spy() already executed for this mu2edev instance (" << UID_ << "); skipping to avoid log-file chaos. Call resetSpyHasOccurred() to re-enable.";
+		TLOG(TLVL_WARNING) << "spy() already executed for this mu2edev instance (" << UID_ << "); skipping to avoid log-file chaos. Call resetSpyHasOccurred() to re-enable.";
 		return;
 	}
 	spyHasOccurred_ = true;

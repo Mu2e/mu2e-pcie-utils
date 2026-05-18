@@ -282,6 +282,7 @@ DTCLib::RegisterFormatter DTCLib::CFOandDTC_Registers::FormatVivadoVersion()
 void DTCLib::CFOandDTC_Registers::SoftReset()
 {
 	TLOG(TLVL_ResetDTC) << __COUT_HDR__ << "Soft Reset start";
+	device_.resetSpyHasOccurred();  // allow spy() to fire again after a reset
 	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_Control);
 	data[31] = 1;  // set Soft Reset bit
 	WriteRegister_(data.to_ulong(), CFOandDTC_Register_Control);
