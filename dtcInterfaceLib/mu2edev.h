@@ -85,6 +85,12 @@ class mu2edev
 	/// <returns>Byte count of data read into buffer. Negative value indicates error.</returns>
 	int read_data(DTC_DMA_Engine const& chn, void** buffer, int tmo_ms);
 	/// <summary>
+	/// Convert a DMA buffer pointer into the receive-ring slot index [0, MU2E_NUM_RECV_BUFFS) for
+	/// the active device on the given channel. Returns -1 if ptr falls outside the mmap'd region.
+	/// Useful for diagnostic prints.
+	/// </summary>
+	int GetBufferIndex(DTC_DMA_Engine const& chn, const void* ptr) const;
+	/// <summary>
 	/// Release a number of buffers held by the software on the given channel
 	/// </summary>
 	/// <param name="chn">Channel to release</param>

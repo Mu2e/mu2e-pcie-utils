@@ -99,6 +99,8 @@ class DTC : public DTC_Registers
 	/// <param name="when">Desired event window tag for readout. Default means use whatever event window tag is next</param>
 	/// <returns>A vector of DTC_SubEvent objects, but only one DTC_SubEvent is expected</returns>
 	std::vector<std::unique_ptr<DTC_SubEvent>> GetSubEventData(DTC_EventWindowTag when = DTC_EventWindowTag(), bool matchEventWindowTag = false);
+	std::vector<std::shared_ptr<DTC_Event>> GetSubEventDataAsEvents(DTC_EventWindowTag when = DTC_EventWindowTag(), bool matchEventWindowTag = false, const size_t vectorBundleTarget = 1, const size_t retries = 3);
+
 	/// <summary>
 	/// Read a file into the DTC memory. Will truncate the file so that it fits in the DTC memory.
 	/// </summary>
@@ -317,16 +319,38 @@ class DTC : public DTC_Registers
 	CFOandDTC_DMAs::DMAInfo daqDMAInfo_;
 	CFOandDTC_DMAs::DMAInfo dcsDMAInfo_;
 
-	DTC_SubEventHeader lastGoodSubEventHeader_{};  ///< Persists across GetSubEventData calls for diagnostics on exception
+	// State for GetSubEventDataAsEvents v3: extracted events buffer
+	std::vector<std::shared_ptr<DTCLib::DTC_Event>> extractedEvents_{};
+
+	bool   needToFinishEvent_{false};
+	size_t currentEventSize_{0};
+	size_t subEventByteCount_{0};
+	size_t extractedSubeventBytes_{0};
+
+	DTC_SubEventHeader lastGoodSubEventHeader_{};
 	bool               hasLastGoodSubEventHeader_{false};
+	uint64_t            totalEventsParsed_{0};      ///< Lifetime count of successfully-parsed subevents; included in diagnostic prints so we can tell whether parsing ever made progress
+
+	// Standing buffer to assemble the on-wire header prefix one QW at a time.
+	// On-wire layout: [EventHeader 1 QW][SubEventHeader 6 QWs] = 7 QWs total.
+	// QW0 = event header; QW1..6 = subevent header.
+	static constexpr size_t kSubEventHeaderQws = sizeof(DTC_SubEventHeader) / sizeof(uint64_t) + 1;
+	std::array<uint64_t, kSubEventHeaderQws> subEventHeaderBuf_{};
+	size_t                                   subEventHeaderQwsFilled_{0};  ///< Number of QWs currently filled in subEventHeaderBuf_
+
 	std::array<uint64_t, 8> lastBufferTailQwords_{};  ///< Last up to 8 qwords of the most recently processed DMA buffer; saved at every return path for cross-buffer exception diagnostics
 	size_t              lastBufferTailCount_{0};       ///< Valid entry count in lastBufferTailQwords_
-	uint64_t            totalSubEventsParsed_{0};      ///< Lifetime count of successfully-parsed subevents; included in diagnostic prints so we can tell whether parsing ever made progress
+	
+	bool                 lastDMABufferWasFull_{false};   ///< True when the last DMA buffer was completely full (dmaBytes==sizeof(mu2e_databuff_t)); used for payloadBytes/tlast calculation
 
-	// State for GetSubEventData v2: cross-buffer pending subevent assembly
+	std::string			lastDMABufferIndex_{}; ///< String representation of the index of the last DMA buffer processed, for diagnostics
+	
+
+	// // State for GetSubEventData v2: cross-buffer pending subevent assembly
+	uint64_t            totalSubEventsParsed_{0};      ///< Lifetime count of successfully-parsed subevents; included in diagnostic prints so we can tell whether parsing ever made progress
 	std::vector<uint8_t> pendingSubEventBytes_{};        ///< Partial subevent bytes carried over from the previous DMA buffer
 	size_t               pendingSubEventTotalBytes_{0};  ///< Expected total byte count of the pending subevent (0 = header not yet complete)
-	bool                 lastDMABufferWasFull_{false};   ///< True when the last DMA buffer was completely full (dmaBytes==sizeof(mu2e_databuff_t)); used for payloadBytes/tlast calculation
+	// bool                 lastDMABufferWasFull_{false};   ///< True when the last DMA buffer was completely full (dmaBytes==sizeof(mu2e_databuff_t)); used for payloadBytes/tlast calculation
 	bool                 pendingPrefixConsumed_{false};  ///< True when the previous buffer ended with a prefix-only (0 subevent bytes after the prefix); next buffer starts with raw subevent header data at offset 0
 
 	uint8_t lastDTCErrorBitsValue_ = 0;

@@ -15,6 +15,7 @@
 #define TLVL_VerifySimFileInDTC3 TLVL_DEBUG + 14
 #define TLVL_WriteSimFileToDTC TLVL_DEBUG + 15
 #define TLVL_Crossover TLVL_DEBUG + 30
+#define TLVL_Crossover1 TLVL_DEBUG + 31
 #define TLVL_WriteSimFileToDTC2 TLVL_DEBUG + 16
 #define TLVL_WriteSimFileToDTC3 TLVL_DEBUG + 17
 #define TLVL_WriteDetectorEmulatorData TLVL_DEBUG + 18
@@ -161,6 +162,334 @@ std::vector<std::unique_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetData(DTC_EventWi
 	DTC_TLOG(TLVL_GetData) << "GetData RETURN";
 	return output;
 }  // GetData
+
+//
+// GetSubEventData v3 -- extract subevents into Events from the current data stream
+std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetSubEventDataAsEvents(
+	DTC_EventWindowTag when, bool matchEventWindowTag,
+	const size_t vectorBundleTarget /* = 1 */, const size_t retries /* = 3 */)
+{	
+	(void)when;  // not yet used; filtering can be added once basic flow works
+	(void)matchEventWindowTag;  // not yet used; filtering can be added once basic flow works
+	
+	// Save up to 8 trailing QWs of the current DMA buffer for diagnostic dumps on later
+	// exceptions. Takes its inputs as parameters so it doesn't capture variables that
+	// aren't in scope yet at the lambda's definition site.
+	auto saveBufferTail = [this](const uint8_t* dmaBufferStartPtr, size_t dmaBytes) {
+		const size_t tailStart = (dmaBytes >= 64) ? dmaBytes - 64 : 0;
+		lastBufferTailCount_ = 0;
+		for (size_t i = tailStart; i + 8 <= dmaBytes && lastBufferTailCount_ < 8; i += 8)
+			lastBufferTailQwords_[lastBufferTailCount_++] =
+				*reinterpret_cast<const uint64_t*>(dmaBufferStartPtr + i);
+	};
+
+	// Returns the last good event window tag as a string, or "-1" if unavailable.
+	auto ewtTag = [&]() -> std::string {
+		if (!hasLastGoodSubEventHeader_) return "-1";
+		return std::to_string(lastGoodSubEventHeader_.event_tag_low |
+		                      (static_cast<uint64_t>(lastGoodSubEventHeader_.event_tag_high) << 32));
+	};
+
+	// Returns the ring-buffer slot index of a DMA buffer pointer as a 2-digit string
+	// (e.g. "07", "42"), or "??" when the pointer is outside the mmap'd region.
+	auto bufferIndexStr = [this](const void* ptr) -> std::string {
+		const int idx = GetDevice()->GetBufferIndex(DTC_DMA_Engine_DAQ, ptr);
+		if (idx < 0) return "??";
+		std::ostringstream oss;
+		oss << std::setw(2) << std::setfill('0') << idx;
+		return oss.str();
+	};
+
+	if (needToFinishEvent_)
+	{
+		auto inProgress = std::move(extractedEvents_.back());
+		extractedEvents_.clear();
+		extractedEvents_.push_back(std::move(inProgress));
+	}
+	else
+	{
+		extractedEvents_.clear();
+		currentEventSize_ = 0;
+		subEventByteCount_ = 0;
+		extractedSubeventBytes_ = 0;
+	}
+	extractedEvents_.reserve(vectorBundleTarget + 1);
+	size_t eventsParsedThisTime = 0;
+	
+	// Release the previous buffer NOW — we are done with it.
+	ReleaseBuffers(DTC_DMA_Engine_DAQ);
+
+	// ------------------------------------------------------------------
+	do //primary loop to read buffers until target event count is reached or timeout
+	{
+		DTC_TLOG(TLVL_GetCurrentBuffer) << "GetSubEventData BEGIN [last EWT=" << ewtTag()
+							<< "] eventsParsedThisTime=" << eventsParsedThisTime
+							<< " totalEventsParsed_=" << totalEventsParsed_;	
+		
+		// Read next buffer
+		int sts;
+		{
+			int retry = retries;
+			do {
+				sts = ReadBuffer(DTC_DMA_Engine_DAQ, 100 /*ms*/);
+			} while (sts <= 0 && --retry > 0);
+		}
+		if (sts <= 0)
+		{
+			DTC_TLOG(TLVL_GetCurrentBuffer) << "GetSubEventData: ReadBuffer returned " << sts << ", no data";
+			{
+				std::vector<std::shared_ptr<DTC_Event>> result;
+				size_t cc = extractedEvents_.size() - (needToFinishEvent_ ? 1 : 0);
+				result.reserve(cc);
+				for (size_t i = 0; i < cc; ++i)
+					result.push_back(extractedEvents_[i]);
+				return result;
+			}
+		}
+		
+		if(lastBufferTailCount_ == 8)
+		{
+			DTC_TLOG(TLVL_GetData) << "GetSubEventData: Last dmaBufferIndex #" << lastDMABufferIndex_ << " tail qwords: "
+								<< std::hex
+								<< lastBufferTailQwords_[0] << " "
+								<< lastBufferTailQwords_[1] << " "
+								<< lastBufferTailQwords_[2] << " "
+								<< lastBufferTailQwords_[3] << " | "
+								<< lastBufferTailQwords_[4] << " "
+								<< lastBufferTailQwords_[5] << " "
+								<< lastBufferTailQwords_[6] << " "
+								<< lastBufferTailQwords_[7];
+		}
+
+		// sts = number of bytes the DMA engine transferred into this buffer
+		const size_t dmaBytes = static_cast<size_t>(sts);
+
+		// Track whether PREVIOUS buffer was full (for diagnostics) and update for this buffer.
+		const bool prevBufferWasFull = lastDMABufferWasFull_;
+		lastDMABufferWasFull_ = (dmaBytes == sizeof(mu2e_databuff_t));
+
+		const uint8_t* dmaBufferStartPtr = reinterpret_cast<const uint8_t*>(&daqDMAInfo_.buffer.back()[0]);
+		{
+			const uint64_t* qw = reinterpret_cast<const uint64_t*>(dmaBufferStartPtr);
+			DTC_TLOG(TLVL_GetData) << "GetSubEventData: first 8 QWs of dmaBufferIndex #" << bufferIndexStr(dmaBufferStartPtr) << ": " << std::hex
+								<< qw[0] << " " << qw[1] << " " << qw[2] << " " << qw[3] << " | "
+								<< qw[4] << " " << qw[5] << " " << qw[6] << " " << qw[7] << std::dec;
+		}
+		saveBufferTail(dmaBufferStartPtr, dmaBytes);
+		lastDMABufferIndex_ = bufferIndexStr(dmaBufferStartPtr);
+		if(lastBufferTailCount_ == 8)
+		{
+			DTC_TLOG(TLVL_GetData) << "GetSubEventData: This dmaBufferIndex #" << lastDMABufferIndex_ << " tail qwords: "
+								<< std::hex
+								<< lastBufferTailQwords_[0] << " "
+								<< lastBufferTailQwords_[1] << " "
+								<< lastBufferTailQwords_[2] << " "
+								<< lastBufferTailQwords_[3] << " | "
+								<< lastBufferTailQwords_[4] << " "
+								<< lastBufferTailQwords_[5] << " "
+								<< lastBufferTailQwords_[6] << " "
+								<< lastBufferTailQwords_[7];
+		}
+
+		// The DMA descriptor byte count (sts) is the number of bytes actually filled.
+		// The last byte is the AXI tlast flag byte when the buffer is not completely full.
+		// When it IS completely full (dmaBytes == sizeof(mu2e_databuff_t)) there is no tlast byte.
+		const size_t payloadBytes = (dmaBytes < sizeof(mu2e_databuff_t)) ? dmaBytes - 1 : dmaBytes;
+
+		DTC_TLOG(TLVL_GetData) << "GetSubEventData: new buffer dmaBufferIndex #" << bufferIndexStr(dmaBufferStartPtr)
+							<< " dmaBytes=" << dmaBytes
+							<< " bufferTotalBytes=" << payloadBytes
+							<< " prevBufferWasFull=" << prevBufferWasFull
+							<< " thisBufferIsFull=" << lastDMABufferWasFull_;
+		
+		size_t dmaBufferOffset = 0;  // our walk position within this buffer
+
+		while(dmaBufferOffset < payloadBytes)
+		{
+			DTC_TLOG(TLVL_GetData) << "GetSubEventData: top of buffer processing loop, dmaBufferOffset= " << dmaBufferOffset
+								<< "/" << payloadBytes
+								<< " eventsParsedThisTime=" << eventsParsedThisTime
+								<< " totalEventsParsed_=" << totalEventsParsed_ 
+								<< " needToFinishEvent_=" << (needToFinishEvent_ ? "true" : "false")
+								<< " subEventHeaderQwsFilled_=" << subEventHeaderQwsFilled_
+								<< " extractedSubeventBytes_=" << extractedSubeventBytes_ << "/" << subEventByteCount_;
+
+			// ---------------------------------------------------------------
+			// Assemble the DTC_SubEventHeader one QW at a time into the standing
+			// buffer (subEventHeaderBuf_). The header is 6 QWs (48 B); it may
+			// span DMA buffer boundaries, so state persists in DTC class members.
+			// As soon as the first 2 QWs are in, we know the event size and can
+			// emplace_back the DTC_Event. Once all 6 QWs are in, the assembled
+			// header is memcpy'd into the Event's owned buffer.
+			// ---------------------------------------------------------------
+			if(currentEventSize_ == 0) //haven't yet determined the event size from the first 2 header QWs
+			{
+				// Fill QWs from the current buffer until we have the first 2 (or the buffer runs out)
+				while(subEventHeaderQwsFilled_ < 2 && (payloadBytes - dmaBufferOffset) >= sizeof(uint64_t))
+				{
+					subEventHeaderBuf_[subEventHeaderQwsFilled_++] =
+						*reinterpret_cast<const uint64_t*>(dmaBufferStartPtr + dmaBufferOffset);
+					dmaBufferOffset += sizeof(uint64_t);
+				}
+				if(subEventHeaderQwsFilled_ < 2)
+				{
+					// Header straddles DMA buffer boundary; resume on next ReadBuffer
+					DTC_TLOG(TLVL_GetData) << "GetSubEventData: only " << subEventHeaderQwsFilled_
+										<< " header QW(s) filled, need 2 before sizing; breaking to fetch next buffer";
+					break;
+				}
+
+				// QW0: DTC_EventHeader    -> bits[0:23] = inclusive_event_byte_count    (24 bits)
+				// QW1: DTC_SubEventHeader -> bits[0:24] = inclusive_subevent_byte_count (25 bits)
+				const size_t inclusiveSubeventBytes = static_cast<size_t>(subEventHeaderBuf_[0] & 0xFFFFFFULL);
+				subEventByteCount_           = static_cast<size_t>(subEventHeaderBuf_[1] & 0x1FFFFFFULL);
+
+				// Sanity: the DTC_EventHeader is exactly one QW that precedes the subevent header,
+				// so eventByteCount must equal subEventByteCount + 8.
+				if(inclusiveSubeventBytes != subEventByteCount_ + 8)
+				{
+					__SS__ << "GetSubEventData: Header sanity check FAILED: inclusiveSubeventBytes=0x"
+						<< std::hex << inclusiveSubeventBytes
+						<< " subEventByteCount_=0x" << subEventByteCount_
+						<< " (expected inclusiveSubeventBytes - 8 == subEventByteCount_, diff="
+						<< std::dec << (static_cast<int64_t>(inclusiveSubeventBytes) - 8 - static_cast<int64_t>(subEventByteCount_))
+						<< ") at dmaBufferOffset=" << dmaBufferOffset
+						<< " last EWT=" << ewtTag();
+					__SS_THROW__;
+				}
+
+				// currentEventSize_ = destination buffer size: struct EventHeader + full subevent
+				currentEventSize_ = sizeof(DTC_EventHeader) + subEventByteCount_;
+				DTC_TLOG(TLVL_GetData) << "GetSubEventData: sized event, inclusiveSubeventBytes=" << inclusiveSubeventBytes
+									<< " subEventByteCount_=" << subEventByteCount_
+									<< " currentEventSize_=" << currentEventSize_
+									<< " at dmaBufferOffset=" << dmaBufferOffset;
+			}
+
+			//fill subevent header cache
+			if(!needToFinishEvent_ && currentEventSize_ > 0 && subEventHeaderQwsFilled_ < kSubEventHeaderQws)
+			{
+				// We have a partially filled header from the previous buffer(s); try to fill the rest before doing anything else
+				DTC_TLOG(TLVL_GetData) << "GetSubEventData: Continuing to fill subevent header, currently have "
+									<< subEventHeaderQwsFilled_ << "/" << kSubEventHeaderQws << " QWs filled";
+				while(subEventHeaderQwsFilled_ < kSubEventHeaderQws && (payloadBytes - dmaBufferOffset) >= sizeof(uint64_t))
+				{
+					subEventHeaderBuf_[subEventHeaderQwsFilled_++] =
+						*reinterpret_cast<const uint64_t*>(dmaBufferStartPtr + dmaBufferOffset);
+					dmaBufferOffset += sizeof(uint64_t);
+					DTC_TLOG(TLVL_GetData) << "GetSubEventData: filled QW " << subEventHeaderQwsFilled_ << "/" << kSubEventHeaderQws;
+				}
+				if(subEventHeaderQwsFilled_ < kSubEventHeaderQws)
+				{
+					// Still don't have the full header; wait for the next buffer
+					DTC_TLOG(TLVL_GetData) << "GetSubEventData: still only have " << subEventHeaderQwsFilled_
+										<< " header QW(s) filled, need " << kSubEventHeaderQws
+										<< "; breaking to fetch next buffer";
+					break;
+				}
+
+				DTC_TLOG(TLVL_GetData) << "GetSubEventData: assembled subevent header: "
+									<< reinterpret_cast<const DTC_SubEventHeader*>(subEventHeaderBuf_.data() + 1)->toJson();
+			} //end fill subevent header cache
+
+			//start a new event and finish copying its subevent header
+			if(!needToFinishEvent_ && currentEventSize_ > 0 && subEventHeaderQwsFilled_ == kSubEventHeaderQws)
+			{
+				extractedEvents_.push_back(std::make_shared<DTC_Event>(currentEventSize_));
+
+				DTCLib::DTC_EventHeader evtHdr;
+				evtHdr.inclusive_event_byte_count = currentEventSize_;
+				evtHdr.num_dtcs = 1;
+				evtHdr.event_tag_low = reinterpret_cast<const DTC_SubEventHeader*>(subEventHeaderBuf_.data() + 1)->event_tag_low;
+				evtHdr.event_tag_high = reinterpret_cast<const DTC_SubEventHeader*>(subEventHeaderBuf_.data() + 1)->event_tag_high;
+				uint8_t* eventBuf = static_cast<uint8_t*>(const_cast<void*>(extractedEvents_.back()->GetRawBufferPointer()));
+				memcpy(eventBuf, &evtHdr, sizeof(DTCLib::DTC_EventHeader));
+				*extractedEvents_.back()->GetHeader() = evtHdr;
+				extractedSubeventBytes_ = 0;
+
+				memcpy(eventBuf + sizeof(DTCLib::DTC_EventHeader) + extractedSubeventBytes_, subEventHeaderBuf_.data() + 1, sizeof(DTC_SubEventHeader));
+				extractedSubeventBytes_ += sizeof(DTC_SubEventHeader);
+
+				subEventHeaderQwsFilled_ = 0;
+				needToFinishEvent_ = true;
+
+				DTC_TLOG(TLVL_GetData) << "GetSubEventData: copied " << sizeof(DTC_SubEventHeader)
+									<< "-byte subevent header into Event vector position #" << extractedEvents_.size()
+									<< " EWT=" << extractedEvents_.back()->GetEventWindowTag()
+									<< " (extractedSubeventBytes_=" << extractedSubeventBytes_
+									<< "/" << subEventByteCount_ << ")";
+			}
+
+			if(needToFinishEvent_)
+			{
+				size_t bytesToCopy = std::min(payloadBytes - dmaBufferOffset, subEventByteCount_ - extractedSubeventBytes_);
+
+				DTC_TLOG(TLVL_GetData) << "GetSubEventData: copying " << bytesToCopy <<
+					" bytes into Event vector position #" << extractedEvents_.size()
+					<< " EWT=" << extractedEvents_.back()->GetEventWindowTag()
+					<< " (before extractedSubeventBytes_=" << extractedSubeventBytes_
+					<< "/" << subEventByteCount_ << ")";
+
+				uint8_t* destPtr = static_cast<uint8_t*>(const_cast<void*>(extractedEvents_.back()->GetRawBufferPointer())) + sizeof(DTC_EventHeader) + extractedSubeventBytes_;
+				memcpy(destPtr, dmaBufferStartPtr + dmaBufferOffset, bytesToCopy);
+				dmaBufferOffset += bytesToCopy;
+				extractedSubeventBytes_ += bytesToCopy;
+
+				DTC_TLOG(TLVL_GetData) << "GetSubEventData: copied " << bytesToCopy
+									<< "-bytes of subevent payload into Event vector position #" << extractedEvents_.size()
+									<< " EWT=" << extractedEvents_.back()->GetEventWindowTag()
+									<< " (extractedSubeventBytes_=" << extractedSubeventBytes_
+									<< "/" << subEventByteCount_ << ")";
+
+				if(extractedSubeventBytes_ == subEventByteCount_)
+				{
+					DTC_TLOG(TLVL_GetData) << "GetSubEventData: finished assembling Event vector position #" << extractedEvents_.size()
+										<< " EWT=" << extractedEvents_.back()->GetEventWindowTag()
+										<< " (total extractedSubeventBytes_=" << extractedSubeventBytes_
+										<< "/" << subEventByteCount_ << ", eventBytes=" << currentEventSize_ << "); resetting for next event"
+										<< " eventsParsedThisTime=" << eventsParsedThisTime
+										<< " totalEventsParsed_=" << totalEventsParsed_;
+					currentEventSize_ = 0;
+					subEventByteCount_ = 0;
+					extractedSubeventBytes_ = 0;
+					needToFinishEvent_ = false;
+					eventsParsedThisTime++;
+					totalEventsParsed_++;
+					subEventHeaderQwsFilled_ = 0;
+
+					extractedEvents_.back()->SetupEvent();
+				}
+				else
+				{
+					DTC_TLOG(TLVL_GetData) << "GetSubEventData: still need to copy "
+										<< (subEventByteCount_ - extractedSubeventBytes_)
+										<< " bytes to finish Event vector position #" << extractedEvents_.size()
+										<< " EWT=" << extractedEvents_.back()->GetEventWindowTag()
+										<< "; breaking to fetch next buffer";
+					break;
+				}
+			}
+		} //end buffer processing loop
+
+		ReleaseBuffers(DTC_DMA_Engine_DAQ);
+
+	} while (eventsParsedThisTime < vectorBundleTarget);
+	// ------------------------------------------------------------------
+	
+
+	size_t completedCount = extractedEvents_.size() - (needToFinishEvent_ ? 1 : 0);
+	DTC_TLOG(TLVL_GetData) << "GetSubEventData END [last EWT=" << ewtTag()
+						<< "] eventsParsedThisTime=" << eventsParsedThisTime
+						<< " totalEventsParsed_=" << totalEventsParsed_
+						<< " completedCount=" << completedCount
+						<< " needToFinishEvent_=" << (needToFinishEvent_ ? "true" : "false");
+
+	std::vector<std::shared_ptr<DTC_Event>> result;
+	result.reserve(completedCount);
+	for (size_t i = 0; i < completedCount; ++i)
+		result.push_back(extractedEvents_[i]);
+	return result;
+} //end GetSubEventDataAsEvents()
 
 // ---------------------------------------------------------------------------
 // GetSubEventData v2 -- simplified, one-buffer-per-call subevent extractor
@@ -609,6 +938,57 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 		{
 			subEventByteCount = static_cast<size_t>(
 				*reinterpret_cast<const uint32_t*>(sePtr) & 0x1FFFFFF);
+
+			// Consistency check: the 8-byte framing prefix we just skipped is an
+			// inclusive byte count for this sub-transfer (prefix + header + payload),
+			// while the first 4 bytes of the SubEvent header are the subevent inclusive
+			// byte count (header + payload, NO prefix).  Therefore
+			//     prefix_low_32 - subEventByteCount == 8
+			// for any well-formed pair.  If this fails the parser is desynced and
+			// continuing would absorb hundreds of KB of unrelated data into a bogus
+			// "pending" subevent (see the 0x230023 incident on 2026-05-18).  Throw
+			// immediately so the caller learns at first sight of corruption.
+			const uint32_t prefixLow32 =
+			    *reinterpret_cast<const uint32_t*>(bufStart + bufOffset - sizeof(uint64_t));
+			if (prefixLow32 < 8 || (prefixLow32 - 8) != subEventByteCount)
+			{
+				std::ostringstream oss;
+				oss << "GetSubEventData: subevent header consistency check FAILED"
+				    << " -- prefix_low32=0x" << std::hex << prefixLow32
+				    << " subEventByteCount=0x" << subEventByteCount << std::dec
+				    << " (expected prefix - byteCount == 8)"
+				    << " at bufOffset=" << bufOffset
+				    << " payloadBytes=" << payloadBytes
+				    << " [last EWT=" << ewtTag()
+				    << " totalParsed=" << totalSubEventsParsed_ << "]";
+				DTC_TLOG(TLVL_ERROR) << oss.str();
+				// Dump 16 qwords of context around the boundary so post-mortem is possible
+				{
+					std::stringstream ss;
+					ss << "  Context (prefix-8 .. +16 qwords): ";
+					const size_t ctxStart =
+					    (bufOffset >= sizeof(uint64_t)) ? bufOffset - sizeof(uint64_t) : 0;
+					for (size_t i = ctxStart;
+					     i + sizeof(uint64_t) <= payloadBytes && i < ctxStart + 17 * sizeof(uint64_t);
+					     i += sizeof(uint64_t))
+						ss << std::hex << std::setw(16) << std::setfill('0')
+						   << *reinterpret_cast<const uint64_t*>(bufStart + i) << " ";
+					DTC_TLOG(TLVL_ERROR) << ss.str();
+				}
+				// Dump buffer start (first 16 qwords) to check for the 0xdeadbeef
+				// release_all marker at qword[0].
+				{
+					std::stringstream ss;
+					ss << "  Buffer FIRST 16 qwords (from bufStart, check qword[0] for 0xdeadbeef): ";
+					for (int i = 0; i < 16 && (size_t)(i * 8) < payloadBytes; ++i)
+						ss << std::hex << std::setw(16) << std::setfill('0')
+						   << *reinterpret_cast<const uint64_t*>(bufStart + i * 8) << " ";
+					DTC_TLOG(TLVL_ERROR) << ss.str();
+				}
+				device_.spy(DTC_DMA_Engine_DAQ,
+				            3 /* once */ | 8 /* wide */ | 16 /* stack trace */);
+				throw std::runtime_error(oss.str());
+			}
 		}
 		else if (seAvail > 0)
 		{
@@ -651,6 +1031,58 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 					pendingSubEventTotalBytes_ = 0;
 					break;
 				}
+
+				// Same prefix/byteCount consistency check as the full-header path:
+				// prefix_low_32 - subEventByteCount must equal 8.  This is the only place
+				// we get a chance to validate before storing pendingSubEventTotalBytes_
+				// and letting Step 2 absorb potentially many KB of unrelated data on the
+				// next calls.  Throw immediately if it fails.
+				const uint32_t prefixLow32 =
+				    *reinterpret_cast<const uint32_t*>(bufStart + bufOffset - sizeof(uint64_t));
+				if (prefixLow32 < 8 || (prefixLow32 - 8) != pendingSubEventTotalBytes_)
+				{
+					std::ostringstream oss;
+					oss << "GetSubEventData: partial-header consistency check FAILED"
+					    << " -- prefix_low32=0x" << std::hex << prefixLow32
+					    << " pendingSubEventTotalBytes=0x" << pendingSubEventTotalBytes_ << std::dec
+					    << " (expected prefix - byteCount == 8)"
+					    << " at bufOffset=" << bufOffset
+					    << " seAvail=" << seAvail
+					    << " payloadBytes=" << payloadBytes
+					    << " [last EWT=" << ewtTag()
+					    << " totalParsed=" << totalSubEventsParsed_ << "]";
+					DTC_TLOG(TLVL_ERROR) << oss.str();
+					// Dump context around the boundary (prefix + whatever partial bytes we have)
+					{
+						std::stringstream ss;
+						ss << "  Context (prefix-8 .. end-of-buffer, up to 17 qwords): ";
+						const size_t ctxStart =
+						    (bufOffset >= sizeof(uint64_t)) ? bufOffset - sizeof(uint64_t) : 0;
+						for (size_t i = ctxStart;
+						     i + sizeof(uint64_t) <= payloadBytes && i < ctxStart + 17 * sizeof(uint64_t);
+						     i += sizeof(uint64_t))
+							ss << std::hex << std::setw(16) << std::setfill('0')
+							   << *reinterpret_cast<const uint64_t*>(bufStart + i) << " ";
+						DTC_TLOG(TLVL_ERROR) << ss.str();
+					}
+					// Dump buffer start (first 16 qwords) to check for the 0xdeadbeef
+					// release_all marker at qword[0].
+					{
+						std::stringstream ss;
+						ss << "  Buffer FIRST 16 qwords (from bufStart, check qword[0] for 0xdeadbeef): ";
+						for (int i = 0; i < 16 && (size_t)(i * 8) < payloadBytes; ++i)
+							ss << std::hex << std::setw(16) << std::setfill('0')
+							   << *reinterpret_cast<const uint64_t*>(bufStart + i * 8) << " ";
+						DTC_TLOG(TLVL_ERROR) << ss.str();
+					}
+					device_.spy(DTC_DMA_Engine_DAQ,
+					            3 /* once */ | 8 /* wide */ | 16 /* stack trace */);
+					// Clear the pending state so we do not absorb anything on the next call
+					pendingSubEventBytes_.clear();
+					pendingSubEventTotalBytes_ = 0;
+					throw std::runtime_error(oss.str());
+				}
+
 				DTC_TLOG(TLVL_GetData) << "GetSubEventData: partial header early byteCount="
 									   << pendingSubEventTotalBytes_;
 				// Note: pendingSubEventTotalBytes_ is set but header is still incomplete
@@ -756,6 +1188,17 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 					for (size_t i = bufOffset; i + 8 <= payloadBytes && i < bufOffset + 64; i += 8)
 						ss << std::hex << std::setw(16) << std::setfill('0')
 						   << *reinterpret_cast<const uint64_t*>(bufStart + i) << " ";
+					DTC_TLOG(TLVL_ERROR) << ss.str() << " [last EWT=" << ewtTag() << " totalParsed=" << totalSubEventsParsed_ << "]";
+				}
+				// Dump buffer start (first 16 qwords) so we can check for the 0xdeadbeef
+				// release_all marker at qword[0] -- if it's still there, hardware never
+				// wrote this buffer since the last ReleaseAllBuffers.
+				{
+					std::stringstream ss;
+					ss << "  Buffer FIRST 16 qwords (from bufStart, check qword[0] for 0xdeadbeef): ";
+					for (int i = 0; i < 16 && (size_t)(i * 8) < payloadBytes; ++i)
+						ss << std::hex << std::setw(16) << std::setfill('0')
+						   << *reinterpret_cast<const uint64_t*>(bufStart + i * 8) << " ";
 					DTC_TLOG(TLVL_ERROR) << ss.str() << " [last EWT=" << ewtTag() << " totalParsed=" << totalSubEventsParsed_ << "]";
 				}
 				// Dump last good subevent header if available
@@ -2441,6 +2884,13 @@ void DTCLib::DTC::ReleaseAllBuffers(const DTC_DMA_Engine& channel)
 	{
 		daqDMAInfo_.buffer.clear();
 		device_.release_all(channel);
+
+		//clear (sub)event extraction members
+		lastDMABufferWasFull_ = false;
+		lastBufferTailCount_ = 0;
+		hasLastGoodSubEventHeader_ = false;
+		totalEventsParsed_ = 0;
+		subEventHeaderQwsFilled_ = 0;
 	}
 	else if (channel == DTC_DMA_Engine_DCS)
 	{
