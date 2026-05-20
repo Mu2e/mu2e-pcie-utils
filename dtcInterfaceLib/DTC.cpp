@@ -2942,7 +2942,7 @@ int DTCLib::DTC::ReadBuffer(const DTC_DMA_Engine& channel, int retries /* = 10 *
 
 void DTCLib::DTC::ReleaseAllBuffers(const DTC_DMA_Engine& channel)
 {
-	TLOG_ENTEX(1) << "ReleaseAllBuffers - channel=" << channel;
+	TLOG_ENTEX(1) << "ReleaseAllBuffers - channel=" << channel << "\n" << otsStyleStackTrace();
 
 	if (channel == DTC_DMA_Engine_DAQ)
 	{

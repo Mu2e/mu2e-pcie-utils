@@ -600,6 +600,15 @@ int mu2edev::release_all(DTC_DMA_Engine const& chn)
 				read_release(chn, has_recv_data);
 				time_last_data = std::chrono::steady_clock::now();
 			}
+			
+			//do not worry about silence on release_all for DCS (since we have lock)
+			if(chn == DTC_DMA_Engine_DCS) 
+			{
+				if(has_recv_data) continue;
+
+				TRACE(TLVL_RELEASE_ALL, UID_ + " - release_all no data to release for chn=%d", chn);
+				break;
+			}
 
 			if (++time_check_counter >= kTimeCheckIntervalLoops)
 			{
