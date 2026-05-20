@@ -600,11 +600,11 @@ int mu2edev::release_all(DTC_DMA_Engine const& chn)
 				read_release(chn, has_recv_data);
 				time_last_data = std::chrono::steady_clock::now();
 			}
-			
-			//do not worry about silence on release_all for DCS (since we have lock)
-			if(chn == DTC_DMA_Engine_DCS) 
+
+			// do not worry about silence on release_all for DCS (since we have lock)
+			if (chn == DTC_DMA_Engine_DCS)
 			{
-				if(has_recv_data) continue;
+				if (has_recv_data) continue;
 
 				TRACE(TLVL_RELEASE_ALL, UID_ + " - release_all no data to release for chn=%d", chn);
 				break;
@@ -639,14 +639,13 @@ int mu2edev::release_all(DTC_DMA_Engine const& chn)
 		// (anything still reading 0xdeadbeef at qword[0] has not been touched
 		// since this release_all completed).
 		{
-			auto* bufArray = (mu2e_databuff_t*)(
-			    mu2e_mmap_ptrs_[activeDeviceIndex_][chn][C2S][MU2E_MAP_BUFF]);
+			auto* bufArray = (mu2e_databuff_t*)(mu2e_mmap_ptrs_[activeDeviceIndex_][chn][C2S][MU2E_MAP_BUFF]);
 			for (auto bufIdx = 0; bufIdx < MU2E_NUM_RECV_BUFFS; ++bufIdx)
 			{
 				*reinterpret_cast<uint64_t*>(bufArray[bufIdx]) = 0xdeadbeefULL;
 			}
 			TRACE(TLVL_RELEASE_ALL, UID_ + " - release_all stamped 0xdeadbeef on first qword of all %d receive buffers (chn=%d)",
-			      MU2E_NUM_RECV_BUFFS, chn);
+				  MU2E_NUM_RECV_BUFFS, chn);
 		}
 	}
 	deviceTime_ += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start).count();
@@ -833,19 +832,19 @@ std::string mu2edev::get_driver_version()
 }  // end get_driver_version
 
 /// @brief Dump contents of receive buffers in a loop with various options for controlling format and behavior. Intended for debugging and development use, not for production use (can cause log-file chaos if used excessively).
-/// @param chn 
-/// @param optsmsk - bitmask of options controlling behavior and format. 
-///		Bit 0 (1) to clear screen each iteration, 
+/// @param chn
+/// @param optsmsk - bitmask of options controlling behavior and format.
+///		Bit 0 (1) to clear screen each iteration,
 ///		bit 1 (2) to run only one iteration,
-///		bit 2 (4) to not clear screen between iterations (overrides bit 0), 
-///		bit 3 (8) to dump all 8192 bytes of each buffer instead of just first 4 qwords, 
-///		bit 4 (16) to include stack trace at end of output, 
+///		bit 2 (4) to not clear screen between iterations (overrides bit 0),
+///		bit 3 (8) to dump all 8192 bytes of each buffer instead of just first 4 qwords,
+///		bit 4 (16) to include stack trace at end of output,
 ///		bit 28 (268435456) to force spy to run even if it has already been called once for this instance (which is usually enough and more can cause log-file chaos).
 ///			spyHasOccurred_ can also be reset to force spy to trigger once again, by calling mu2edev::resetSpyHasOccurred()
-/// @param out 
+/// @param out
 void mu2edev::spy(int chn, unsigned optsmsk, std::ostream& out /* = std::cout */)
 {
-	if (!(optsmsk & (1<<28)) && //set bit 28 to force spy to happen 
+	if (!(optsmsk & (1 << 28)) &&       // set bit 28 to force spy to happen
 		spyHasOccurred_ && !TTEST(50))  // set debug+50 to re-enable if you know what you're doing and want to see more than the first spy() call for a given instance in the logs (which is usually enough and more can cause log-file chaos)
 	{
 		TLOG(TLVL_WARNING) << "spy() already executed for this mu2edev instance (" << UID_ << "); skipping to avoid log-file chaos. Call resetSpyHasOccurred() to re-enable.";
@@ -893,5 +892,5 @@ void mu2edev::spy(int chn, unsigned optsmsk, std::ostream& out /* = std::cout */
 	}
 	if (optsmsk & 16)
 		out << "\n\n"
-		    << otsStyleStackTrace() << std::flush;
+			<< otsStyleStackTrace() << std::flush;
 }  // end spy()

@@ -212,7 +212,7 @@ class mu2edev
 	FILE*                                 debugFp_ = 0;
 	std::chrono::steady_clock::time_point lastWriteTime_;
 	bool                                  spyHasOccurred_ = false;  ///< Limits spy() printout to a single invocation per instance lifetime (or until resetSpyHasOccurred() is called) to avoid log-file chaos.
-	unsigned                              spyIteration_ = 0;
+	unsigned                              spyIteration_   = 0;
 };
 
 #endif
