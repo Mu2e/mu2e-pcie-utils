@@ -296,7 +296,7 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetSubEventDataAsEv
 			const uint64_t* qw = reinterpret_cast<const uint64_t*>(dmaBufferStartPtr);
 			if(qw[0] == 0xdeadbeef)
 			{
-				__SS__ << "GetSubEventData: Detected 0xdeadbeef at start of dmaBufferIndex #" << bufferIndexStr(dmaBufferStartPtr) << " -- this buffer is likely not filled by DMA yet! Is kernel driver and DTC out of sync? Try sending a finite number of events through the system TWICE. If that doesn't work, try resetting the PCIe.\nSpy output follows:\n" << __E__;				
+				__SS__ << "GetSubEventData: Detected 0xdeadbeef at start of dmaBufferIndex #" << bufferIndexStr(dmaBufferStartPtr) << " -- this buffer is likely not filled by DMA yet! Is kernel driver and DTC out of sync? Try sending a finite number (e.g. 2) of events through the system TWICE. If that doesn't work, try resetting the PCIe.\nSpy output follows:\n" << __E__;				
 				device_.spy(DTC_DMA_Engine_DAQ, 3 /* for once */ | 8 /* for wide view */ | (1<<28) /* to force spy */, ss);
 				__SS_THROW__;
 				// continue;  // skip processing this buffer, try to read the next one
@@ -334,9 +334,18 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetSubEventDataAsEv
 			const size_t continuationPrefix = static_cast<size_t>(*reinterpret_cast<const uint64_t*>(dmaBufferStartPtr) & 0xFFFFFFULL);
 			if (continuationPrefix == remainingBytes + 8)
 			{
-				DTC_TLOG(TLVL_GetData) << "GetSubEventData: continuation prefix validated at dmaBufferIndex #" << bufferIndexStr(dmaBufferStartPtr)
+				DTC_TLOG(TLVL_GetData) << "GetSubEventData: continuation prefix validated (final) at dmaBufferIndex #" << bufferIndexStr(dmaBufferStartPtr)
 									<< " prefixVal=0x" << std::hex << continuationPrefix << std::dec
 									<< " == remainingBytes(" << remainingBytes << ") + 8"
+									<< "; skipping 8-byte prefix";
+				dmaBufferOffset = sizeof(uint64_t);
+			}
+			else if (continuationPrefix == MAX_TRANSFER_SIZE - 1)
+			{
+				DTC_TLOG(TLVL_GetData) << "GetSubEventData: continuation prefix validated (intermediate, another max sub-transfer) at dmaBufferIndex #" << bufferIndexStr(dmaBufferStartPtr)
+									<< " prefixVal=0x" << std::hex << continuationPrefix << std::dec
+									<< " == MAX_TRANSFER_SIZE-1=0x" << (MAX_TRANSFER_SIZE - 1) << std::dec
+									<< " remainingBytes=" << remainingBytes
 									<< "; skipping 8-byte prefix";
 				dmaBufferOffset = sizeof(uint64_t);
 			}
@@ -345,6 +354,7 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetSubEventDataAsEv
 				__SS__ << "GetSubEventData: continuation prefix mismatch at dmaBufferIndex #" << bufferIndexStr(dmaBufferStartPtr)
 					<< " prefixVal=" << continuationPrefix << "(0x" << std::hex << continuationPrefix << std::dec << ")"
 					<< " expected " << (remainingBytes + 8) << "(0x" << std::hex << (remainingBytes + 8) << std::dec << ")"
+					<< " or MAX_TRANSFER_SIZE-1=0x" << std::hex << (MAX_TRANSFER_SIZE - 1) << std::dec
 					<< " remainingBytes=" << remainingBytes
 					<< " extractedSubeventBytes_=" << extractedSubeventBytes_ << "/" << subEventByteCount_
 					<< " prevBufferWasFull=" << (prevBufferWasFull ? "true" : "false")
