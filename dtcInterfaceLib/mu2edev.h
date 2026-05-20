@@ -181,7 +181,7 @@ class mu2edev
 	/// Only executes once per instance lifetime (or until resetSpyHasOccurred() is called) to avoid log-file chaos.
 	/// </summary>
 	/// <returns>No value is returned.</returns>
-	void spy(int chn, unsigned flags);
+	void spy(int chn, unsigned flags, std::ostream& out = std::cout);
 
 	/// <summary>
 	/// Reset the spy-has-occurred flag so that spy() will produce output again on the next call.
@@ -212,6 +212,7 @@ class mu2edev
 	FILE*                                 debugFp_ = 0;
 	std::chrono::steady_clock::time_point lastWriteTime_;
 	bool                                  spyHasOccurred_ = false;  ///< Limits spy() printout to a single invocation per instance lifetime (or until resetSpyHasOccurred() is called) to avoid log-file chaos.
+	unsigned                              spyIteration_ = 0;
 };
 
 #endif

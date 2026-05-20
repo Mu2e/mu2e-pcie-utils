@@ -823,9 +823,21 @@ std::string mu2edev::get_driver_version()
 	return outstr;
 }  // end get_driver_version
 
-void mu2edev::spy(int chn, unsigned optsmsk)
+/// @brief Dump contents of receive buffers in a loop with various options for controlling format and behavior. Intended for debugging and development use, not for production use (can cause log-file chaos if used excessively).
+/// @param chn 
+/// @param optsmsk - bitmask of options controlling behavior and format. 
+///		Bit 0 (1) to clear screen each iteration, 
+///		bit 1 (2) to run only one iteration,
+///		bit 2 (4) to not clear screen between iterations (overrides bit 0), 
+///		bit 3 (8) to dump all 8192 bytes of each buffer instead of just first 4 qwords, 
+///		bit 4 (16) to include stack trace at end of output, 
+///		bit 28 (268435456) to force spy to run even if it has already been called once for this instance (which is usually enough and more can cause log-file chaos).
+///			spyHasOccurred_ can also be reset to force spy to trigger once again, by calling mu2edev::resetSpyHasOccurred()
+/// @param out 
+void mu2edev::spy(int chn, unsigned optsmsk, std::ostream& out /* = std::cout */)
 {
-	if (spyHasOccurred_ && !TTEST(50))  // set debug+50 to re-enable if you know what you're doing and want to see more than the first spy() call for a given instance in the logs (which is usually enough and more can cause log-file chaos)
+	if (!(optsmsk & (1<<28)) && //set bit 28 to force spy to happen 
+		spyHasOccurred_ && !TTEST(50))  // set debug+50 to re-enable if you know what you're doing and want to see more than the first spy() call for a given instance in the logs (which is usually enough and more can cause log-file chaos)
 	{
 		TLOG(TLVL_WARNING) << "spy() already executed for this mu2edev instance (" << UID_ << "); skipping to avoid log-file chaos. Call resetSpyHasOccurred() to re-enable.";
 		return;
@@ -835,43 +847,42 @@ void mu2edev::spy(int chn, unsigned optsmsk)
 	TLOG_INFO() << "spy";
 	void* buffer;
 	uint64_t* datap;
-	std::cout << "optsmsk=" << optsmsk << '\n';
-	if (!(optsmsk & 1)) std::cout << "\033[0;0H\033[J";
-	unsigned iter = 0;
-	while (++iter)
+	out << "optsmsk=" << optsmsk << '\n';
+	if (!(optsmsk & 1)) out << "\033[0;0H\033[J";
+	while (++spyIteration_)
 	{  // watch out (when using integer type) for compiler error: iteration 2147483647 invokes undefined behavior [-Werror=aggressive-loop-optimizations]
-		std::cout << "spy iteration: " << std::dec << std::setw(7) << std::setfill(' ') << iter << '\n';
+		out << "spy iteration: " << std::dec << std::setw(7) << std::setfill(' ') << spyIteration_ << '\n';
 		for (auto bufIdx = 0; bufIdx < MU2E_NUM_RECV_BUFFS;)
 		{
-			std::cout << std::dec << std::setw(3) << std::setfill(' ') << bufIdx << " ";
+			out << std::dec << std::setw(3) << std::setfill(' ') << bufIdx << " ";
 			for (auto buf = 0; buf < ((optsmsk & 8) ? 1 : 3); ++buf)
 			{
 				buffer = ((mu2e_databuff_t*)(mu2e_mmap_ptrs_[activeDeviceIndex_][chn][C2S][MU2E_MAP_BUFF]))[bufIdx++];
 				datap = (uint64_t*)buffer;
-				std::cout << "0x" << std::hex << std::setw(16) << std::setfill('0') << datap[0];
+				out << "0x" << std::hex << std::setw(16) << std::setfill('0') << datap[0];
 				for (auto dd = 1; dd < ((optsmsk & 8) ? 13 : 4); ++dd)
 				{
-					std::cout << " " << std::hex << std::setw(16) << std::setfill('0') << datap[dd];
+					out << " " << std::hex << std::setw(16) << std::setfill('0') << datap[dd];
 				}
 				if (optsmsk & 8)
 				{
 					constexpr size_t totalQwords = sizeof(mu2e_databuff_t) / sizeof(uint64_t);  // 8192
-					std::cout << " ...";
+					out << " ...";
 					for (size_t dd = totalQwords - 13; dd < totalQwords; ++dd)
 					{
-						std::cout << " " << std::hex << std::setw(16) << std::setfill('0') << datap[dd];
+						out << " " << std::hex << std::setw(16) << std::setfill('0') << datap[dd];
 					}
 				}
 				if (!(bufIdx < MU2E_NUM_RECV_BUFFS)) break;
-				if (buf < 3) std::cout << "   ";
+				if (buf < 3) out << "   ";
 			}
-			std::cout << '\n';
+			out << '\n';
 		}
 		if (optsmsk & 2) break;
 		sleep(1);  // user should control-C here :)
-		if (optsmsk & 4) std::cout << "\033[0;0H";
+		if (optsmsk & 4) out << "\033[0;0H";
 	}
 	if (optsmsk & 16)
-		std::cout << "\n\n"
-				  << otsStyleStackTrace() << std::flush;
+		out << "\n\n"
+		    << otsStyleStackTrace() << std::flush;
 }  // end spy()

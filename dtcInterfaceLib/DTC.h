@@ -341,7 +341,8 @@ class DTC : public DTC_Registers
 	std::array<uint64_t, 8> lastBufferTailQwords_{};  ///< Last up to 8 qwords of the most recently processed DMA buffer; saved at every return path for cross-buffer exception diagnostics
 	size_t              lastBufferTailCount_{0};       ///< Valid entry count in lastBufferTailQwords_
 	
-	bool                 lastDMABufferWasFull_{false};   ///< True when the last DMA buffer was completely full (dmaBytes==sizeof(mu2e_databuff_t)); used for payloadBytes/tlast calculation
+	bool                 lastDMABufferWasFull_{false};   ///< True when dmaBytes == MAX_TRANSFER_SIZE (max sub-transfer with tlast); next buffer starts a new sub-transfer with prefix
+	bool                 lastDMABufferWasMax_{false};    ///< True when dmaBytes == sizeof(mu2e_databuff_t) (buffer physically full, no tlast); next buffer is raw continuation (no prefix)
 
 	std::string			lastDMABufferIndex_{}; ///< String representation of the index of the last DMA buffer processed, for diagnostics
 	
