@@ -2975,10 +2975,16 @@ void DTCLib::DTC::ReleaseAllBuffers(const DTC_DMA_Engine& channel)
 
 		// clear (sub)event extraction members
 		lastDMABufferWasFull_ = false;
+		lastDMABufferWasMax_ = false;
 		lastBufferTailCount_ = 0;
 		hasLastGoodSubEventHeader_ = false;
 		totalEventsParsed_ = 0;
 		subEventHeaderQwsFilled_ = 0;
+		needToFinishEvent_ = false;
+		currentEventSize_ = 0;
+		subEventByteCount_ = 0;
+		extractedSubeventBytes_ = 0;
+		extractedEvents_.clear();
 	}
 	else if (channel == DTC_DMA_Engine_DCS)
 	{
