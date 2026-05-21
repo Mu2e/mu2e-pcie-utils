@@ -644,8 +644,9 @@ int mu2edev::release_all(DTC_DMA_Engine const& chn)
 			{
 				*reinterpret_cast<uint64_t*>(bufArray[bufIdx]) = 0xdeadbeefULL;
 			}
-			TRACE(TLVL_RELEASE_ALL, UID_ + " - release_all stamped 0xdeadbeef on first qword of all %d receive buffers (chn=%d)",
-				  MU2E_NUM_RECV_BUFFS, chn);
+			unsigned lastReleasedIdx = idx_add(mu2e_channel_info_[activeDeviceIndex_][chn][C2S].swIdx, -1, activeDeviceIndex_, chn, C2S);
+			TRACE(TLVL_RELEASE_ALL, UID_ + " - release_all stamped 0xdeadbeef on first qword of all %d receive buffers (chn=%d) last cleared buffer index #%02u",
+				  MU2E_NUM_RECV_BUFFS, chn, lastReleasedIdx);
 		}
 	}
 	deviceTime_ += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start).count();
@@ -850,7 +851,11 @@ void mu2edev::spy(int chn, unsigned optsmsk, std::ostream& out /* = std::cout */
 		TLOG(TLVL_WARNING) << "spy() already executed for this mu2edev instance (" << UID_ << "); skipping to avoid log-file chaos. Call resetSpyHasOccurred() to re-enable.";
 		return;
 	}
-	spyHasOccurred_ = true;
+	if((optsmsk & (1 << 28))) // if forcing spy, then do not set spyHasOccurred_ to true, so that subsequent calls to spy will still be allowed (since user is explicitly forcing spy to run multiple times via optsmsk)
+	{
+		TLOG_INFO() << "spy() is being forced to run by optsmsk bit 28, which allows multiple executions. Be careful as this can cause log-file chaos if used excessively. Call resetSpyHasOccurred() to re-enable if you know what you're doing and want to see more than the first spy() call for a given instance in the logs.";
+		spyHasOccurred_ = true;
+	}
 
 	TLOG_INFO() << "spy";
 	void* buffer;
@@ -859,7 +864,9 @@ void mu2edev::spy(int chn, unsigned optsmsk, std::ostream& out /* = std::cout */
 	if (!(optsmsk & 1)) out << "\033[0;0H\033[J";
 	while (++spyIteration_)
 	{  // watch out (when using integer type) for compiler error: iteration 2147483647 invokes undefined behavior [-Werror=aggressive-loop-optimizations]
-		out << "spy iteration: " << std::dec << std::setw(7) << std::setfill(' ') << spyIteration_ << '\n';
+		unsigned lastReleasedIdx = idx_add(mu2e_channel_info_[activeDeviceIndex_][chn][C2S].swIdx, -1, activeDeviceIndex_, chn, C2S);
+		out << "spy iteration: " << std::dec << std::setw(7) << std::setfill(' ') << spyIteration_
+			<< "  -- last released buffer index #" << std::setw(2) << std::setfill('0') << lastReleasedIdx << '\n';
 		for (auto bufIdx = 0; bufIdx < MU2E_NUM_RECV_BUFFS;)
 		{
 			out << std::dec << std::setw(3) << std::setfill(' ') << bufIdx << " ";
