@@ -851,9 +851,9 @@ void mu2edev::spy(int chn, unsigned optsmsk, std::ostream& out /* = std::cout */
 		TLOG(TLVL_WARNING) << "spy() already executed for this mu2edev instance (" << UID_ << "); skipping to avoid log-file chaos. Call resetSpyHasOccurred() to re-enable.";
 		return;
 	}
-	if ((optsmsk & (1 << 28)))  // if forcing spy, then do not set spyHasOccurred_ to true, so that subsequent calls to spy will still be allowed (since user is explicitly forcing spy to run multiple times via optsmsk)
+	if (!(optsmsk & (1 << 28)))  // only flag spy occurring if not forcing it (with bit 28)
 	{
-		TLOG_INFO() << "spy() is being forced to run by optsmsk bit 28, which allows multiple executions. Be careful as this can cause log-file chaos if used excessively. Call resetSpyHasOccurred() to re-enable if you know what you're doing and want to see more than the first spy() call for a given instance in the logs.";
+		TLOG_INFO() << "Flagging that spy() has occurred.";
 		spyHasOccurred_ = true;
 	}
 
