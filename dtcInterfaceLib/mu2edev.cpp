@@ -835,9 +835,9 @@ std::string mu2edev::get_driver_version()
 /// @brief Dump contents of receive buffers in a loop with various options for controlling format and behavior. Intended for debugging and development use, not for production use (can cause log-file chaos if used excessively).
 /// @param chn
 /// @param optsmsk - bitmask of options controlling behavior and format.
-///		Bit 0 (1) to clear screen each iteration,
+///		Bit 0 (1) to suppress the initial screen clear; when this bit is not set, the screen is cleared once before the loop starts,
 ///		bit 1 (2) to run only one iteration,
-///		bit 2 (4) to not clear screen between iterations (overrides bit 0),
+///		bit 2 (4) reserved/legacy screen-clear option (current implementation does not clear between iterations),
 ///		bit 3 (8) to dump all 8192 bytes of each buffer instead of just first 4 qwords,
 ///		bit 4 (16) to include stack trace at end of output,
 ///		bit 28 (268435456) to force spy to run even if it has already been called once for this instance (which is usually enough and more can cause log-file chaos).
