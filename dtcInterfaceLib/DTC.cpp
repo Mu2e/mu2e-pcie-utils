@@ -427,9 +427,8 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetSubEventDataAsEv
 						   << std::dec << (static_cast<int64_t>(potentialEventTransferPrefix) - 8 - static_cast<int64_t>(subEventByteCount_))
 						   << "] at dmaBufferIndex #" << bufferIndexStr(dmaBufferStartPtr) << " dmaBufferOffset=" << dmaBufferOffset
 						   << " payloadBytes=" << payloadBytes
-						   << " last EWT=" << ewtTag() < < < <
-						" eventsParsedThisTime=" << eventsParsedThisTime
-												 << " totalEventsParsed_=" << totalEventsParsed_;
+						   << " last EWT=" << ewtTag() << " eventsParsedThisTime=" << eventsParsedThisTime
+						   << " totalEventsParsed_=" << totalEventsParsed_;
 
 					__SS_THROW__;
 				}
