@@ -282,6 +282,7 @@ DTCLib::RegisterFormatter DTCLib::CFOandDTC_Registers::FormatVivadoVersion()
 void DTCLib::CFOandDTC_Registers::SoftReset()
 {
 	TLOG(TLVL_ResetDTC) << __COUT_HDR__ << "Soft Reset start";
+	device_.resetSpyHasOccurred();  // allow spy() to fire again after a reset
 	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_Control);
 	data[31] = 1;  // set Soft Reset bit
 	WriteRegister_(data.to_ulong(), CFOandDTC_Register_Control);
@@ -771,7 +772,7 @@ bool DTCLib::CFOandDTC_Registers::CFOandDTCVerifyRegisterWrite_(const CFOandDTC_
 					   << "write value 0x" << std::setw(8) << std::setfill('0') << std::setprecision(8) << std::hex << static_cast<uint32_t>(dataToWrite)
 					   << " to register 0x" << std::setw(4) << std::setfill('0') << std::setprecision(4) << std::hex << static_cast<uint32_t>(address) << "... read back 0x" << std::setw(8) << std::setfill('0') << std::setprecision(8) << std::hex << static_cast<uint32_t>(readbackValue) << std::endl
 					   << std::endl
-					   << "If you do not understand this error, try checking the DTC firmware version: " << ReadDesignDate() << std::endl;
+					   << "If you do not understand this error, try checking the firmware version: " << ReadDesignDate() << std::endl;
 				__SS_ONLY_THROW__;
 			}
 			catch (const std::runtime_error& e)

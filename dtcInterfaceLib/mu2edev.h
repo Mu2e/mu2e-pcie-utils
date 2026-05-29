@@ -85,6 +85,12 @@ class mu2edev
 	/// <returns>Byte count of data read into buffer. Negative value indicates error.</returns>
 	int read_data(DTC_DMA_Engine const& chn, void** buffer, int tmo_ms);
 	/// <summary>
+	/// Convert a DMA buffer pointer into the receive-ring slot index [0, MU2E_NUM_RECV_BUFFS) for
+	/// the active device on the given channel. Returns -1 if ptr falls outside the mmap'd region.
+	/// Useful for diagnostic prints.
+	/// </summary>
+	int GetBufferIndex(DTC_DMA_Engine const& chn, const void* ptr) const;
+	/// <summary>
 	/// Release a number of buffers held by the software on the given channel
 	/// </summary>
 	/// <param name="chn">Channel to release</param>
@@ -171,10 +177,16 @@ class mu2edev
 
 	/// <summary>
 	/// For this DTC, "spy" on C2S buffers associated with chn.
-	/// Output a small protion of each buffer to stdout until ^C.
+	/// Output a small portion of each buffer to stdout until ^C.
+	/// Only executes once per instance lifetime (or until resetSpyHasOccurred() is called) to avoid log-file chaos.
 	/// </summary>
 	/// <returns>No value is returned.</returns>
-	void spy(int chn, unsigned flags);
+	void spy(int chn, unsigned flags, std::ostream& out = std::cout);
+
+	/// <summary>
+	/// Reset the spy-has-occurred flag so that spy() will produce output again on the next call.
+	/// </summary>
+	void resetSpyHasOccurred() { spyHasOccurred_ = false; }
 
   private:
 	// unsigned delta_(int chn, int dir);
@@ -199,6 +211,8 @@ class mu2edev
 	std::string                           UID_;
 	FILE*                                 debugFp_ = 0;
 	std::chrono::steady_clock::time_point lastWriteTime_;
+	bool                                  spyHasOccurred_ = false;  ///< Limits spy() printout to a single invocation per instance lifetime (or until resetSpyHasOccurred() is called) to avoid log-file chaos.
+	unsigned                              spyIteration_   = 0;
 };
 
 #endif
