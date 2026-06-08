@@ -503,9 +503,13 @@ void CFOLib::CFO_Registers::ResetSERDES(const CFO_Link_ID& link, int interval)
 	}
 	if (loops >= 100)
 	{
-		__SS__ << "Timeout waiting for SERDES Reset loop=" << loops;
+		uint32_t resetDoneReg = ReadRegister_(CFOandDTC_Register_SERDES_ResetDone);
+		uint32_t linkEnableReg = ReadRegister_(CFOandDTC_Register_LinkEnable);
+		__SS__ << "Timeout waiting for SERDES Reset loop=" << loops
+		       << ". SERDES Reset Done mask=0x" << std::hex << (resetDoneReg & 0xFF)
+		       << ", Link Enable mask=0x" << (linkEnableReg & 0xFF) << std::dec
+		       << ". This may not be an issue if not all CFO 8 links are active.";
 		__SS_THROW__;
-		// throw DTC_IOErrorException("Timeout waiting for SERDES Reset loop.");
 	}
 }
 
