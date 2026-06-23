@@ -1283,6 +1283,18 @@ void DTCLib::DTC_Registers::SetResequenceNonNullEvents(bool enable)
 	WriteRegister_(data.to_ulong(), CFOandDTC_Register_LinkEnable);
 }
 
+bool DTCLib::DTC_Registers::ReadAutoGenDRPPerLink(DTC_Link_ID const& link, std::optional<uint32_t> val)
+{
+	std::bitset<32> dataSet = val.has_value() ? *val : ReadRegister_(CFOandDTC_Register_LinkEnable);
+	return dataSet[link + 16];
+}
+void DTCLib::DTC_Registers::SetAutoGenDRPPerLink(DTC_Link_ID const& link, bool enable)
+{
+	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_LinkEnable);
+	data[link + 16] = enable;
+	WriteRegister_(data.to_ulong(), CFOandDTC_Register_LinkEnable);
+}
+
 /// <summary>
 /// Formats the register's current value for register dumps
 /// </summary>
@@ -1312,6 +1324,11 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatLinkEnable()
 						(ReadBlockNullHeartbeatsToROC(form.value) ? "x" : ".") + "]");
 	form.vals.push_back(std::string("Resequence Non-null Events for ALL ROCs:   [") +
 						(ReadResequenceNonNullEvents(form.value) ? "x" : ".") + "]");
+	for (auto r : DTC_ROC_Links)
+	{
+		form.vals.push_back(std::string("Auto-Gen DRP Link ") + std::to_string(r) + ": [" +
+							(ReadAutoGenDRPPerLink(r, form.value) ? "x" : ".") + "]");
+	}
 	return form;
 }
 
