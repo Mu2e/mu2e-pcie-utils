@@ -501,6 +501,8 @@ class DTC_Registers : public CFOandDTC_Registers
 	void               SetBlockNullHeartbeatsToROC(bool enable);
 	bool               ReadResequenceNonNullEvents(std::optional<uint32_t> val = std::nullopt);
 	void               SetResequenceNonNullEvents(bool enable);
+	bool               ReadAutoGenDRPPerLink(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
+	void               SetAutoGenDRPPerLink(DTC_Link_ID const& link, bool enable);
 	RegisterFormatter  FormatLinkEnable();
 
 	// SERDES Reset Register
