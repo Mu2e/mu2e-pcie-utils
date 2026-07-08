@@ -164,7 +164,7 @@ enum DTC_Register : uint16_t
 	DTC_Register_CFOLink40MHzErrorCount          = 0x93D4,
 	DTC_Register_InputBufferDropCount            = 0x93D8,
 	DTC_Register_OutputBufferDropCount           = 0x93DC,
-	DTC_Register_ROCDCSTimerPreset               = 0x93E0,
+	DTC_Register_RTFHistIdelay                   = 0x93E0,
 	DTC_Register_DataRequest_Low                 = 0x93F8,
 	DTC_Register_DataRequest_High                = 0x93FC,
 	// 0x93E4 - 0x93FC Reserved
@@ -297,7 +297,7 @@ enum DTC_Register : uint16_t
 	DTC_Register_RXDataHeaderPacketCount_Link3 = 0x967C,
 	DTC_Register_RXDataHeaderPacketCount_Link4 = 0x9680,
 	DTC_Register_RXDataHeaderPacketCount_Link5 = 0x9684,
-	// 0x9688 Reserved
+	DTC_Register_CFOCDCDiag                    = 0x9688,
 	// 0x968C Reserved
 	DTC_Register_RXDataPacketCount_Link0 = 0x9690,
 	DTC_Register_RXDataPacketCount_Link1 = 0x9694,
@@ -965,10 +965,9 @@ class DTC_Registers : public CFOandDTC_Registers
 	void              ClearOutputBufferFragmentDumpCount();
 	RegisterFormatter FormatOutputBufferFragmentDumpCount();
 
-	// ROC DCS Response Timer Preset
-	uint32_t          ReadROCDCSResponseTimer(std::optional<uint32_t> val = std::nullopt);
-	void              SetROCDCSResponseTimer(uint32_t timer);
-	RegisterFormatter FormatROCDCSResponseTimerPreset();
+	// RTF Histogram and IDELAY Status Register (Read-Only)
+	uint32_t          ReadRTFHistIdelay(std::optional<uint32_t> val = std::nullopt);
+	RegisterFormatter FormatRTFHistIdelay();
 
 	// Software DataRequests
 	void               SetSoftwareDataRequest(const DTC_EventWindowTag& ts);
@@ -1123,7 +1122,7 @@ class DTC_Registers : public CFOandDTC_Registers
 
 	// Jitter Attenuator SERDES RX Recovered Clock LOS Counter
 	uint32_t          ReadJitterAttenuatorRecoveredClockLOSCount(std::optional<uint32_t> val = std::nullopt);
-	void              ClearJitterAttenuatorRecoeveredClockLOSCount();
+	void              ClearJitterAttenuatorRecoveredClockLOSCount();
 	RegisterFormatter FormatJitterAttenuatorRecoveredClockLOSCount();
 
 	// Jitter Attenuator SERDES RX External Clock LOS Counter
@@ -1163,6 +1162,10 @@ class DTC_Registers : public CFOandDTC_Registers
 	uint32_t          ReadRXDataHeaderPacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
 	RegisterFormatter FormatRXDataHeaderPacketCountLink(DTC_Link_ID const& link);
 	DTC_Register      GetRXDataHeaderPacketCountLinkRegister(DTC_Link_ID const& link);
+
+	// CFO CDC Diagnostic (Parity Mismatch & Batch Slip Counts)
+	uint32_t          ReadCFOCDCDiag(std::optional<uint32_t> val = std::nullopt);
+	RegisterFormatter FormatCFOCDCDiag();
 
 	// RX Data Packet Count
 	uint32_t          ReadRXDataPacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
@@ -1341,7 +1344,7 @@ class DTC_Registers : public CFOandDTC_Registers
 	    [this] { return this->FormatLinkMuxError(); },
 	    [this] { return this->FormatFireflyCSR(); },
 	    [this] { return this->FormatSFPControlStatus(); },
-	    // [this] { return this->FormatROCDCSResponseTimerPreset(); },
+	    [this] { return this->FormatRTFHistIdelay(); },
 	    [this] { return this->FormatSoftwareDataRequestLow(); },
 	    [this] { return this->FormatSoftwareDataRequestHigh(); },
 	    [this] { return this->FormatFPGAPROMProgramStatus(); },
@@ -1475,6 +1478,8 @@ class DTC_Registers : public CFOandDTC_Registers
 	    [this] { return this->FormatRXDataHeaderPacketCountLink(DTC_Link_3); },
 	    [this] { return this->FormatRXDataHeaderPacketCountLink(DTC_Link_4); },
 	    [this] { return this->FormatRXDataHeaderPacketCountLink(DTC_Link_5); },
+
+	    [this] { return this->FormatCFOCDCDiag(); },
 
 	    [this] { return this->FormatRXDataPacketCountLink(DTC_Link_0); },
 	    [this] { return this->FormatRXDataPacketCountLink(DTC_Link_1); },

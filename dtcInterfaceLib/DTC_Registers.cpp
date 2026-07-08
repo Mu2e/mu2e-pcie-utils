@@ -5730,27 +5730,48 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatOutputBufferFragmentDumpC
 	return form;
 }
 
-uint32_t DTCLib::DTC_Registers::ReadROCDCSResponseTimer(std::optional<uint32_t> val)
+uint32_t DTCLib::DTC_Registers::ReadRTFHistIdelay(std::optional<uint32_t> val)
 {
-	__SS__ << "The SetROCDCSResponseTimer register was removed as of December 2023 and set to a 1ms constant value in the DTC. Do not use." << __E__;
-	__SS_THROW__;
-	return val.has_value() ? *val : ReadRegister_(DTC_Register_ROCDCSTimerPreset);
+	return val.has_value() ? *val : ReadRegister_(DTC_Register_RTFHistIdelay);
 }
 
-void DTCLib::DTC_Registers::SetROCDCSResponseTimer(uint32_t timer)
+DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatRTFHistIdelay()
 {
-	__SS__ << "The SetROCDCSResponseTimer register was removed as of December 2023 and set to a 1ms constant value in the DTC. Do not use." << __E__;
-	__SS_THROW__;
-	WriteRegister_(timer, DTC_Register_ROCDCSTimerPreset);
-}
+	auto form = CreateFormatter(DTC_Register_RTFHistIdelay);
+	form.description = "RTF Histogram & IDELAY Status";
+	form.vals.push_back("([ x = 1 (hi) ])");
 
-DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatROCDCSResponseTimerPreset()
-{
-	auto form = CreateFormatter(DTC_Register_ROCDCSTimerPreset);
-	form.description = "ROC DCS Response Timer Preset (*5ns)";
-	std::stringstream o;
-	o << std::dec << ReadROCDCSResponseTimer(form.value);
-	form.vals.push_back(o.str());
+	uint32_t idelay_tap = (form.value >> 27) & 0x1F;
+	form.vals.push_back(std::string("IDELAY Tap Count Value:      [") +
+						std::to_string(idelay_tap) + "]");
+
+	form.vals.push_back(std::string("IDELAY Ready:                [") +
+						(((form.value >> 26) & 1) ? "x" : " ") + "]");
+
+	form.vals.push_back("");
+
+	form.vals.push_back("RTF Histogram Bins (3-bit counts, 0-7):");
+	for (int bin = 0; bin < 5; ++bin)
+	{
+		int shift = 11 + bin * 3;
+		uint32_t count = (form.value >> shift) & 0x7;
+		form.vals.push_back(std::string("  Bin ") + std::to_string(bin) +
+							": [" + std::to_string(count) + "]");
+	}
+
+	form.vals.push_back("");
+
+	form.vals.push_back(std::string("Histogram Saturated:         [") +
+						(((form.value >> 10) & 1) ? "x" : " ") + "]");
+
+	uint32_t sat_bin = (form.value >> 7) & 0x7;
+	form.vals.push_back(std::string("Saturated Bin:               [") +
+						std::to_string(sat_bin) + "]");
+
+	std::stringstream rs;
+	rs << "0x" << std::hex << (form.value & 0x7F);
+	form.vals.push_back(std::string("Reserved [6:0]:              [") + rs.str() + "]");
+
 	return form;
 }
 
@@ -7143,7 +7164,7 @@ uint32_t DTCLib::DTC_Registers::ReadJitterAttenuatorRecoveredClockLOSCount(std::
 {
 	return val.has_value() ? *val : ReadRegister_(DTC_Register_JitterAttenuator_SERDES_RXRecoveredClockLOSCount);
 }
-void DTCLib::DTC_Registers::ClearJitterAttenuatorRecoeveredClockLOSCount()
+void DTCLib::DTC_Registers::ClearJitterAttenuatorRecoveredClockLOSCount()
 {
 	WriteRegister_(1, DTC_Register_JitterAttenuator_SERDES_RXRecoveredClockLOSCount);
 }
@@ -7574,6 +7595,25 @@ DTCLib::DTC_Register DTCLib::DTC_Registers::GetRXDataHeaderPacketCountLinkRegist
 	return reg;
 }  // end GetRXDataHeaderPacketCountLinkRegister()
 
+// CFO CDC Diagnostic (Parity Mismatch & Batch Slip Counts)
+uint32_t DTCLib::DTC_Registers::ReadCFOCDCDiag(std::optional<uint32_t> val)
+{
+	return val.has_value() ? *val : ReadRegister_(DTC_Register_CFOCDCDiag);
+}
+
+DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatCFOCDCDiag()
+{
+	auto form = CreateFormatter(DTC_Register_CFOCDCDiag);
+	form.description = "CFO CDC Diagnostic";
+	std::stringstream o;
+	uint32_t parityMismatchCount = (form.value >> 16) & 0xFFFF;
+	uint32_t batchSlipCount = form.value & 0xFFFF;
+	o << "Parity Mismatch Count: " << std::dec << parityMismatchCount << "\n";
+	o << "Batch Slip Count:      " << std::dec << batchSlipCount;
+	form.vals.push_back(o.str());
+	return form;
+}
+
 // RX Data Packet Count
 uint32_t DTCLib::DTC_Registers::ReadRXDataPacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val)
 {
@@ -7823,6 +7863,8 @@ void DTCLib::DTC_Registers::VerifyRegisterWrite_(const CFOandDTC_Register& addre
 			case DTC_Register_RXCDRUnlockCount_CFOLink:  // write clears 32-bit CDR unlock counter, but can read back errors
 														 // immediately, so don't check
 			case DTC_Register_JitterAttenuatorLossOfLockCount:
+			case DTC_Register_JitterAttenuator_SERDES_RXRecoveredClockLOSCount:
+			case DTC_Register_JitterAttenuator_SERDES_RXExternalClockLOSCount:
 				return;
 			case DTC_Register_JitterAttenuatorCSR:  // 0x9308 bit-0 is reset, input select bit-5:4, bit-8 is LOL, bit-11:9
 													// (input LOS).. only check input select bits
