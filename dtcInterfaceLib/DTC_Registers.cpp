@@ -7605,12 +7605,10 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatCFOCDCDiag()
 {
 	auto form = CreateFormatter(DTC_Register_CFOCDCDiag);
 	form.description = "CFO CDC Diagnostic";
-	std::stringstream o;
 	uint32_t parityMismatchCount = (form.value >> 16) & 0xFFFF;
 	uint32_t batchSlipCount = form.value & 0xFFFF;
-	o << "Parity Mismatch Count: " << std::dec << parityMismatchCount << "\n";
-	o << "Batch Slip Count:      " << std::dec << batchSlipCount;
-	form.vals.push_back(o.str());
+	form.vals.push_back(std::string("Parity Mismatch Count: ") + std::to_string(parityMismatchCount));
+	form.vals.push_back(std::string("Batch Slip Count:      ") + std::to_string(batchSlipCount));
 	return form;
 }
 
