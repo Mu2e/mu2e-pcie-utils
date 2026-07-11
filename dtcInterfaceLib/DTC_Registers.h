@@ -165,9 +165,9 @@ enum DTC_Register : uint16_t
 	DTC_Register_InputBufferDropCount            = 0x93D8,
 	DTC_Register_OutputBufferDropCount           = 0x93DC,
 	DTC_Register_RTFHistIdelay                   = 0x93E0,
-	DTC_Register_DataRequest_Low                 = 0x93F8,
-	DTC_Register_DataRequest_High                = 0x93FC,
-	// 0x93E4 - 0x93FC Reserved
+	// 0x93E4 - 0x93F4 Reserved
+	DTC_Register_DataRequest_Low       = 0x93F8,
+	DTC_Register_DataRequest_High      = 0x93FC,
 	DTC_Register_FPGAProgramData       = 0x9400,
 	DTC_Register_FPGAPROMProgramStatus = 0x9404,
 	DTC_Register_FPGACoreAccess        = 0x9408,
