@@ -5318,28 +5318,70 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatRocLink5Error()
 /// Formats the register's current value for register dumps
 /// </summary>
 /// <returns>RegisterFormatter object containing register information</returns>
+uint32_t DTCLib::DTC_Registers::ReadCFOLinkErrorRegister()
+{
+	return ReadRegister_(DTC_Register_CFOLinkErrorFlags);
+}  // end ReadCFOLinkErrorRegister()
+
+/// @brief Measured CFO marker sample position at bits [18:16]
+int DTCLib::DTC_Registers::ReadCFOMeasuredMarkerPosition(std::optional<uint32_t> val)
+{
+	uint32_t value = val.has_value() ? *val : ReadRegister_(DTC_Register_CFOLinkErrorFlags);
+	return (value >> 16) & 7;
+}  // end ReadCFOMeasuredMarkerPosition()
+
+/// @brief bit 9 - Event Start marker tx error at CFO Interface
+bool DTCLib::DTC_Registers::ReadCFOEventStartMarkerTxError(std::optional<uint32_t> val)
+{
+	std::bitset<32> data = val.has_value() ? *val : ReadRegister_(DTC_Register_CFOLinkErrorFlags);
+	return data[9];
+}  // end ReadCFOEventStartMarkerTxError()
+
+/// @brief bit 10 - Clock marker tx error at CFO Interface
+bool DTCLib::DTC_Registers::ReadCFOClockMarkerTxError(std::optional<uint32_t> val)
+{
+	std::bitset<32> data = val.has_value() ? *val : ReadRegister_(DTC_Register_CFOLinkErrorFlags);
+	return data[10];
+}  // end ReadCFOClockMarkerTxError()
+
+/// @brief bit 11 - RTF 40MHz clock phase has shifted
+bool DTCLib::DTC_Registers::ReadCFORTF40MHzPhaseShiftError(std::optional<uint32_t> val)
+{
+	std::bitset<32> data = val.has_value() ? *val : ReadRegister_(DTC_Register_CFOLinkErrorFlags);
+	return data[11];
+}  // end ReadCFORTF40MHzPhaseShiftError()
+
+/// @brief bit 12 - Illegal marker timing in RTF 40MHz clock count
+bool DTCLib::DTC_Registers::ReadCFOIllegalMarkerTimingError(std::optional<uint32_t> val)
+{
+	std::bitset<32> data = val.has_value() ? *val : ReadRegister_(DTC_Register_CFOLinkErrorFlags);
+	return data[12];
+}  // end ReadCFOIllegalMarkerTimingError()
+
+/// @brief bit 13 - Moving data from CFO rx to tx clock domain has marker corruption at "external" CFO Interface
+bool DTCLib::DTC_Registers::ReadCFORxToTxDataCorruptionError(std::optional<uint32_t> val)
+{
+	std::bitset<32> data = val.has_value() ? *val : ReadRegister_(DTC_Register_CFOLinkErrorFlags);
+	return data[13];
+}  // end ReadCFORxToTxDataCorruptionError()
+
 DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatCFOLinkError()
 {
 	auto form = CreateFormatter(DTC_Register_CFOLinkErrorFlags);
 	form.description = "CFO Link Settings & Error Flags";
 	form.vals.push_back("([ x = 1 (hi) ])");  // translation
 
-	// bit 9 - Event Start marker tx error at CFO Interface
-	// bit 10 - Clock marker tx error at CFO Interface
-	// bit 11 - RTF 40MHz clock phase has shifted
-	// bit 12 - Illegal marker timing in RTF 40MHz clock count
-	// bit 13 - Moving data from CFO rx to tx clock domain has marker corruption at "external" CFO Interface
 	form.vals.push_back(std::string("CFO Event Start Marker tx Error:     [") +
-						(((form.value >> 9) & 1) ? "x" : " ") + "]");
+						(ReadCFOEventStartMarkerTxError(form.value) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("CFO Clock Marker tx Error:           [") +
-						(((form.value >> 10) & 1) ? "x" : " ") + "]");
+						(ReadCFOClockMarkerTxError(form.value) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("CFO RTF 40MHz Phase Shift Error:     [") +
-						(((form.value >> 11) & 1) ? "x" : " ") + "]");
+						(ReadCFORTF40MHzPhaseShiftError(form.value) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("CFO Illegal Marker Over Link Timing: [") +
-						(((form.value >> 12) & 1) ? "x" : " ") + "]");
+						(ReadCFOIllegalMarkerTimingError(form.value) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("CFO Rx-to-Tx Data Corruption Error:  [") +
-						(((form.value >> 13) & 1) ? "x" : " ") + "]");
-	int measuredPos = (form.value >> 16) & 7;
+						(ReadCFORxToTxDataCorruptionError(form.value) ? "x" : " ") + "]");
+	int measuredPos = ReadCFOMeasuredMarkerPosition(form.value);
 	int impliedPos = 2 - measuredPos;  // legal values are -2 -1 0 1 2 (if measured value is 4 3 2 1 0, respsectively)
 	form.vals.push_back(std::string("CFO Measured Marker position {0,4}:  [") +
 						std::to_string(measuredPos) + "] ==> " + std::to_string(impliedPos));

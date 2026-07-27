@@ -910,6 +910,13 @@ class DTC_Registers : public CFOandDTC_Registers
 	RegisterFormatter FormatRocLink5Error();
 
 	// CFO Link Error Register
+	uint32_t          ReadCFOLinkErrorRegister();
+	int               ReadCFOMeasuredMarkerPosition(std::optional<uint32_t> val = std::nullopt);   // B18:16
+	bool              ReadCFOEventStartMarkerTxError(std::optional<uint32_t> val = std::nullopt);   // B9
+	bool              ReadCFOClockMarkerTxError(std::optional<uint32_t> val = std::nullopt);        // B10
+	bool              ReadCFORTF40MHzPhaseShiftError(std::optional<uint32_t> val = std::nullopt);   // B11
+	bool              ReadCFOIllegalMarkerTimingError(std::optional<uint32_t> val = std::nullopt);  // B12
+	bool              ReadCFORxToTxDataCorruptionError(std::optional<uint32_t> val = std::nullopt); // B13
 	RegisterFormatter FormatCFOLinkError();
 
 	// Link Mux Error Register
