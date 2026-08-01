@@ -65,9 +65,9 @@ enum DTC_Register : uint16_t
 	DTC_Register_CFOEmulation_40MHzClockMarkerInterval = 0x91F4,
 	DTC_Register_CFOMarkerEnables                      = 0x91F8,
 	DTC_Register_ROCFinishThreshold                    = 0x91FC,
-	DTC_Register_EVBHighLevelCounters0 = 0x9200,  // [31:16] Self-transfer words, [15:0] ROC input words
-	DTC_Register_EVBHighLevelCounters1 = 0x9204,  // [31:16] DDR->TX words,      [15:0] DDR FIFO write words
-	DTC_Register_EVBHighLevelCounters2 = 0x9208,  // [31:16] DMA output words,   [15:0] Buffer manager output words
+	DTC_Register_EVBHighLevelCounters0                 = 0x9200,  // [31:16] Self-transfer words, [15:0] ROC input words
+	DTC_Register_EVBHighLevelCounters1                 = 0x9204,  // [31:16] DDR->TX words,      [15:0] DDR FIFO write words
+	DTC_Register_EVBHighLevelCounters2                 = 0x9208,  // [31:16] DMA output words,   [15:0] Buffer manager output words
 	// Reserved - formerly... DTC_Register_ReceiveByteCount_Link3 = 0x920C,
 	// Reserved - formerly... DTC_Register_ReceiveByteCount_Link4 = 0x9210,
 	// Reserved - formerly... DTC_Register_ReceiveByteCount_Link5 = 0x9214,
@@ -912,13 +912,13 @@ class DTC_Registers : public CFOandDTC_Registers
 
 	// CFO Link Error Register
 	uint32_t          ReadCFOLinkErrorRegister();
-	int               ReadCFOMeasuredMarkerPosition(std::optional<uint32_t> val = std::nullopt);   // B18:16
-	int               ReadCFOImpliedMarkerOffset(std::optional<uint32_t> val = std::nullopt);      // 2 - measured
-	bool              ReadCFOEventStartMarkerTxError(std::optional<uint32_t> val = std::nullopt);   // B9
-	bool              ReadCFOClockMarkerTxError(std::optional<uint32_t> val = std::nullopt);        // B10
-	bool              ReadCFORTF40MHzPhaseShiftError(std::optional<uint32_t> val = std::nullopt);   // B11
-	bool              ReadCFOIllegalMarkerTimingError(std::optional<uint32_t> val = std::nullopt);  // B12
-	bool              ReadCFORxToTxDataCorruptionError(std::optional<uint32_t> val = std::nullopt); // B13
+	int               ReadCFOMeasuredMarkerPosition(std::optional<uint32_t> val = std::nullopt);     // B18:16
+	int               ReadCFOImpliedMarkerOffset(std::optional<uint32_t> val = std::nullopt);        // 2 - measured
+	bool              ReadCFOEventStartMarkerTxError(std::optional<uint32_t> val = std::nullopt);    // B9
+	bool              ReadCFOClockMarkerTxError(std::optional<uint32_t> val = std::nullopt);         // B10
+	bool              ReadCFORTF40MHzPhaseShiftError(std::optional<uint32_t> val = std::nullopt);    // B11
+	bool              ReadCFOIllegalMarkerTimingError(std::optional<uint32_t> val = std::nullopt);   // B12
+	bool              ReadCFORxToTxDataCorruptionError(std::optional<uint32_t> val = std::nullopt);  // B13
 	RegisterFormatter FormatCFOLinkError();
 
 	// Link Mux Error Register
@@ -1177,15 +1177,15 @@ class DTC_Registers : public CFOandDTC_Registers
 	RegisterFormatter FormatCFOCDCDiag();
 
 	// EVB High Level Counters (six 16-bit word counters across 0x9200/0x9204/0x9208)
-	uint32_t ReadEVBHighLevelCounters0(std::optional<uint32_t> val = std::nullopt);           // 0x9200 raw
-	uint32_t ReadEVBHighLevelCounters1(std::optional<uint32_t> val = std::nullopt);           // 0x9204 raw
-	uint32_t ReadEVBHighLevelCounters2(std::optional<uint32_t> val = std::nullopt);           // 0x9208 raw
-	uint16_t ReadEVBROCInputWords(std::optional<uint32_t> val = std::nullopt);                // 0x9200 [15:0]
-	uint16_t ReadEVBSelfTransferWords(std::optional<uint32_t> val = std::nullopt);            // 0x9200 [31:16]
-	uint16_t ReadEVBDDRFIFOWriteWords(std::optional<uint32_t> val = std::nullopt);            // 0x9204 [15:0]
-	uint16_t ReadEVBDDRToTXWords(std::optional<uint32_t> val = std::nullopt);                 // 0x9204 [31:16]
-	uint16_t ReadEVBBufferManagerOutputWords(std::optional<uint32_t> val = std::nullopt);     // 0x9208 [15:0]
-	uint16_t ReadEVBDMAOutputWords(std::optional<uint32_t> val = std::nullopt);               // 0x9208 [31:16]
+	uint32_t ReadEVBHighLevelCounters0(std::optional<uint32_t> val = std::nullopt);        // 0x9200 raw
+	uint32_t ReadEVBHighLevelCounters1(std::optional<uint32_t> val = std::nullopt);        // 0x9204 raw
+	uint32_t ReadEVBHighLevelCounters2(std::optional<uint32_t> val = std::nullopt);        // 0x9208 raw
+	uint16_t ReadEVBROCInputWords(std::optional<uint32_t> val = std::nullopt);             // 0x9200 [15:0]
+	uint16_t ReadEVBSelfTransferWords(std::optional<uint32_t> val = std::nullopt);         // 0x9200 [31:16]
+	uint16_t ReadEVBDDRFIFOWriteWords(std::optional<uint32_t> val = std::nullopt);         // 0x9204 [15:0]
+	uint16_t ReadEVBDDRToTXWords(std::optional<uint32_t> val = std::nullopt);              // 0x9204 [31:16]
+	uint16_t ReadEVBBufferManagerOutputWords(std::optional<uint32_t> val = std::nullopt);  // 0x9208 [15:0]
+	uint16_t ReadEVBDMAOutputWords(std::optional<uint32_t> val = std::nullopt);            // 0x9208 [31:16]
 
 	// RX Data Packet Count
 	uint32_t          ReadRXDataPacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);

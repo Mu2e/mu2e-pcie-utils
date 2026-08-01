@@ -836,7 +836,7 @@ int DTCLib::DTC_Registers::ReadExternalCFOSampleEdgeMode(std::optional<uint32_t>
 int DTCLib::DTC_Registers::ToggleExternalCFOSampleEdge()
 {
 	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_Control);
-	data[5]              = !data[5];  // DTC control bit [5]: 1 for falling-edge, 0 for rising-edge
+	data[5] = !data[5];  // DTC control bit [5]: 1 for falling-edge, 0 for rising-edge
 	WriteRegister_(data.to_ulong(), CFOandDTC_Register_Control);
 	return data[5];
 }  // end ToggleExternalCFOSampleEdge()
@@ -5400,7 +5400,7 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatCFOLinkError()
 	form.vals.push_back(std::string("CFO Rx-to-Tx Data Corruption Error:  [") +
 						(ReadCFORxToTxDataCorruptionError(form.value) ? "x" : " ") + "]");
 	int measuredPos = ReadCFOMeasuredMarkerPosition(form.value);
-	int impliedPos  = ReadCFOImpliedMarkerOffset(form.value);  // legal values are -2 -1 0 1 2 (if measured value is 4 3 2 1 0, respectively)
+	int impliedPos = ReadCFOImpliedMarkerOffset(form.value);  // legal values are -2 -1 0 1 2 (if measured value is 4 3 2 1 0, respectively)
 	form.vals.push_back(std::string("CFO Measured Marker position {0,4}:  [") +
 						std::to_string(measuredPos) + "] ==> " + std::to_string(impliedPos));
 	form.vals.push_back(std::string("CFO Permanent Offset setting {-2,2}: [") +
