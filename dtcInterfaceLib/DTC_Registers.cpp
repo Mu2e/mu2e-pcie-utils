@@ -830,6 +830,17 @@ int DTCLib::DTC_Registers::ReadExternalCFOSampleEdgeMode(std::optional<uint32_t>
 	return (data[6] << 1) | data[5];
 }  // end ReadExternalCFOSampleEdgeMode()
 
+/// @brief Toggle only the CFO sample clock edge (Control Register bit 5), leaving the
+///        forced/auto select (bit 6) untouched.
+/// @return the new edge bit value: 0 = rising-edge (posedge), 1 = falling-edge (negedge)
+int DTCLib::DTC_Registers::ToggleExternalCFOSampleEdge()
+{
+	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_Control);
+	data[5]              = !data[5];  // DTC control bit [5]: 1 for falling-edge, 0 for rising-edge
+	WriteRegister_(data.to_ulong(), CFOandDTC_Register_Control);
+	return data[5];
+}  // end ToggleExternalCFOSampleEdge()
+
 void DTCLib::DTC_Registers::SetExternalFanoutClockInput()
 {
 	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_Control);
@@ -5330,6 +5341,13 @@ int DTCLib::DTC_Registers::ReadCFOMeasuredMarkerPosition(std::optional<uint32_t>
 	return (value >> 16) & 7;
 }  // end ReadCFOMeasuredMarkerPosition()
 
+/// @brief Implied CFO sample offset for the measured marker position.
+///        Legal values are -2 -1 0 1 2 (if measured value is 4 3 2 1 0, respectively).
+int DTCLib::DTC_Registers::ReadCFOImpliedMarkerOffset(std::optional<uint32_t> val)
+{
+	return 2 - ReadCFOMeasuredMarkerPosition(val);
+}  // end ReadCFOImpliedMarkerOffset()
+
 /// @brief bit 9 - Event Start marker tx error at CFO Interface
 bool DTCLib::DTC_Registers::ReadCFOEventStartMarkerTxError(std::optional<uint32_t> val)
 {
@@ -5382,7 +5400,7 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatCFOLinkError()
 	form.vals.push_back(std::string("CFO Rx-to-Tx Data Corruption Error:  [") +
 						(ReadCFORxToTxDataCorruptionError(form.value) ? "x" : " ") + "]");
 	int measuredPos = ReadCFOMeasuredMarkerPosition(form.value);
-	int impliedPos = 2 - measuredPos;  // legal values are -2 -1 0 1 2 (if measured value is 4 3 2 1 0, respsectively)
+	int impliedPos  = ReadCFOImpliedMarkerOffset(form.value);  // legal values are -2 -1 0 1 2 (if measured value is 4 3 2 1 0, respectively)
 	form.vals.push_back(std::string("CFO Measured Marker position {0,4}:  [") +
 						std::to_string(measuredPos) + "] ==> " + std::to_string(impliedPos));
 	form.vals.push_back(std::string("CFO Permanent Offset setting {-2,2}: [") +
@@ -7653,6 +7671,58 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatCFOCDCDiag()
 	form.vals.push_back(std::string("Batch Slip Count:      ") + std::to_string(batchSlipCount));
 	return form;
 }
+
+// EVB High Level Counters (0x9200/0x9204/0x9208), each holding two 16-bit word counters
+uint32_t DTCLib::DTC_Registers::ReadEVBHighLevelCounters0(std::optional<uint32_t> val)
+{
+	return val.has_value() ? *val : ReadRegister_(DTC_Register_EVBHighLevelCounters0);
+}  // end ReadEVBHighLevelCounters0()
+
+uint32_t DTCLib::DTC_Registers::ReadEVBHighLevelCounters1(std::optional<uint32_t> val)
+{
+	return val.has_value() ? *val : ReadRegister_(DTC_Register_EVBHighLevelCounters1);
+}  // end ReadEVBHighLevelCounters1()
+
+uint32_t DTCLib::DTC_Registers::ReadEVBHighLevelCounters2(std::optional<uint32_t> val)
+{
+	return val.has_value() ? *val : ReadRegister_(DTC_Register_EVBHighLevelCounters2);
+}  // end ReadEVBHighLevelCounters2()
+
+/// @brief 0x9200 [15:0] - ROC input words
+uint16_t DTCLib::DTC_Registers::ReadEVBROCInputWords(std::optional<uint32_t> val)
+{
+	return ReadEVBHighLevelCounters0(val) & 0xFFFF;
+}  // end ReadEVBROCInputWords()
+
+/// @brief 0x9200 [31:16] - Self-transfer words
+uint16_t DTCLib::DTC_Registers::ReadEVBSelfTransferWords(std::optional<uint32_t> val)
+{
+	return (ReadEVBHighLevelCounters0(val) >> 16) & 0xFFFF;
+}  // end ReadEVBSelfTransferWords()
+
+/// @brief 0x9204 [15:0] - DDR FIFO write words
+uint16_t DTCLib::DTC_Registers::ReadEVBDDRFIFOWriteWords(std::optional<uint32_t> val)
+{
+	return ReadEVBHighLevelCounters1(val) & 0xFFFF;
+}  // end ReadEVBDDRFIFOWriteWords()
+
+/// @brief 0x9204 [31:16] - DDR->TX words
+uint16_t DTCLib::DTC_Registers::ReadEVBDDRToTXWords(std::optional<uint32_t> val)
+{
+	return (ReadEVBHighLevelCounters1(val) >> 16) & 0xFFFF;
+}  // end ReadEVBDDRToTXWords()
+
+/// @brief 0x9208 [15:0] - Buffer manager output words
+uint16_t DTCLib::DTC_Registers::ReadEVBBufferManagerOutputWords(std::optional<uint32_t> val)
+{
+	return ReadEVBHighLevelCounters2(val) & 0xFFFF;
+}  // end ReadEVBBufferManagerOutputWords()
+
+/// @brief 0x9208 [31:16] - DMA output words
+uint16_t DTCLib::DTC_Registers::ReadEVBDMAOutputWords(std::optional<uint32_t> val)
+{
+	return (ReadEVBHighLevelCounters2(val) >> 16) & 0xFFFF;
+}  // end ReadEVBDMAOutputWords()
 
 // RX Data Packet Count
 uint32_t DTCLib::DTC_Registers::ReadRXDataPacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val)
