@@ -292,10 +292,22 @@ std::string collectMetrics(DTCLib::DTC_Registers& dtc, int dtcId)
 	return oss.str();
 }
 
+// Sends all bytes in buf to fd, retrying on short writes.
+void writeAll(int fd, const char* buf, size_t len)
+{
+	while (len > 0)
+	{
+		const ssize_t n = send(fd, buf, len, MSG_NOSIGNAL);
+		if (n <= 0) break;
+		buf += n;
+		len -= static_cast<size_t>(n);
+	}
+}
+
 void handleRequest(int clientFd, DTCLib::DTC_Registers& dtc, int dtcId)
 {
 	char buf[4096] = {};
-	if (read(clientFd, buf, sizeof(buf) - 1) < 0)
+	if (read(clientFd, buf, sizeof(buf) - 1) <= 0)
 	{
 		close(clientFd);
 		return;
@@ -306,27 +318,31 @@ void handleRequest(int clientFd, DTCLib::DTC_Registers& dtc, int dtcId)
 
 	std::string body;
 	std::string statusLine;
+	std::string contentType;
 
 	if (isMetrics)
 	{
 		body = collectMetrics(dtc, dtcId);
 		statusLine = "HTTP/1.1 200 OK\r\n";
+		contentType = "text/plain; version=0.0.4; charset=utf-8";
 	}
 	else
 	{
 		body = "Not Found. Use /metrics\n";
 		statusLine = "HTTP/1.1 404 Not Found\r\n";
+		contentType = "text/plain; charset=utf-8";
 	}
 
 	const std::string response = statusLine +
-								 "Content-Type: text/plain; version=0.0.4; charset=utf-8\r\n"
+								 "Content-Type: " + contentType +
+								 "\r\n"
 								 "Content-Length: " +
 								 std::to_string(body.size()) +
 								 "\r\n"
 								 "Connection: close\r\n\r\n" +
 								 body;
 
-	write(clientFd, response.c_str(), response.size());
+	writeAll(clientFd, response.c_str(), response.size());
 	close(clientFd);
 }
 }  // namespace
@@ -337,6 +353,7 @@ void printHelpMsg()
 			  << "Options:\n"
 			  << "    -h: This message.\n"
 			  << "    -d: DTC instance to use (defaults to DTCLIB_DTC env var if set, 0 otherwise)\n"
+			  << "    -m: Use <file> as the emulated DTC memory area (default: mu2esim.bin)\n"
 			  << "    -p: TCP port to listen on (default: 9100)\n";
 	exit(0);
 }
@@ -358,6 +375,9 @@ int main(int argc, char* argv[])
 					break;
 				case 'd':
 					dtcId = DTCLib::Utilities::getOptionValue(&optind, &argv);
+					break;
+				case 'm':
+					memFileName = DTCLib::Utilities::getOptionString(&optind, &argv);
 					break;
 				case 'p':
 					port = static_cast<uint16_t>(DTCLib::Utilities::getOptionValue(&optind, &argv));
@@ -383,7 +403,10 @@ int main(int argc, char* argv[])
 	}
 
 	const int opt = 1;
-	setsockopt(serverFd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+	if (setsockopt(serverFd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
+	{
+		std::cerr << "Warning: setsockopt SO_REUSEADDR failed: " << strerror(errno) << "\n";
+	}
 
 	sockaddr_in addr{};
 	addr.sin_family = AF_INET;
