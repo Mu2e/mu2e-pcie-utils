@@ -447,15 +447,15 @@ class DTC_Registers : public CFOandDTC_Registers
 	// bool ReadPunchEnable(std::optional<uint32_t> val = std::nullopt);                     // B9 implemented for CFO and DTC
 	// void ResetSERDES();                       // B8 implemented for CFO and DTC
 	// bool ReadResetSERDES(std::optional<uint32_t> val = std::nullopt);                   // B8 implemented for CFO and DTC
-	void SetExternalCFOSampleEdgeMode(int forceCFOedge);                    // B6:5
-	int  ReadExternalCFOSampleEdgeMode(std::optional<uint32_t> val);        // B6:5
-	int  ToggleExternalCFOSampleEdge();                                     // B5 only
-	void SetRTFPunchedClockEdge(bool posedge);                              // B7
-	bool ReadRTFPunchedClockEdge(std::optional<uint32_t> val = std::nullopt); // B7
-	int  ToggleRTFPunchedClockEdge();                                       // B7
-	void SetExternalFanoutClockInput();                                     // B4
-	void SetInternalFanoutClockInput();                                     // B4
-	bool ReadFanoutClockInput(std::optional<uint32_t> val = std::nullopt);  // B4
+	void SetExternalCFOSampleEdgeMode(int forceCFOedge);                       // B6:5
+	int  ReadExternalCFOSampleEdgeMode(std::optional<uint32_t> val);           // B6:5
+	int  ToggleExternalCFOSampleEdge();                                        // B5 only
+	void SetRTFPunchedClockEdge(bool posedge);                                 // B7
+	bool ReadRTFPunchedClockEdge(std::optional<uint32_t> val = std::nullopt);  // B7
+	int  ToggleRTFPunchedClockEdge();                                          // B7
+	void SetExternalFanoutClockInput();                                        // B4
+	void SetInternalFanoutClockInput();                                        // B4
+	bool ReadFanoutClockInput(std::optional<uint32_t> val = std::nullopt);     // B4
 	// void RunCFOEmulatorLoopbackTest();   // B3 implemented for CFO and DTC
 	void EnableDCSReception();                                          // B2
 	void DisableDCSReception();                                         // B2
