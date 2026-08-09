@@ -504,17 +504,15 @@ bool DTCLib::DTC_Registers::ReadKillTimeoutROCs(std::optional<uint32_t> val)
 void DTCLib::DTC_Registers::ResetPCIe()
 {
 	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_Control);
-	data[21] = 1;
-	data[20] = 1;
+	// data[21] = 1;  // no longer connected in firmware
+	// data[20] = 1;  // no longer connected in firmware
 	data[11] = 1;
-	data[7] = 1;
 	WriteRegister_(data.to_ulong(), CFOandDTC_Register_Control);
 	usleep(1000);
 	data = ReadRegister_(CFOandDTC_Register_Control);
-	data[21] = 0;
-	data[20] = 0;
+	// data[21] = 0;
+	// data[20] = 0;
 	data[11] = 0;
-	data[7] = 0;
 	WriteRegister_(data.to_ulong(), CFOandDTC_Register_Control);
 
 	// Note the DTC instance likely needs to be reinitialized on a firmware-DMA reset to realign pointers:
@@ -841,6 +839,28 @@ int DTCLib::DTC_Registers::ToggleExternalCFOSampleEdge()
 	return data[5];
 }  // end ToggleExternalCFOSampleEdge()
 
+void DTCLib::DTC_Registers::SetRTFPunchedClockEdge(bool posedge)
+{
+	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_Control);
+	data[7] = posedge ? 1 : 0;
+	WriteRegister_(data.to_ulong(), CFOandDTC_Register_Control);
+}
+
+bool DTCLib::DTC_Registers::ReadRTFPunchedClockEdge(std::optional<uint32_t> val)
+{
+	std::bitset<32> data = val.has_value() ? *val : ReadRegister_(CFOandDTC_Register_Control);
+	return data[7];
+}
+
+/// @return the new edge bit value: 0 = negedge, 1 = posedge
+int DTCLib::DTC_Registers::ToggleRTFPunchedClockEdge()
+{
+	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_Control);
+	data[7] = !data[7];
+	WriteRegister_(data.to_ulong(), CFOandDTC_Register_Control);
+	return data[7];
+}
+
 void DTCLib::DTC_Registers::SetExternalFanoutClockInput()
 {
 	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_Control);
@@ -925,7 +945,7 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDTCControl()
 	// 10	RW	0b0	Drop Subevent Data to Emulate Hardware Event Building Reserved (Formerly Sequence Number Disable)
 	// 9	RW	0b0	Punch Enable on RJ-45 Output
 	// 8	RW	0b0	SERDES Global Reset
-	// 7	RW	0b0	Reserved (Formerly Global Buffer Reset)
+	// 7	RW	0b0	RTF Punched Clock Edge Select (0=negedge, 1=posedge)
 	// 6	RW	0b0	Do Force External CFO Sample Edge (Formerly RX Packet Error Feedback Enable)
 	// 5	RW	0b0	Force External CFO Sample Edge Select (Formerly Comma Tolerance Enable)
 	// 4	RW	0b0	Fanout Clock Input Select
@@ -958,6 +978,7 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDTCControl()
 
 	form.vals.push_back(std::string("Bit-09 Punched Clock Enable:                 [") + (CFOandDTC_Registers::ReadPunchEnable(form.value) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("Bit-08 SERDES Global Reset:                  [") + (CFOandDTC_Registers::ReadResetSERDES(form.value) ? "x" : " ") + "]");
+	form.vals.push_back(std::string("Bit-07 RTF Punched Clock Edge Select:        [") + (ReadRTFPunchedClockEdge(form.value) ? "posedge" : "negedge") + "]");
 
 	form.vals.push_back(std::string("Bit-06 Enable CFO-RTF Offset Control:        [") + (((ReadExternalCFOSampleEdgeMode(form.value) >> 1) & 1) ? "x" : " ") + "]");
 	form.vals.push_back(std::string("Bit-05 CFO-RTF Edge Select:                  [") + ((ReadExternalCFOSampleEdgeMode(form.value) & 1) ? "x" : " ") + "]");
