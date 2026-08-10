@@ -239,7 +239,7 @@ class CFOandDTC_Registers
 	RegisterFormatter FormatFPGAAlarms();
 
 	// Time Alive Register
-	RegisterFormatter FormatDeviceTimeAlive();
+	virtual RegisterFormatter FormatDeviceTimeAlive();
 
 	// Scratch Register (Device Hash)
 	RegisterFormatter FormatDeviceHash();
