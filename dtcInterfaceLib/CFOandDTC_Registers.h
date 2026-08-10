@@ -239,7 +239,7 @@ class CFOandDTC_Registers
 	RegisterFormatter FormatFPGAAlarms();
 
 	// Time Alive Register
-	RegisterFormatter FormatDeviceTimeAlive();
+	virtual RegisterFormatter FormatDeviceTimeAlive();
 
 	// Scratch Register (Device Hash)
 	RegisterFormatter FormatDeviceHash();
@@ -255,7 +255,7 @@ class CFOandDTC_Registers
 	void RunCableDelayLoopbackTest();                                  // B3
 	void HardReset();                                                  // B0
 	bool ReadHardReset(std::optional<uint32_t> val = std::nullopt);    // B0
-	void ClearControlRegister();                                       // 32-bit clear
+	void ClearControlRegister(uint32_t keepMask = 0);                  // 32-bit clear; bits set in keepMask are preserved
 
 	// Jitter Attenuator CSR Register
 	virtual std::bitset<2>    ReadJitterAttenuatorSelect(std::optional<uint32_t> val = std::nullopt)   = 0;  // pure virtual

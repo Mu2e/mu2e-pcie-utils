@@ -395,9 +395,15 @@ bool DTCLib::CFOandDTC_Registers::ReadHardReset(std::optional<uint32_t> val)
 /// <summary>
 /// Clear the Control Register
 /// </summary>
-void DTCLib::CFOandDTC_Registers::ClearControlRegister()
+/// @brief Clear the Control Register, optionally preserving select bits.
+/// @param keepMask bits set here retain their current value; all other bits are cleared to 0.
+///        Default (0) clears the entire register, matching legacy behavior.
+void DTCLib::CFOandDTC_Registers::ClearControlRegister(uint32_t keepMask)
 {
-	WriteRegister_(0, CFOandDTC_Register_Control);
+	// bits set in keepMask keep their current value across the clear (read-modify-write);
+	// with keepMask==0 this reduces to writing all zeros
+	uint32_t preserved = keepMask ? (ReadRegister_(CFOandDTC_Register_Control) & keepMask) : 0;
+	WriteRegister_(preserved, CFOandDTC_Register_Control);
 }
 
 /// <summary>
