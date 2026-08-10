@@ -1,7 +1,7 @@
 #ifndef DTC_REGISTERS_H
 #define DTC_REGISTERS_H
 
-#include <bitset> // std::bitset
+#include <bitset>  // std::bitset
 // #include <cstdint> // uint8_t, uint16_t
 #include <functional>  // std::bind, std::function
 #include <vector>      // std::vector
