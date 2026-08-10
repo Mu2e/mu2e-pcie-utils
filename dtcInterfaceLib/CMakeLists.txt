@@ -33,6 +33,8 @@ cet_make_exec(NAME mu2eRequestSender SOURCE requestSender.cc LIBRARIES mu2e-pcie
 
 cet_make_exec(NAME DTCRegDump SOURCE dtcRegDump.cc LIBRARIES mu2e-pcie-utils::DTCInterface)
 
+cet_make_exec(NAME dtcPrometheusExporter SOURCE dtcPrometheusExporter.cc LIBRARIES mu2e-pcie-utils::DTCInterface mu2e-pcie-utils::CFOInterface)
+
 cet_make_exec(NAME my_cntl SOURCE my_cntl.cc LIBRARIES mu2e-pcie-utils::DTCInterface)
 cet_make_exec(NAME rick_clock_test SOURCE rick_clock_test.cc LIBRARIES mu2e-pcie-utils::DTCInterface)
 
