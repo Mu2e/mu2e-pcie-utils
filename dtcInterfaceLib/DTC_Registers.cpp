@@ -7732,6 +7732,11 @@ uint32_t DTCLib::DTC_Registers::ReadEVBHighLevelCounters2(std::optional<uint32_t
 	return val.has_value() ? *val : ReadRegister_(DTC_Register_EVBHighLevelCounters2);
 }  // end ReadEVBHighLevelCounters2()
 
+uint32_t DTCLib::DTC_Registers::ReadEVBHighLevelCounters3(std::optional<uint32_t> val)
+{
+	return val.has_value() ? *val : ReadRegister_(DTC_Register_EVBHighLevelCounters3);
+}  // end ReadEVBHighLevelCounters3()
+
 /// @brief 0x9200 [15:0] - ROC input words
 uint16_t DTCLib::DTC_Registers::ReadEVBROCInputWords(std::optional<uint32_t> val)
 {
@@ -7767,6 +7772,12 @@ uint16_t DTCLib::DTC_Registers::ReadEVBDMAOutputWords(std::optional<uint32_t> va
 {
 	return (ReadEVBHighLevelCounters2(val) >> 16) & 0xFFFF;
 }  // end ReadEVBDMAOutputWords()
+
+/// @brief 0x920C [15:0] - GBE RX words
+uint16_t DTCLib::DTC_Registers::ReadEVBGBERXWords(std::optional<uint32_t> val)
+{
+	return ReadEVBHighLevelCounters3(val) & 0xFFFF;
+}  // end ReadEVBGBERXWords()
 
 // RX Data Packet Count
 uint32_t DTCLib::DTC_Registers::ReadRXDataPacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val)
