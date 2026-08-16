@@ -2587,6 +2587,15 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 				case DTC_EVBStatsType_TxLastSequenceTag:
 					o << "Last Transmitted Sequence Tag:         ";
 					break;
+				case DTC_EVBStatsType_TravelTime:
+					o << "Travel Time [switch clocks]:           ";
+					break;
+				case DTC_EVBStatsType_TxIdleCount:
+					o << "TX Idle Packet Count:                  ";
+					break;
+				case DTC_EVBStatsType_RxIdleCount:
+					o << "RX Idle Packet Count:                  ";
+					break;
 				default:
 					__SS__ << "Invalid DTC EVB Stat type: " << t << __E__;
 					__SS_THROW__;
