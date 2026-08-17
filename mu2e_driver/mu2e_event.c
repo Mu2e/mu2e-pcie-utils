@@ -21,6 +21,22 @@
 
 #define PACKET_POLL_HZ 1000
 
+/* https://github.com/Xilinx/dma_ip_drivers/pull/392
+ * from_timer() was renamed to timer_container_of() in upstream v6.16
+ * (commit 41cb08555c41), and backported by Red Hat into RHEL 9.8
+ * (RHEL-115039) and RHEL 10.1 (RHEL-114125).
+ */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 16, 0)
+  #define HAVE_TIMER_CONTAINER_OF
+#elif defined(RHEL_RELEASE_CODE)
+  #if (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(9, 8) &&  \
+       RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(10, 0)) || \
+      (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(10, 1))
+    #define HAVE_TIMER_CONTAINER_OF
+  #endif
+#elif
+#endif
+
 /// <summary>
 /// Data for retrieving DTC ID from timer list
 /// </summary>
@@ -87,9 +103,7 @@ static void poll_packets(struct timer_list *t)
 #endif
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
 	int dtc = (int)dc;
-#elif (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(9, 8) &&  \
-	 RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(10, 0)) || \
-	(RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(10, 1))
+#elif defined(HAVE_TIMER_CONTAINER_OF)
 	struct timer_data *tt = timer_container_of(tt, t, timer);
 	int dtc = tt->dtc;  // FIXME: from_timer(, t, );
 #else
