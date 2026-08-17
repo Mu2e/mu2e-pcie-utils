@@ -1,7 +1,7 @@
 #ifndef DTC_REGISTERS_H
 #define DTC_REGISTERS_H
 
-// #include <bitset> // std::bitset
+#include <bitset>  // std::bitset
 // #include <cstdint> // uint8_t, uint16_t
 #include <functional>  // std::bind, std::function
 #include <vector>      // std::vector
@@ -65,9 +65,9 @@ enum DTC_Register : uint16_t
 	DTC_Register_CFOEmulation_40MHzClockMarkerInterval = 0x91F4,
 	DTC_Register_CFOMarkerEnables                      = 0x91F8,
 	DTC_Register_ROCFinishThreshold                    = 0x91FC,
-	// Reserved - formerly... DTC_Register_ReceiveByteCount_Link0 = 0x9200,
-	// Reserved - formerly... DTC_Register_ReceiveByteCount_Link1 = 0x9204,
-	// Reserved - formerly... DTC_Register_ReceiveByteCount_Link2 = 0x9208,
+	DTC_Register_EVBHighLevelCounters0                 = 0x9200,  // [31:16] Self-transfer words, [15:0] ROC input words
+	DTC_Register_EVBHighLevelCounters1                 = 0x9204,  // [31:16] DDR->TX words,      [15:0] DDR FIFO write words
+	DTC_Register_EVBHighLevelCounters2                 = 0x9208,  // [31:16] DMA output words,   [15:0] Buffer manager output words
 	// Reserved - formerly... DTC_Register_ReceiveByteCount_Link3 = 0x920C,
 	// Reserved - formerly... DTC_Register_ReceiveByteCount_Link4 = 0x9210,
 	// Reserved - formerly... DTC_Register_ReceiveByteCount_Link5 = 0x9214,
@@ -164,10 +164,10 @@ enum DTC_Register : uint16_t
 	DTC_Register_CFOLink40MHzErrorCount          = 0x93D4,
 	DTC_Register_InputBufferDropCount            = 0x93D8,
 	DTC_Register_OutputBufferDropCount           = 0x93DC,
-	DTC_Register_ROCDCSTimerPreset               = 0x93E0,
-	DTC_Register_DataRequest_Low                 = 0x93F8,
-	DTC_Register_DataRequest_High                = 0x93FC,
-	// 0x93E4 - 0x93FC Reserved
+	DTC_Register_RTFHistIdelay                   = 0x93E0,
+	// 0x93E4 - 0x93F4 Reserved
+	DTC_Register_DataRequest_Low       = 0x93F8,
+	DTC_Register_DataRequest_High      = 0x93FC,
 	DTC_Register_FPGAProgramData       = 0x9400,
 	DTC_Register_FPGAPROMProgramStatus = 0x9404,
 	DTC_Register_FPGACoreAccess        = 0x9408,
@@ -297,7 +297,7 @@ enum DTC_Register : uint16_t
 	DTC_Register_RXDataHeaderPacketCount_Link3 = 0x967C,
 	DTC_Register_RXDataHeaderPacketCount_Link4 = 0x9680,
 	DTC_Register_RXDataHeaderPacketCount_Link5 = 0x9684,
-	// 0x9688 Reserved
+	DTC_Register_CFOCDCDiag                    = 0x9688,
 	// 0x968C Reserved
 	DTC_Register_RXDataPacketCount_Link0 = 0x9690,
 	DTC_Register_RXDataPacketCount_Link1 = 0x9694,
@@ -447,11 +447,15 @@ class DTC_Registers : public CFOandDTC_Registers
 	// bool ReadPunchEnable(std::optional<uint32_t> val = std::nullopt);                     // B9 implemented for CFO and DTC
 	// void ResetSERDES();                       // B8 implemented for CFO and DTC
 	// bool ReadResetSERDES(std::optional<uint32_t> val = std::nullopt);                   // B8 implemented for CFO and DTC
-	void SetExternalCFOSampleEdgeMode(int forceCFOedge);                    // B6:5
-	int  ReadExternalCFOSampleEdgeMode(std::optional<uint32_t> val);        // B6:5
-	void SetExternalFanoutClockInput();                                     // B4
-	void SetInternalFanoutClockInput();                                     // B4
-	bool ReadFanoutClockInput(std::optional<uint32_t> val = std::nullopt);  // B4
+	void SetExternalCFOSampleEdgeMode(int forceCFOedge);                       // B6:5
+	int  ReadExternalCFOSampleEdgeMode(std::optional<uint32_t> val);           // B6:5
+	int  ToggleExternalCFOSampleEdge();                                        // B5 only
+	void SetRTFPunchedClockEdge(bool posedge);                                 // B7
+	bool ReadRTFPunchedClockEdge(std::optional<uint32_t> val = std::nullopt);  // B7
+	int  ToggleRTFPunchedClockEdge();                                          // B7
+	void SetExternalFanoutClockInput();                                        // B4
+	void SetInternalFanoutClockInput();                                        // B4
+	bool ReadFanoutClockInput(std::optional<uint32_t> val = std::nullopt);     // B4
 	// void RunCFOEmulatorLoopbackTest();   // B3 implemented for CFO and DTC
 	void EnableDCSReception();                                          // B2
 	void DisableDCSReception();                                         // B2
@@ -910,6 +914,14 @@ class DTC_Registers : public CFOandDTC_Registers
 	RegisterFormatter FormatRocLink5Error();
 
 	// CFO Link Error Register
+	uint32_t          ReadCFOLinkErrorRegister();
+	int               ReadCFOMeasuredMarkerPosition(std::optional<uint32_t> val = std::nullopt);     // B18:16
+	int               ReadCFOImpliedMarkerOffset(std::optional<uint32_t> val = std::nullopt);        // 2 - measured
+	bool              ReadCFOEventStartMarkerTxError(std::optional<uint32_t> val = std::nullopt);    // B9
+	bool              ReadCFOClockMarkerTxError(std::optional<uint32_t> val = std::nullopt);         // B10
+	bool              ReadCFORTF40MHzPhaseShiftError(std::optional<uint32_t> val = std::nullopt);    // B11
+	bool              ReadCFOIllegalMarkerTimingError(std::optional<uint32_t> val = std::nullopt);   // B12
+	bool              ReadCFORxToTxDataCorruptionError(std::optional<uint32_t> val = std::nullopt);  // B13
 	RegisterFormatter FormatCFOLinkError();
 
 	// Link Mux Error Register
@@ -965,10 +977,9 @@ class DTC_Registers : public CFOandDTC_Registers
 	void              ClearOutputBufferFragmentDumpCount();
 	RegisterFormatter FormatOutputBufferFragmentDumpCount();
 
-	// ROC DCS Response Timer Preset
-	uint32_t          ReadROCDCSResponseTimer(std::optional<uint32_t> val = std::nullopt);
-	void              SetROCDCSResponseTimer(uint32_t timer);
-	RegisterFormatter FormatROCDCSResponseTimerPreset();
+	// RTF Histogram and IDELAY Status Register (Read-Only)
+	uint32_t          ReadRTFHistIdelay(std::optional<uint32_t> val = std::nullopt);
+	RegisterFormatter FormatRTFHistIdelay();
 
 	// Software DataRequests
 	void               SetSoftwareDataRequest(const DTC_EventWindowTag& ts);
@@ -1123,7 +1134,7 @@ class DTC_Registers : public CFOandDTC_Registers
 
 	// Jitter Attenuator SERDES RX Recovered Clock LOS Counter
 	uint32_t          ReadJitterAttenuatorRecoveredClockLOSCount(std::optional<uint32_t> val = std::nullopt);
-	void              ClearJitterAttenuatorRecoeveredClockLOSCount();
+	void              ClearJitterAttenuatorRecoveredClockLOSCount();
 	RegisterFormatter FormatJitterAttenuatorRecoveredClockLOSCount();
 
 	// Jitter Attenuator SERDES RX External Clock LOS Counter
@@ -1163,6 +1174,25 @@ class DTC_Registers : public CFOandDTC_Registers
 	uint32_t          ReadRXDataHeaderPacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
 	RegisterFormatter FormatRXDataHeaderPacketCountLink(DTC_Link_ID const& link);
 	DTC_Register      GetRXDataHeaderPacketCountLinkRegister(DTC_Link_ID const& link);
+
+	// CFO CDC Diagnostic (Parity Mismatch & Batch Slip Counts)
+	uint32_t          ReadCFOCDCDiag(std::optional<uint32_t> val = std::nullopt);
+	RegisterFormatter FormatCFOCDCDiag();
+
+	// Time Alive Register (override to append EVB firmware version)
+	RegisterFormatter FormatDeviceTimeAlive() override;
+
+	// EVB Firmware Version and High Level Counters (0x9200/0x9204/0x9208)
+	std::string ReadEVBFirmwareVersion(std::optional<uint32_t> val = std::nullopt);           // 0x9200 [15:0] as "Bx.yy"
+	uint32_t    ReadEVBHighLevelCounters0(std::optional<uint32_t> val = std::nullopt);        // 0x9200 raw
+	uint32_t    ReadEVBHighLevelCounters1(std::optional<uint32_t> val = std::nullopt);        // 0x9204 raw
+	uint32_t    ReadEVBHighLevelCounters2(std::optional<uint32_t> val = std::nullopt);        // 0x9208 raw
+	uint16_t    ReadEVBROCInputWords(std::optional<uint32_t> val = std::nullopt);             // 0x9200 [15:0]
+	uint16_t    ReadEVBSelfTransferWords(std::optional<uint32_t> val = std::nullopt);         // 0x9200 [31:16]
+	uint16_t    ReadEVBDDRFIFOWriteWords(std::optional<uint32_t> val = std::nullopt);         // 0x9204 [15:0]
+	uint16_t    ReadEVBDDRToTXWords(std::optional<uint32_t> val = std::nullopt);              // 0x9204 [31:16]
+	uint16_t    ReadEVBBufferManagerOutputWords(std::optional<uint32_t> val = std::nullopt);  // 0x9208 [15:0]
+	uint16_t    ReadEVBDMAOutputWords(std::optional<uint32_t> val = std::nullopt);            // 0x9208 [31:16]
 
 	// RX Data Packet Count
 	uint32_t          ReadRXDataPacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
@@ -1341,7 +1371,7 @@ class DTC_Registers : public CFOandDTC_Registers
 	    [this] { return this->FormatLinkMuxError(); },
 	    [this] { return this->FormatFireflyCSR(); },
 	    [this] { return this->FormatSFPControlStatus(); },
-	    // [this] { return this->FormatROCDCSResponseTimerPreset(); },
+	    [this] { return this->FormatRTFHistIdelay(); },
 	    [this] { return this->FormatSoftwareDataRequestLow(); },
 	    [this] { return this->FormatSoftwareDataRequestHigh(); },
 	    [this] { return this->FormatFPGAPROMProgramStatus(); },
@@ -1475,6 +1505,8 @@ class DTC_Registers : public CFOandDTC_Registers
 	    [this] { return this->FormatRXDataHeaderPacketCountLink(DTC_Link_3); },
 	    [this] { return this->FormatRXDataHeaderPacketCountLink(DTC_Link_4); },
 	    [this] { return this->FormatRXDataHeaderPacketCountLink(DTC_Link_5); },
+
+	    [this] { return this->FormatCFOCDCDiag(); },
 
 	    [this] { return this->FormatRXDataPacketCountLink(DTC_Link_0); },
 	    [this] { return this->FormatRXDataPacketCountLink(DTC_Link_1); },
