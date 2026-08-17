@@ -87,6 +87,11 @@ static void poll_packets(struct timer_list *t)
 #endif
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
 	int dtc = (int)dc;
+#elif (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(9, 8) &&  \
+	 RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(10, 0)) || \
+	(RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(10, 1))
+	struct timer_data *tt = timer_container_of(tt, t, timer);
+	int dtc = tt->dtc;  // FIXME: from_timer(, t, );
 #else
 	struct timer_data *tt = from_timer(tt, t, timer);
 	int dtc = tt->dtc;  // FIXME: from_timer(, t, );
