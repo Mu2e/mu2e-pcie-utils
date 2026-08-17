@@ -81,9 +81,11 @@ if(${CANVAS_ROOT_IO_FOUND})
 endif()
 
 find_package(SWIG)
-if(${SWIG_FOUND})
-	set(BUILD_PYTHON_INTERFACE TRUE)
+if(DEFINED $ENV{BUILD_PYTHON_INTERFACE})
+if (${SWIG_FOUND})
+        set(BUILD_PYTHON_INTERFACE TRUE)
 	include(${SWIG_USE_FILE})
+endif()
 endif()
 
 # source
