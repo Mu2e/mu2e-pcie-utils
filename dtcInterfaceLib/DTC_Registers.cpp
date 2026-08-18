@@ -7721,9 +7721,23 @@ std::string DTCLib::DTC_Registers::ReadEVBFirmwareVersion(std::optional<uint32_t
 DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDeviceTimeAlive()
 {
 	auto form = CFOandDTC_Registers::FormatDeviceTimeAlive();
-	std::string evbVer = ReadEVBFirmwareVersion();
-	if (!evbVer.empty() && evbVer[0] != '0')  // '0' type nibble means not an EVB firmware
-		form.vals.back() += ", EVB " + evbVer;
+	uint16_t evbRaw = ReadEVBROCInputWords();
+	uint8_t typeNibble = (evbRaw >> 12) & 0xF;
+	if (typeNibble == 0xB)  // 'B' = EVB firmware present
+	{
+		auto& line = form.vals.back();
+		auto pos = line.find("-ROC");
+		if (pos == std::string::npos)
+			pos = line.find("-Links");
+		if (pos != std::string::npos)
+		{
+			while (pos > 0 && line[pos - 1] != ' ')
+				--pos;
+			line.insert(pos, "EVB  ");
+		}
+		else
+			line += ", EVB";
+	}
 	return form;
 }  // end DTC_Registers::FormatDeviceTimeAlive()
 
