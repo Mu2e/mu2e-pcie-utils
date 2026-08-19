@@ -7694,6 +7694,29 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatCFOCDCDiag()
 }
 
 // EVB High Level Counters (0x9200/0x9204/0x9208), each holding two 16-bit word counters
+/// @brief Read the EVB firmware version from 0x9200 [15:0].
+///        Encoded as 0xTMmm where T is type (B = EVBuilding), M is major, mm is minor.
+std::string DTCLib::DTC_Registers::ReadEVBFirmwareVersion(std::optional<uint32_t> val)
+{
+	uint16_t ver = ReadEVBROCInputWords(val);
+	char type = static_cast<char>((ver >> 12) & 0xF);
+	int major = (ver >> 8) & 0xF;
+	int minor = ver & 0xFF;
+	std::ostringstream o;
+	o << std::hex << std::uppercase << type << std::dec << major << "." << std::setw(2) << std::setfill('0') << minor;
+	return o.str();
+}  // end ReadEVBFirmwareVersion()
+
+/// @brief Override to append EVB firmware version to the time-alive line when present.
+DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDeviceTimeAlive()
+{
+	auto form = CFOandDTC_Registers::FormatDeviceTimeAlive();
+	std::string evbVer = ReadEVBFirmwareVersion();
+	if (!evbVer.empty() && evbVer[0] != '0')  // '0' type nibble means not an EVB firmware
+		form.vals.back() += ", EVB " + evbVer;
+	return form;
+}  // end DTC_Registers::FormatDeviceTimeAlive()
+
 uint32_t DTCLib::DTC_Registers::ReadEVBHighLevelCounters0(std::optional<uint32_t> val)
 {
 	return val.has_value() ? *val : ReadRegister_(DTC_Register_EVBHighLevelCounters0);

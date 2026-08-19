@@ -1,7 +1,7 @@
 #ifndef DTC_REGISTERS_H
 #define DTC_REGISTERS_H
 
-// #include <bitset> // std::bitset
+#include <bitset>  // std::bitset
 // #include <cstdint> // uint8_t, uint16_t
 #include <functional>  // std::bind, std::function
 #include <vector>      // std::vector
@@ -1179,16 +1179,20 @@ class DTC_Registers : public CFOandDTC_Registers
 	uint32_t          ReadCFOCDCDiag(std::optional<uint32_t> val = std::nullopt);
 	RegisterFormatter FormatCFOCDCDiag();
 
-	// EVB High Level Counters (six 16-bit word counters across 0x9200/0x9204/0x9208)
-	uint32_t ReadEVBHighLevelCounters0(std::optional<uint32_t> val = std::nullopt);        // 0x9200 raw
-	uint32_t ReadEVBHighLevelCounters1(std::optional<uint32_t> val = std::nullopt);        // 0x9204 raw
-	uint32_t ReadEVBHighLevelCounters2(std::optional<uint32_t> val = std::nullopt);        // 0x9208 raw
-	uint16_t ReadEVBROCInputWords(std::optional<uint32_t> val = std::nullopt);             // 0x9200 [15:0]
-	uint16_t ReadEVBSelfTransferWords(std::optional<uint32_t> val = std::nullopt);         // 0x9200 [31:16]
-	uint16_t ReadEVBDDRFIFOWriteWords(std::optional<uint32_t> val = std::nullopt);         // 0x9204 [15:0]
-	uint16_t ReadEVBDDRToTXWords(std::optional<uint32_t> val = std::nullopt);              // 0x9204 [31:16]
-	uint16_t ReadEVBBufferManagerOutputWords(std::optional<uint32_t> val = std::nullopt);  // 0x9208 [15:0]
-	uint16_t ReadEVBDMAOutputWords(std::optional<uint32_t> val = std::nullopt);            // 0x9208 [31:16]
+	// Time Alive Register (override to append EVB firmware version)
+	RegisterFormatter FormatDeviceTimeAlive() override;
+
+	// EVB Firmware Version and High Level Counters (0x9200/0x9204/0x9208)
+	std::string ReadEVBFirmwareVersion(std::optional<uint32_t> val = std::nullopt);           // 0x9200 [15:0] as "Bx.yy"
+	uint32_t    ReadEVBHighLevelCounters0(std::optional<uint32_t> val = std::nullopt);        // 0x9200 raw
+	uint32_t    ReadEVBHighLevelCounters1(std::optional<uint32_t> val = std::nullopt);        // 0x9204 raw
+	uint32_t    ReadEVBHighLevelCounters2(std::optional<uint32_t> val = std::nullopt);        // 0x9208 raw
+	uint16_t    ReadEVBROCInputWords(std::optional<uint32_t> val = std::nullopt);             // 0x9200 [15:0]
+	uint16_t    ReadEVBSelfTransferWords(std::optional<uint32_t> val = std::nullopt);         // 0x9200 [31:16]
+	uint16_t    ReadEVBDDRFIFOWriteWords(std::optional<uint32_t> val = std::nullopt);         // 0x9204 [15:0]
+	uint16_t    ReadEVBDDRToTXWords(std::optional<uint32_t> val = std::nullopt);              // 0x9204 [31:16]
+	uint16_t    ReadEVBBufferManagerOutputWords(std::optional<uint32_t> val = std::nullopt);  // 0x9208 [15:0]
+	uint16_t    ReadEVBDMAOutputWords(std::optional<uint32_t> val = std::nullopt);            // 0x9208 [31:16]
 
 	// RX Data Packet Count
 	uint32_t          ReadRXDataPacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);

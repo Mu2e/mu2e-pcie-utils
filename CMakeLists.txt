@@ -11,7 +11,7 @@ cmake_minimum_required (VERSION 3.19 FATAL_ERROR)
 
 find_package(cetmodules 3.19.02 REQUIRED)
 
-project(mu2e-pcie-utils VERSION 8.05.00)
+project(mu2e-pcie-utils VERSION 9.00.00)
 
 include(CetCMakeEnv)
 cet_cmake_env()
@@ -81,9 +81,11 @@ if(${CANVAS_ROOT_IO_FOUND})
 endif()
 
 find_package(SWIG)
-if(${SWIG_FOUND})
-	set(BUILD_PYTHON_INTERFACE TRUE)
+if(DEFINED $ENV{BUILD_PYTHON_INTERFACE})
+if (${SWIG_FOUND})
+        set(BUILD_PYTHON_INTERFACE TRUE)
 	include(${SWIG_USE_FILE})
+endif()
 endif()
 
 # source
