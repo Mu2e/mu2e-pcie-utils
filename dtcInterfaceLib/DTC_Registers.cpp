@@ -981,7 +981,7 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDTCControl()
 	form.vals.push_back(std::string("Bit-07 RTF Punched Clock Edge Select:        [") + (ReadRTFPunchedClockEdge(form.value) ? "posedge" : "negedge") + "]");
 
 	form.vals.push_back(std::string("Bit-06 Enable CFO-RTF Offset Control:        [") + (((ReadExternalCFOSampleEdgeMode(form.value) >> 1) & 1) ? "x" : " ") + "]");
-	form.vals.push_back(std::string("Bit-05 CFO-RTF Edge Select:                  [") + ((ReadExternalCFOSampleEdgeMode(form.value) & 1) ? "x" : " ") + "]");
+	form.vals.push_back(std::string("Bit-05 CFO-RTF Edge Select:                  [") + ((ReadExternalCFOSampleEdgeMode(form.value) & 1) ? "negedge" : "posedge") + "]");
 
 	// form.vals.push_back(std::string("Bit-31 RX Packet Error Feedback Enable: [") + (ReadRxPacketErrorFeedbackEnable(form.value) ? "x" : " ") + "]");
 	// form.vals.push_back(std::string("Bit-31 Comma Tolerance Enable:          [") + (ReadCommaToleranceEnable(form.value) ? "x" : " ") + "]");
@@ -2242,8 +2242,8 @@ uint8_t DTCLib::DTC_Registers::ReadEVBMode(std::optional<uint32_t> val)
 /// <param name="id">Local partition ID</param>
 void DTCLib::DTC_Registers::SetEVBLocalParitionID(uint8_t partitionId)
 {
-	auto regVal = ReadRegister_(DTC_Register_EVBPartitionID) & 0xFFFFFCFF;
-	regVal += (partitionId & 0x3) << 8;
+	auto regVal = ReadRegister_(DTC_Register_EVBPartitionID) & 0xFFFF00FF;
+	regVal += partitionId << 8;
 	WriteRegister_(regVal, DTC_Register_EVBPartitionID);
 }
 
@@ -2253,8 +2253,7 @@ void DTCLib::DTC_Registers::SetEVBLocalParitionID(uint8_t partitionId)
 /// <returns>Partition ID</returns>
 uint8_t DTCLib::DTC_Registers::ReadEVBLocalParitionID(std::optional<uint32_t> val)
 {
-	auto regVal = (val.has_value() ? *val : ReadRegister_(DTC_Register_EVBPartitionID)) & 0xFF0000;
-	return static_cast<uint8_t>((regVal >> 8) & 0x3);
+	return static_cast<uint8_t>(((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBPartitionID)) >> 8) & 0xFF);
 }
 
 /// <summary>
@@ -2263,8 +2262,8 @@ uint8_t DTCLib::DTC_Registers::ReadEVBLocalParitionID(std::optional<uint32_t> va
 /// <param name="macByte">MAC Address</param>
 void DTCLib::DTC_Registers::SetEVBLocalMACAddress(uint8_t macByte)
 {
-	auto regVal = ReadRegister_(DTC_Register_EVBPartitionID) & 0xFFFFFFC0;
-	regVal += (macByte & 0x3F);
+	auto regVal = ReadRegister_(DTC_Register_EVBPartitionID) & 0xFFFFFF00;
+	regVal += macByte;
 	WriteRegister_(regVal, DTC_Register_EVBPartitionID);
 }
 
@@ -2272,7 +2271,7 @@ void DTCLib::DTC_Registers::SetEVBLocalMACAddress(uint8_t macByte)
 /// Read the MAC address for the EVB network (lowest byte)
 /// </summary>
 /// <returns>MAC Address</returns>
-uint8_t DTCLib::DTC_Registers::ReadEVBLocalMACAddress(std::optional<uint32_t> val) { return (val.has_value() ? *val : ReadRegister_(DTC_Register_EVBPartitionID)) & 0x3F; }
+uint8_t DTCLib::DTC_Registers::ReadEVBLocalMACAddress(std::optional<uint32_t> val) { return (val.has_value() ? *val : ReadRegister_(DTC_Register_EVBPartitionID)) & 0xFF; }
 
 /// <summary>
 /// Formats the register's current value for register dumps
@@ -2296,7 +2295,8 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBLocalParitionIDMACInde
 	form.vals.push_back(o.str());
 	o.str("");
 	o.clear();
-	o << "EVB Self MAC Address Last Byte: 0x" << std::hex << static_cast<int>(ReadEVBLocalMACAddress(form.value));
+	auto mac = static_cast<int>(ReadEVBLocalMACAddress(form.value));
+	o << "EVB Self MAC Address Last Byte: 0x" << std::hex << mac << " (" << std::dec << mac << ")";
 	form.vals.push_back(o.str());
 	return form;
 }
@@ -2334,8 +2334,8 @@ uint16_t DTCLib::DTC_Registers::ReadEVBDeadTime(std::optional<uint32_t> val)
 /// </summary>
 void DTCLib::DTC_Registers::SetEVBStartNode(uint8_t startNode)
 {
-	auto regVal = ReadRegister_(DTC_Register_EVBConfiguration) & 0xFFFFC0FF;
-	regVal += (startNode & 0x3F) << 8;
+	auto regVal = ReadRegister_(DTC_Register_EVBConfiguration) & 0xFFFF00FF;
+	regVal += startNode << 8;
 	WriteRegister_(regVal, DTC_Register_EVBConfiguration);
 }
 
@@ -2344,7 +2344,7 @@ void DTCLib::DTC_Registers::SetEVBStartNode(uint8_t startNode)
 /// </summary>
 uint8_t DTCLib::DTC_Registers::ReadEVBStartNode(std::optional<uint32_t> val)
 {
-	return static_cast<uint8_t>((((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBConfiguration)) & 0x3F00)) >> 8);
+	return static_cast<uint8_t>((((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBConfiguration)) & 0xFF00)) >> 8);
 }
 
 /// <summary>
@@ -2353,8 +2353,8 @@ uint8_t DTCLib::DTC_Registers::ReadEVBStartNode(std::optional<uint32_t> val)
 /// <param name="numOfNodes">Number of nodes</param>
 void DTCLib::DTC_Registers::SetEVBNumberOfDestinationNodes(uint8_t numOfNodes)
 {
-	auto regVal = ReadRegister_(DTC_Register_EVBConfiguration) & 0xFFFFFFC0;
-	regVal += (numOfNodes & 0x3F);
+	auto regVal = ReadRegister_(DTC_Register_EVBConfiguration) & 0xFFFFFF00;
+	regVal += numOfNodes;
 	WriteRegister_(regVal, DTC_Register_EVBConfiguration);
 }
 
@@ -2364,7 +2364,7 @@ void DTCLib::DTC_Registers::SetEVBNumberOfDestinationNodes(uint8_t numOfNodes)
 /// <returns>Number of nodes</returns>
 uint8_t DTCLib::DTC_Registers::ReadEVBNumberOfDestinationNodes(std::optional<uint32_t> val)
 {
-	return static_cast<uint8_t>((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBConfiguration)) & 0x3F);
+	return static_cast<uint8_t>((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBConfiguration)) & 0xFF);
 }
 
 /// <summary>
@@ -2381,7 +2381,8 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBClusterInfo()
 	form.vals.push_back(o.str());
 	o.str("");
 	o.clear();
-	o << "EVB Start Node: " << std::dec << static_cast<int>(ReadEVBStartNode(form.value));
+	auto startNode = static_cast<int>(ReadEVBStartNode(form.value));
+	o << "EVB Start Node: 0x" << std::hex << startNode << " (" << std::dec << startNode << ")";
 	form.vals.push_back(o.str());
 	o.str("");
 	o.clear();
@@ -2586,6 +2587,15 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 					break;
 				case DTC_EVBStatsType_TxLastSequenceTag:
 					o << "Last Transmitted Sequence Tag:         ";
+					break;
+				case DTC_EVBStatsType_TravelTime:
+					o << "Travel Time [switch clocks]:           ";
+					break;
+				case DTC_EVBStatsType_TxIdleCount:
+					o << "TX Idle Packet Count:                  ";
+					break;
+				case DTC_EVBStatsType_RxIdleCount:
+					o << "RX Idle Packet Count:                  ";
 					break;
 				default:
 					__SS__ << "Invalid DTC EVB Stat type: " << t << __E__;
@@ -7711,9 +7721,23 @@ std::string DTCLib::DTC_Registers::ReadEVBFirmwareVersion(std::optional<uint32_t
 DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDeviceTimeAlive()
 {
 	auto form = CFOandDTC_Registers::FormatDeviceTimeAlive();
-	std::string evbVer = ReadEVBFirmwareVersion();
-	if (!evbVer.empty() && evbVer[0] != '0')  // '0' type nibble means not an EVB firmware
-		form.vals.back() += ", EVB " + evbVer;
+	uint16_t evbRaw = ReadEVBROCInputWords();
+	uint8_t typeNibble = (evbRaw >> 12) & 0xF;
+	if (typeNibble == 0xB)  // 'B' = EVB firmware present
+	{
+		auto& line = form.vals.back();
+		auto pos = line.find("-ROC");
+		if (pos == std::string::npos)
+			pos = line.find("-Links");
+		if (pos != std::string::npos)
+		{
+			while (pos > 0 && line[pos - 1] != ' ')
+				--pos;
+			line.insert(pos, "EVB  ");
+		}
+		else
+			line += ", EVB";
+	}
 	return form;
 }  // end DTC_Registers::FormatDeviceTimeAlive()
 
@@ -7731,6 +7755,11 @@ uint32_t DTCLib::DTC_Registers::ReadEVBHighLevelCounters2(std::optional<uint32_t
 {
 	return val.has_value() ? *val : ReadRegister_(DTC_Register_EVBHighLevelCounters2);
 }  // end ReadEVBHighLevelCounters2()
+
+uint32_t DTCLib::DTC_Registers::ReadEVBHighLevelCounters3(std::optional<uint32_t> val)
+{
+	return val.has_value() ? *val : ReadRegister_(DTC_Register_EVBHighLevelCounters3);
+}  // end ReadEVBHighLevelCounters3()
 
 /// @brief 0x9200 [15:0] - ROC input words
 uint16_t DTCLib::DTC_Registers::ReadEVBROCInputWords(std::optional<uint32_t> val)
@@ -7767,6 +7796,12 @@ uint16_t DTCLib::DTC_Registers::ReadEVBDMAOutputWords(std::optional<uint32_t> va
 {
 	return (ReadEVBHighLevelCounters2(val) >> 16) & 0xFFFF;
 }  // end ReadEVBDMAOutputWords()
+
+/// @brief 0x920C [15:0] - GBE RX words
+uint16_t DTCLib::DTC_Registers::ReadEVBGBERXWords(std::optional<uint32_t> val)
+{
+	return ReadEVBHighLevelCounters3(val) & 0xFFFF;
+}  // end ReadEVBGBERXWords()
 
 // RX Data Packet Count
 uint32_t DTCLib::DTC_Registers::ReadRXDataPacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val)
