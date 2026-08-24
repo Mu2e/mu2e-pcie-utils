@@ -784,206 +784,206 @@ class CFO_Registers : public DTCLib::CFOandDTC_Registers
 	/// Clear the value of the Receive byte counter
 	/// </summary>
 	/// <param name="link">Link to clear counter for</param>
-	void ClearReceiveByteCount(const CFO_Link_ID& link);
+	//2026-08-17 PM	void ClearReceiveByteCount(const CFO_Link_ID& link);
 	/// <summary>
 	/// Read the value of the Receive byte counter
 	/// </summary>
 	/// <param name="link">Link to read counter for</param>
 	/// <returns>Current value of the Receive byte counter on the given Link</returns>
-	uint32_t ReadReceiveByteCount(const CFO_Link_ID& link, std::optional<uint32_t> val = std::nullopt);
+	//2026-08-17 PM		uint32_t ReadReceiveByteCount(const CFO_Link_ID& link, std::optional<uint32_t> val = std::nullopt);
 	/// <summary>
 	/// Clear the value of the Receive Packet counter
 	/// </summary>
 	/// <param name="link">Link to clear counter for</param>
-	void ClearReceivePacketCount(const CFO_Link_ID& link);
+	//2026-08-17 PM		void ClearReceivePacketCount(const CFO_Link_ID& link);
 	/// <summary>
 	/// Read the value of the Receive Packet counter
 	/// </summary>
 	/// <param name="link">Link to read counter for</param>
 	/// <returns>Current value of the Receive Packet counter on the given Link</returns>
-	uint32_t ReadReceivePacketCount(const CFO_Link_ID& link, std::optional<uint32_t> val = std::nullopt);
+	//2026-08-17 PM		uint32_t ReadReceivePacketCount(const CFO_Link_ID& link, std::optional<uint32_t> val = std::nullopt);
 	/// <summary>
 	/// Clear the value of the Transmit byte counter
 	/// </summary>
 	/// <param name="link">Link to clear counter for</param>
-	void ClearTransmitByteCount(const CFO_Link_ID& link);
+	//2026-08-17 PM		void ClearTransmitByteCount(const CFO_Link_ID& link);
 	/// <summary>
 	/// Read the value of the Transmit byye counter
 	/// </summary>
 	/// <param name="link">Link to read counter for</param>
 	/// <returns>Current value of the Transmit byte counter on the given Link</returns>
-	uint32_t ReadTransmitByteCount(const CFO_Link_ID& link, std::optional<uint32_t> val = std::nullopt);
+	//2026-08-17 PM		uint32_t ReadTransmitByteCount(const CFO_Link_ID& link, std::optional<uint32_t> val = std::nullopt);
 	/// <summary>
 	/// Clear the value of the Transmit Packet counter
 	/// </summary>
 	/// <param name="link">Link to clear counter for</param>
-	void ClearTransmitPacketCount(const CFO_Link_ID& link);
+	//2026-08-17 PM		void ClearTransmitPacketCount(const CFO_Link_ID& link);
 	/// <summary>
 	/// Read the value of the Transmit Packet counter
 	/// </summary>
 	/// <param name="link">Link to read counter for</param>
 	/// <returns>Current value of the Transmit Packet counter on the given Link</returns>
-	uint32_t ReadTransmitPacketCount(const CFO_Link_ID& link, std::optional<uint32_t> val = std::nullopt);
+	//2026-08-17 PM		uint32_t ReadTransmitPacketCount(const CFO_Link_ID& link, std::optional<uint32_t> val = std::nullopt);
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatReceiveByteCountLink0();
+	//2026-08-17 PM		RegisterFormatter FormatReceiveByteCountLink0();
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatReceiveByteCountLink1();
+	//2026-08-17 PM		RegisterFormatter FormatReceiveByteCountLink1();
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatReceiveByteCountLink2();
+	//2026-08-17 PM		RegisterFormatter FormatReceiveByteCountLink2();
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatReceiveByteCountLink3();
+	//2026-08-17 PM		RegisterFormatter FormatReceiveByteCountLink3();
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatReceiveByteCountLink4();
+	//2026-08-17 PM		RegisterFormatter FormatReceiveByteCountLink4();
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatReceiveByteCountLink5();
+	//2026-08-17 PM		RegisterFormatter FormatReceiveByteCountLink5();
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatReceiveByteCountLink6();
+	//2026-08-17 PM		RegisterFormatter FormatReceiveByteCountLink6();
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatReceiveByteCountLink7();
+	//2026-08-17 PM		RegisterFormatter FormatReceiveByteCountLink7();
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatReceivePacketCountLink0();
+	//2026-08-17 PM		RegisterFormatter FormatReceivePacketCountLink0();
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatReceivePacketCountLink1();
+	//2026-08-17 PM		RegisterFormatter FormatReceivePacketCountLink1();
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatReceivePacketCountLink2();
+	//2026-08-17 PM		RegisterFormatter FormatReceivePacketCountLink2();
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatReceivePacketCountLink3();
+	//2026-08-17 PM		RegisterFormatter FormatReceivePacketCountLink3();
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatReceivePacketCountLink4();
+	//2026-08-17 PM		RegisterFormatter FormatReceivePacketCountLink4();
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatReceivePacketCountLink5();
+	//2026-08-17 PM		RegisterFormatter FormatReceivePacketCountLink5();
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatReceivePacketCountLink6();
+	//2026-08-17 PM		RegisterFormatter FormatReceivePacketCountLink6();
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatReceivePacketCountLink7();
+	//2026-08-17 PM		RegisterFormatter FormatReceivePacketCountLink7();
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatTramsitByteCountLink0();
+	//2026-08-17 PM		RegisterFormatter FormatTramsitByteCountLink0();
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatTramsitByteCountLink1();
+	//2026-08-17 PM		RegisterFormatter FormatTramsitByteCountLink1();
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatTramsitByteCountLink2();
+	//2026-08-17 PM		RegisterFormatter FormatTramsitByteCountLink2();
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatTramsitByteCountLink3();
+	//2026-08-17 PM		RegisterFormatter FormatTramsitByteCountLink3();
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatTramsitByteCountLink4();
+	//2026-08-17 PM		RegisterFormatter FormatTramsitByteCountLink4();
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatTramsitByteCountLink5();
+	//2026-08-17 PM		RegisterFormatter FormatTramsitByteCountLink5();
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatTramsitByteCountLink6();
+	//2026-08-17 PM		RegisterFormatter FormatTramsitByteCountLink6();
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatTramsitByteCountLink7();
+	//2026-08-17 PM		RegisterFormatter FormatTramsitByteCountLink7();
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatTransmitPacketCountLink0();
+	//2026-08-17 PM		RegisterFormatter FormatTransmitPacketCountLink0();
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatTransmitPacketCountLink1();
+	//2026-08-17 PM		RegisterFormatter FormatTransmitPacketCountLink1();
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatTransmitPacketCountLink2();
+	//2026-08-17 PM		RegisterFormatter FormatTransmitPacketCountLink2();
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatTransmitPacketCountLink3();
+	//2026-08-17 PM		RegisterFormatter FormatTransmitPacketCountLink3();
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatTransmitPacketCountLink4();
+	//2026-08-17 PM		RegisterFormatter FormatTransmitPacketCountLink4();
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatTransmitPacketCountLink5();
+	//2026-08-17 PM		RegisterFormatter FormatTransmitPacketCountLink5();
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatTransmitPacketCountLink6();
+	//2026-08-17 PM		RegisterFormatter FormatTransmitPacketCountLink6();
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>
 	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatTransmitPacketCountLink7();
+	//2026-08-17 PM		RegisterFormatter FormatTransmitPacketCountLink7();
 
 	// DDR3 Memory DMA Write Start Address Register
 	/// <summary>
