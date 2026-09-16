@@ -60,6 +60,6 @@ inline std::vector<std::string> DecodeEVBErrorStatus(uint32_t value)
 	}
 	return lines;
 }
-}
+}  // namespace DTCLib
 
 #endif

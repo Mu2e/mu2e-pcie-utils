@@ -708,8 +708,8 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 			srcBuf.insert(srcBuf.end(), chunkData, chunkData + chunkBytes);
 
 			++evbChunksParsed_;
-			DTC_TLOG(TLVL_DEBUG+1) << "GetEVBDataAsEvents: FAFA chunk src=0x" << std::hex << static_cast<int>(chunk_src)
-								 << " wc=" << std::dec << chunk_wc << " words; reassembly[src] now " << srcBuf.size() << " bytes";
+			DTC_TLOG(TLVL_DEBUG + 1) << "GetEVBDataAsEvents: FAFA chunk src=0x" << std::hex << static_cast<int>(chunk_src)
+									 << " wc=" << std::dec << chunk_wc << " words; reassembly[src] now " << srcBuf.size() << " bytes";
 			ptr += 1 + chunk_wc;
 		}
 		else
@@ -789,8 +789,8 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 
 			if (srcBuf.size() < totalRecordBytes)
 			{
-				DTC_TLOG(TLVL_DEBUG+1) << "GetEVBDataAsEvents: src=0x" << std::hex << static_cast<int>(src) << std::dec
-									 << " record incomplete: have " << srcBuf.size() << " of " << totalRecordBytes << " bytes; waiting for more chunks";
+				DTC_TLOG(TLVL_DEBUG + 1) << "GetEVBDataAsEvents: src=0x" << std::hex << static_cast<int>(src) << std::dec
+										 << " record incomplete: have " << srcBuf.size() << " of " << totalRecordBytes << " bytes; waiting for more chunks";
 				break;  // incomplete subevent, wait for more chunks
 			}
 
@@ -856,11 +856,11 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 				}
 			}
 
-			DTC_TLOG(TLVL_DEBUG+1) << "GetEVBDataAsEvents: parsing subevent src=0x" << std::hex << static_cast<int>(src)
-								 << " EWT=" << std::dec << ((static_cast<uint64_t>(subHdr->event_tag_high) << 32) | subHdr->event_tag_low)
-								 << " bytes=" << subEvtByteCount << " num_rocs=" << subHdr->num_rocs
-								 << " dtc_mac=0x" << std::hex << subHdr->dtc_mac
-								 << " fmt=0x" << subHdr->subevent_format_version << std::dec;
+			DTC_TLOG(TLVL_DEBUG + 1) << "GetEVBDataAsEvents: parsing subevent src=0x" << std::hex << static_cast<int>(src)
+									 << " EWT=" << std::dec << ((static_cast<uint64_t>(subHdr->event_tag_high) << 32) | subHdr->event_tag_low)
+									 << " bytes=" << subEvtByteCount << " num_rocs=" << subHdr->num_rocs
+									 << " dtc_mac=0x" << std::hex << subHdr->dtc_mac
+									 << " fmt=0x" << subHdr->subevent_format_version << std::dec;
 
 			uint8_t* eventBuf = static_cast<uint8_t*>(const_cast<void*>(event->GetRawBufferPointer()));
 			memcpy(eventBuf, &evtHdr, sizeof(DTC_EventHeader));
@@ -916,8 +916,8 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 					throw std::runtime_error(ss.str());
 				}
 				pend.subevents[srcId].assign(srcBuf.begin() + RECORD_HEADER_SIZE, srcBuf.begin() + totalRecordBytes);
-				DTC_TLOG(TLVL_DEBUG+1) << "GetEVBDataAsEvents: staged EWT=" << tag << " source_dtc_id=0x" << std::hex << static_cast<int>(srcId) << std::dec
-									 << " (" << pend.subevents.size() << "/" << static_cast<int>(evbNumSources_) << " sources); open tags=" << evbPendingTags_.size();
+				DTC_TLOG(TLVL_DEBUG + 1) << "GetEVBDataAsEvents: staged EWT=" << tag << " source_dtc_id=0x" << std::hex << static_cast<int>(srcId) << std::dec
+										 << " (" << pend.subevents.size() << "/" << static_cast<int>(evbNumSources_) << " sources); open tags=" << evbPendingTags_.size();
 			}
 
 			srcBuf.erase(srcBuf.begin(), srcBuf.begin() + totalRecordBytes);
@@ -989,8 +989,8 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 		evbLastReleasedTag_ = tag;
 		evbHaveReleasedTag_ = true;
 		++evbEventsReleased_;
-		DTC_TLOG(TLVL_DEBUG+1) << "GetEVBDataAsEvents: released complete event EWT=" << tag << " with " << pend.subevents.size()
-							 << " subevents, " << eventSize << " bytes; open tags=" << (evbPendingTags_.size() - 1);
+		DTC_TLOG(TLVL_DEBUG + 1) << "GetEVBDataAsEvents: released complete event EWT=" << tag << " with " << pend.subevents.size()
+								 << " subevents, " << eventSize << " bytes; open tags=" << (evbPendingTags_.size() - 1);
 		output.push_back(std::move(event));
 		evbPendingTags_.erase(it);
 	}
