@@ -1,4 +1,5 @@
 #include "DTC_Registers.h"
+#include "EVBErrorStatus.h"
 
 #include <assert.h>
 #include <unistd.h>
@@ -2604,6 +2605,9 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 				case DTC_EVBStatsType_RxIdleCount:
 					o << "RX Idle Packet Count:                  ";
 					break;
+				case DTC_EVBStatsType_TxPacketCount:
+					o << "TX Packet Count:                       ";
+					break;
 				default:
 					__SS__ << "Invalid DTC EVB Stat type: " << t << __E__;
 					__SS_THROW__;
@@ -4816,20 +4820,8 @@ bool DTCLib::DTC_Registers::ReadEventBuilder_TransmitDMAByteCountFIFOFull(std::o
 DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEventBuilderErrorRegister()
 {
 	auto form = CreateFormatter(DTC_Register_EventBuilderErrorFlags);
-	form.description = "Event Builder Error Flags";
-	form.vals.push_back("([ x = 1 (hi) ])");  // translation
-	form.vals.push_back(std::string("Sub-Event Received Flags Buffer Error: [") +
-						(ReadEventBuilder_SubEventReceiverFlagsBufferError(form.value) ? "x" : " ") + "]");
-	form.vals.push_back(std::string("Input FIFO Full:                       [") +
-						(ReadEventBuilder_EthernetInputFIFOFull(form.value) ? "x" : " ") + "]");
-	form.vals.push_back(std::string("Link Error:                            [") +
-						(ReadEventBuilder_LinkError(form.value) ? "x" : " ") + "]");
-	form.vals.push_back(std::string("TX Packet Error:                       [") +
-						(ReadEventBuilder_TXPacketError(form.value) ? "x" : " ") + "]");
-	form.vals.push_back(std::string("Local Data Pointer FIFO Queue Error:   [") +
-						(ReadEventBuilder_LocalDataPointerFIFOQueueError(form.value) ? "x" : " ") + "]");
-	form.vals.push_back(std::string("Transmit DMA Byte Count FIFO Full:     [") +
-						(ReadEventBuilder_TransmitDMAByteCountFIFOFull(form.value) ? "x" : " ") + "]");
+	form.description = "EVB Errors / Status";
+	form.vals = DecodeEVBErrorStatus(form.value);
 	return form;
 }
 

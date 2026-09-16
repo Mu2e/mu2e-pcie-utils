@@ -3,6 +3,7 @@
 #define TRACE_NAME "DTC.cpp"
 
 #include "DTC.h"
+#include "EVBErrorStatus.h"
 #define TLVL_GetData TLVL_DEBUG + 5
 #define TLVL_GetJSONData TLVL_DEBUG + 6
 #define TLVL_ReadBuffer TLVL_DEBUG + 7
@@ -615,6 +616,13 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 			dumpRecord(os, "  staged subevent (no record header)", sid, bytes.data(), bytes.size());
 	};
 
+	auto dumpEVBErrorStatus = [&](std::ostream& os) {
+		uint32_t evbErr = ReadRegister_(DTC_Register_EventBuilderErrorFlags);
+		os << "EVB Error/Status (0x9370) at abort: 0x" << std::hex << std::setw(8) << std::setfill('0') << evbErr << std::dec << std::setfill(' ') << "\n";
+		for (const auto& line : DecodeEVBErrorStatus(evbErr))
+			os << "  " << line << "\n";
+	};
+
 	// Step 0: event-completion timeout / overflow scan.  Runs on EVERY call, including calls
 	// where no DMA data arrives, so a tag whose remaining subevents never come is reported.
 	if (!evbPendingTags_.empty())
@@ -632,6 +640,7 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 			   << pend.subevents.size() << " of " << static_cast<int>(evbNumSources_) << " sources present; open tags=" << evbPendingTags_.size()
 			   << " (max " << evbMaxOpenTags_ << "). Stopping EVB DMA parsing.\n";
 			describePending(ss, tag, pend);
+			dumpEVBErrorStatus(ss);
 			DTC_TLOG(TLVL_ERROR) << ss.str();
 			++evbFramingErrors_;
 			throw std::runtime_error(ss.str());
@@ -699,7 +708,7 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 			srcBuf.insert(srcBuf.end(), chunkData, chunkData + chunkBytes);
 
 			++evbChunksParsed_;
-			DTC_TLOG(TLVL_DEBUG) << "GetEVBDataAsEvents: FAFA chunk src=0x" << std::hex << static_cast<int>(chunk_src)
+			DTC_TLOG(TLVL_DEBUG+1) << "GetEVBDataAsEvents: FAFA chunk src=0x" << std::hex << static_cast<int>(chunk_src)
 								 << " wc=" << std::dec << chunk_wc << " words; reassembly[src] now " << srcBuf.size() << " bytes";
 			ptr += 1 + chunk_wc;
 		}
@@ -768,6 +777,7 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 						dumpRecord(ss, "Last GOOD record (same src, for comparison)", src, lg->second.data(), lg->second.size());
 					else
 						ss << "(no previous good record from src=0x" << std::hex << static_cast<int>(src) << std::dec << ")\n";
+					dumpEVBErrorStatus(ss);
 					device_.resetSpyHasOccurred();
 					device_.spy(DTC_DMA_Engine_DAQ, 3 | 8 | 16, ss);
 					DTC_TLOG(TLVL_ERROR) << ss.str();
@@ -779,7 +789,7 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 
 			if (srcBuf.size() < totalRecordBytes)
 			{
-				DTC_TLOG(TLVL_DEBUG) << "GetEVBDataAsEvents: src=0x" << std::hex << static_cast<int>(src) << std::dec
+				DTC_TLOG(TLVL_DEBUG+1) << "GetEVBDataAsEvents: src=0x" << std::hex << static_cast<int>(src) << std::dec
 									 << " record incomplete: have " << srcBuf.size() << " of " << totalRecordBytes << " bytes; waiting for more chunks";
 				break;  // incomplete subevent, wait for more chunks
 			}
@@ -801,6 +811,7 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 				   << " != expected 0x" << static_cast<uint16_t>(CURRENT_SUBEVENT_FORMAT_VERSION)
 				   << ". Check that your DTC FPGA version matches the software expectation.\n";
 				dumpRecord(ss, "BAD record", src, srcBuf.data(), totalRecordBytes);
+				dumpEVBErrorStatus(ss);
 				device_.resetSpyHasOccurred();
 				device_.spy(DTC_DMA_Engine_DAQ, 3 | 8 | 16, ss);
 				DTC_TLOG(TLVL_ERROR) << ss.str();
@@ -835,6 +846,7 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 						dumpRecord(ss, "Last GOOD record (same src, for comparison)", src, lg->second.data(), lg->second.size());
 					else
 						ss << "(no previous good record from src=0x" << std::hex << static_cast<int>(src) << std::dec << ")\n";
+					dumpEVBErrorStatus(ss);
 					device_.resetSpyHasOccurred();
 					device_.spy(DTC_DMA_Engine_DAQ, 3 | 8 | 16, ss);
 					DTC_TLOG(TLVL_ERROR) << ss.str();
@@ -844,7 +856,7 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 				}
 			}
 
-			DTC_TLOG(TLVL_DEBUG) << "GetEVBDataAsEvents: parsing subevent src=0x" << std::hex << static_cast<int>(src)
+			DTC_TLOG(TLVL_DEBUG+1) << "GetEVBDataAsEvents: parsing subevent src=0x" << std::hex << static_cast<int>(src)
 								 << " EWT=" << std::dec << ((static_cast<uint64_t>(subHdr->event_tag_high) << 32) | subHdr->event_tag_low)
 								 << " bytes=" << subEvtByteCount << " num_rocs=" << subHdr->num_rocs
 								 << " dtc_mac=0x" << std::hex << subHdr->dtc_mac
@@ -870,6 +882,7 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 					dumpRecord(ss, "Last GOOD record (same src, for comparison)", src, lg->second.data(), lg->second.size());
 				else
 					ss << "(no previous good record from src=0x" << std::hex << static_cast<int>(src) << std::dec << ")\n";
+				dumpEVBErrorStatus(ss);
 				device_.resetSpyHasOccurred();
 				device_.spy(DTC_DMA_Engine_DAQ, 3 | 8 | 16, ss);
 				DTC_TLOG(TLVL_ERROR) << ss.str();
@@ -896,13 +909,14 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 					   << " (chunk src=0x" << static_cast<int>(src) << std::dec << "); this source already delivered this tag.\n";
 					dumpRecord(ss, "DUPLICATE record", src, srcBuf.data(), totalRecordBytes);
 					describePending(ss, tag, pend);
+					dumpEVBErrorStatus(ss);
 					DTC_TLOG(TLVL_ERROR) << ss.str();
 					++evbFramingErrors_;
 					srcBuf.erase(srcBuf.begin(), srcBuf.begin() + totalRecordBytes);
 					throw std::runtime_error(ss.str());
 				}
 				pend.subevents[srcId].assign(srcBuf.begin() + RECORD_HEADER_SIZE, srcBuf.begin() + totalRecordBytes);
-				DTC_TLOG(TLVL_DEBUG) << "GetEVBDataAsEvents: staged EWT=" << tag << " source_dtc_id=0x" << std::hex << static_cast<int>(srcId) << std::dec
+				DTC_TLOG(TLVL_DEBUG+1) << "GetEVBDataAsEvents: staged EWT=" << tag << " source_dtc_id=0x" << std::hex << static_cast<int>(srcId) << std::dec
 									 << " (" << pend.subevents.size() << "/" << static_cast<int>(evbNumSources_) << " sources); open tags=" << evbPendingTags_.size();
 			}
 
@@ -927,6 +941,7 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 			std::stringstream ss;
 			ss << "GetEVBDataAsEvents: ORDERING violation -- completed EWT=" << tag << " is not greater than last released EWT=" << evbLastReleasedTag_ << ".\n";
 			describePending(ss, tag, pend);
+			dumpEVBErrorStatus(ss);
 			DTC_TLOG(TLVL_ERROR) << ss.str();
 			++evbFramingErrors_;
 			throw std::runtime_error(ss.str());
@@ -965,6 +980,7 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 			ss << "GetEVBDataAsEvents: assembled event EWT=" << tag << " (" << pend.subevents.size() << " subevents, " << eventSize
 			   << " bytes) failed SetupEvent although each subevent validated individually.\n";
 			describePending(ss, tag, pend);
+			dumpEVBErrorStatus(ss);
 			DTC_TLOG(TLVL_ERROR) << ss.str();
 			++evbFramingErrors_;
 			throw std::runtime_error(ss.str());
@@ -973,7 +989,7 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 		evbLastReleasedTag_ = tag;
 		evbHaveReleasedTag_ = true;
 		++evbEventsReleased_;
-		DTC_TLOG(TLVL_DEBUG) << "GetEVBDataAsEvents: released complete event EWT=" << tag << " with " << pend.subevents.size()
+		DTC_TLOG(TLVL_DEBUG+1) << "GetEVBDataAsEvents: released complete event EWT=" << tag << " with " << pend.subevents.size()
 							 << " subevents, " << eventSize << " bytes; open tags=" << (evbPendingTags_.size() - 1);
 		output.push_back(std::move(event));
 		evbPendingTags_.erase(it);
