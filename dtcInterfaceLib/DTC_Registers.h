@@ -28,7 +28,7 @@ enum DTC_Register : uint16_t
 	DTC_Register_EVBPacketControl          = 0x915C,
 	DTC_Register_EVBStats                  = 0x9160,
 	DTC_Register_SERDESClock_IICBusControl = 0x9164,
-	// DTC_Register_DDRReferenceClockFrequency = 0x9170,
+	DTC_Register_EVBIdleBurst                  = 0x9170,
 	// DTC_Register_DDRClock_IICBusControl = 0x9174,
 	// DTC_Register_DDRClock_IICBusLow = 0x9178,
 	// DTC_Register_DDRClock_IICBusHigh = 0x917C,
@@ -615,6 +615,11 @@ class DTC_Registers : public CFOandDTC_Registers
 	uint8_t           ReadEVBInterpacketGap(std::optional<uint32_t> val = std::nullopt);
 	uint8_t           ReadEVBLoopbackCalibratedOffset(std::optional<uint32_t> val = std::nullopt);
 	RegisterFormatter FormatEVBPacketControlInfo();
+
+	// EVB Idle Burst (0x9170)
+	void              SetEVBIdleBurst(uint16_t count);
+	uint16_t          ReadEVBIdleBurst(std::optional<uint32_t> val = std::nullopt);
+	RegisterFormatter FormatEVBIdleBurst();
 
 	// EVB Stats
 	uint32_t                                           ReadEVBStats(DTC_EVBStatsType type, uint8_t dtc_mac, std::optional<uint32_t> val = std::nullopt);

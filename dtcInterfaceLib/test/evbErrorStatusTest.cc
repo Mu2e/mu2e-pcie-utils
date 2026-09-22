@@ -36,11 +36,11 @@ try
 		"DDR read desync",
 		"staging FIFO write-while-full",
 		"staging FIFO empty inside TX payload",
-		nullptr,
-		nullptr,
-		nullptr,
-		nullptr,
-		nullptr,
+		"TX frame malformed",
+		"Rx frame size mismatch",
+		"Rx FCS bad",
+		"ROC tag slip",
+		"ROC record shape",
 		"ROC input held",
 		"self-subevent throttle",
 		"destination has no credit",
@@ -92,10 +92,66 @@ try
 			"Status heading must describe the sticky exception");
 	require(foreignOnly[1].find("0x0400") != std::string::npos, "Wrong status mask");
 	const auto all = DTCLib::DecodeEVBErrorStatus(0xFFFFFFFFu);
-	require(all.size() == 24, "All bits must display only the 22 defined details and two headings");
-	require(all.front().find("0xffff") != std::string::npos, "Reserved error bits must remain in raw field");
+	require(all.size() == 29, "All bits must display only the 27 defined details and two headings");
+	require(all.front().find("0xffff") != std::string::npos, "Raw error field must show all 16 bits");
+	require(bitLine(all, 4).find("TX window overrun") != std::string::npos,
+	        "Bit 4 must include the 2026-09-19 window-overrun meaning");
+	require(bitLine(all, 14).find("upstream") != std::string::npos,
+	        "Bit 14 must say the slip originated upstream of EVB3");
+	require(bitLine(all, 2).find("addressed to this DTC but source offset > 31") != std::string::npos,
+	        "Bit 2 must exclude foreign frames");
+	require(bitLine(all, 7).find("bit 1 and Rx BRAM rows/rates untrustworthy") != std::string::npos,
+	        "Bit 7 must qualify sequence-gap and Rx statistics");
+	require(bitLine(all, 12).find("without necessarily losing declared payload") != std::string::npos,
+	        "A long frame need not lose declared payload");
+	require(bitLine(all, 13).find("shifted 0x33 frames not checked") != std::string::npos,
+	        "FCS checking must not be claimed for shifted frames");
 
-	std::cout << "EVB error/status decoding passed: zero, all 32 single bits, mixed flags, and all bits\n";
+	constexpr uint32_t calibrated = 1u << 25;
+	require(!DTCLib::CheckEVBStatus(0).readyToStart(), "Missing DDR calibration must block start");
+	require(DTCLib::CheckEVBStatus(calibrated).readyToStart(), "Calibrated idle DTC must be ready");
+	for(unsigned bit = 0; bit < 32; ++bit)
+	{
+		const auto check = DTCLib::CheckEVBStatus(calibrated | (1u << bit));
+		require(check.stickyErrors == (bit < 16 ? (1u << bit) : 0u),
+		        "Wrong defined error mask for bit " + std::to_string(bit));
+		require(check.readyToStart() == (bit >= 16),
+		        "Only defined sticky errors should block a calibrated DTC");
+	}
+	require(!DTCLib::CheckEVBStatus(calibrated, false).missingFrontier,
+	        "No frontier warning before traffic");
+	require(DTCLib::CheckEVBStatus(calibrated, true).missingFrontier,
+	        "Missing frontier after traffic must warn");
+	require(!DTCLib::CheckEVBStatus(calibrated | (1u << 24), true).missingFrontier,
+	        "Valid frontier must not warn");
+	require(!DTCLib::CheckEVBStatus(calibrated, true, false).missingFrontier,
+	        "Single-node partition has no peer frontier requirement");
+	const auto report = DTCLib::FormatEVBStatusCheck(calibrated | 0xFFFFu, "DTC_1", true);
+	require(report.find("DTC DTC_1 EVB error/status (0x9370): 0x0200ffff") != std::string::npos,
+	        "Report must identify the DTC and exact raw snapshot");
+	require(report.find("ROC input (upstream of EVB3)") == std::string::npos,
+	        "Bits 14-15 belong in the data-corrupt group, not a separate one");
+	require(report.find("ERROR: run INVALID") != std::string::npos, "Errors must invalidate run");
+	require(report.find("Data lost: Bit 0 RX_BUF_WRITE_FULL; Bit 1 RX_SEQ_GAP; Bit 9 STAGING_WRITE_FULL; Bit 12 RX_FRAME_SIZE;") != std::string::npos,
+	        "Wrong data-loss group");
+	require(report.find("Data corrupt: Bit 3 DDR_WR_UNDERFLOW; Bit 6 LOCAL_BAD_HEADER; Bit 8 DDR_RD_BAD_COUNT; Bit 10 TX_PAYLOAD_UNDERFLOW; Bit 11 TX_FRAME_MALFORMED; Bit 13 RX_FCS_BAD; Bit 14 ROC_TAG_SLIP; Bit 15 ROC_RECORD_SHAPE;") != std::string::npos,
+	        "Wrong data-corruption group");
+	require(report.find("Protocol / config: Bit 2 RX_PKT_REJECTED; Bit 4 TX_FSM_FAULT; Bit 5 CREDIT_VIOLATION; Bit 7 RX_STATS_COLLISION;") != std::string::npos,
+	        "Wrong protocol/config group");
+	require(report.find("SoftReset all DTCs together") != std::string::npos,
+	        "Report must require coordinated reset");
+	const auto informational = DTCLib::FormatEVBStatusCheck(0x07FF0000u, "DTC_0", true);
+	require(informational.find("ERROR:") == std::string::npos,
+	        "Back-pressure and foreign frames must never invalidate a run");
+	const auto plain = DTCLib::FormatEVBStatusCheck(calibrated | (1u << 11), "DTC_0", false, true, false);
+	require(plain.find("TX_FRAME_MALFORMED") == std::string::npos &&
+	        plain.find("Bit 11 set: TX frame malformed") != std::string::npos,
+	        "GUI mode must retain plain-language descriptions without symbolic names");
+	const auto noDDR = DTCLib::FormatEVBStatusCheck(0, "DTC_0");
+	require(noDDR.find("DDR not calibrated; do not start") != std::string::npos,
+	        "Missing calibration must be explicit");
+
+	std::cout << "EVB error/status decoding and B3 checks passed\n";
 	return 0;
 }
 catch (const std::exception& error)

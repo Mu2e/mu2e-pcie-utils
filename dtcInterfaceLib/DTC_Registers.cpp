@@ -2443,6 +2443,34 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBPacketControlInfo()
 	return form;
 }
 
+/// Set the EVB idle-burst count (0x9170 [15:0]).
+/// 0 or 1 keeps the default one-idle-per-window behavior.  N sends up to N idle
+/// packets per destination window, each through the normal header/CRC/gap path.
+void DTCLib::DTC_Registers::SetEVBIdleBurst(uint16_t count)
+{
+	WriteRegister_(static_cast<uint32_t>(count), DTC_Register_EVBIdleBurst);
+}
+
+/// Read the EVB idle-burst count (0x9170 [15:0])
+uint16_t DTCLib::DTC_Registers::ReadEVBIdleBurst(std::optional<uint32_t> val)
+{
+	return static_cast<uint16_t>(
+	    (val.has_value() ? *val : ReadRegister_(DTC_Register_EVBIdleBurst)) & 0xFFFFu);
+}
+
+/// Formats the EVB idle-burst register for register dumps
+DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBIdleBurst()
+{
+	auto form = CreateFormatter(DTC_Register_EVBIdleBurst);
+	form.description = "EVB Idle Burst";
+	form.vals.push_back("");
+	std::stringstream o;
+	o << "Idle Burst Count: " << std::dec << ReadEVBIdleBurst(form.value)
+	  << " (0 or 1 = one per window)";
+	form.vals.push_back(o.str());
+	return form;
+}
+
 /// Read theHardware Event Building Stats data based on type and DTC mac address
 uint32_t DTCLib::DTC_Registers::ReadEVBStats(DTC_EVBStatsType type, uint8_t dtc_mac, std::optional<uint32_t> val)
 {
