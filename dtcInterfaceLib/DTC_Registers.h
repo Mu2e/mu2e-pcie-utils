@@ -28,7 +28,7 @@ enum DTC_Register : uint16_t
 	DTC_Register_EVBPacketControl          = 0x915C,
 	DTC_Register_EVBStats                  = 0x9160,
 	DTC_Register_SERDESClock_IICBusControl = 0x9164,
-	DTC_Register_EVBIdleBurst                  = 0x9170,
+	DTC_Register_EVBIdleBurst              = 0x9170,
 	// DTC_Register_DDRClock_IICBusControl = 0x9174,
 	// DTC_Register_DDRClock_IICBusLow = 0x9178,
 	// DTC_Register_DDRClock_IICBusHigh = 0x917C,

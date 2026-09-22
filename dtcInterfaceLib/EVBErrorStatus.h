@@ -18,18 +18,16 @@ constexpr uint32_t EVBDefinedErrorMask = 0xFFFFu;
 struct EVBStatusCheck
 {
 	uint32_t stickyErrors;
-	bool ddrCalibrated;
-	bool missingFrontier;
+	bool     ddrCalibrated;
+	bool     missingFrontier;
 
 	bool readyToStart() const { return stickyErrors == 0 && ddrCalibrated; }
 };
 
 // Evaluate one caller-owned snapshot; never read or clear hardware here.
-inline EVBStatusCheck CheckEVBStatus(uint32_t value, bool trafficStarted = false,
-                                    bool hasPeers = true)
+inline EVBStatusCheck CheckEVBStatus(uint32_t value, bool trafficStarted = false, bool hasPeers = true)
 {
-	return {value & EVBDefinedErrorMask, (value & (1u << 25)) != 0,
-	        trafficStarted && hasPeers && !(value & (1u << 24))};
+	return {value & EVBDefinedErrorMask, (value & (1u << 25)) != 0, trafficStarted && hasPeers && !(value & (1u << 24))};
 }
 
 inline std::vector<std::string> DecodeEVBErrorStatus(uint32_t value)
@@ -88,13 +86,10 @@ inline std::vector<std::string> DecodeEVBErrorStatus(uint32_t value)
 	return lines;
 }
 
-inline std::string FormatEVBStatusCheck(uint32_t value, const std::string& dtc,
-                                        bool trafficStarted = false, bool hasPeers = true,
-                                        bool includeBitNames = true,
-                                        uint32_t ignoreMask = 0)
+inline std::string FormatEVBStatusCheck(uint32_t value, const std::string& dtc, bool trafficStarted = false, bool hasPeers = true, bool includeBitNames = true, uint32_t ignoreMask = 0)
 {
-	const auto check  = CheckEVBStatus(value & ~ignoreMask, trafficStarted, hasPeers);
-	const uint32_t ignored = value & EVBDefinedErrorMask & ignoreMask;
+	const auto         check   = CheckEVBStatus(value & ~ignoreMask, trafficStarted, hasPeers);
+	const uint32_t     ignored = value & EVBDefinedErrorMask & ignoreMask;
 	std::ostringstream output;
 	output << "DTC " << dtc << " EVB error/status (0x9370): 0x" << std::hex
 	       << std::setw(8) << std::setfill('0') << value << std::dec << std::setfill(' ') << "\n";
@@ -102,20 +97,33 @@ inline std::string FormatEVBStatusCheck(uint32_t value, const std::string& dtc,
 	{
 		output << "ERROR: run INVALID. Stop traffic, then SoftReset all DTCs together before the next first event; never write 0x9370 to clear.\n";
 		static const char* const names[] = {
-		    "RX_BUF_WRITE_FULL", "RX_SEQ_GAP", "RX_PKT_REJECTED", "DDR_WR_UNDERFLOW",
-		    "TX_FSM_FAULT", "CREDIT_VIOLATION", "LOCAL_BAD_HEADER", "RX_STATS_COLLISION",
-		    "DDR_RD_BAD_COUNT", "STAGING_WRITE_FULL", "TX_PAYLOAD_UNDERFLOW",
-		    "TX_FRAME_MALFORMED", "RX_FRAME_SIZE", "RX_FCS_BAD",
-		    "ROC_TAG_SLIP", "ROC_RECORD_SHAPE",
+		    "RX_BUF_WRITE_FULL",
+		    "RX_SEQ_GAP",
+		    "RX_PKT_REJECTED",
+		    "DDR_WR_UNDERFLOW",
+		    "TX_FSM_FAULT",
+		    "CREDIT_VIOLATION",
+		    "LOCAL_BAD_HEADER",
+		    "RX_STATS_COLLISION",
+		    "DDR_RD_BAD_COUNT",
+		    "STAGING_WRITE_FULL",
+		    "TX_PAYLOAD_UNDERFLOW",
+		    "TX_FRAME_MALFORMED",
+		    "RX_FRAME_SIZE",
+		    "RX_FCS_BAD",
+		    "ROC_TAG_SLIP",
+		    "ROC_RECORD_SHAPE",
 		};
 		const auto group = [&](const char* label, uint32_t mask) {
-			if(!(check.stickyErrors & mask)) return;
+			if(!(check.stickyErrors & mask))
+				return;
 			output << "  " << label << ":";
 			for(std::size_t bit = 0; bit < sizeof(names) / sizeof(names[0]); ++bit)
 				if(check.stickyErrors & mask & (1u << bit))
 				{
 					output << " Bit " << bit;
-					if(includeBitNames) output << " " << names[bit];
+					if(includeBitNames)
+						output << " " << names[bit];
 					output << ";";
 				}
 			output << "\n";
@@ -123,8 +131,7 @@ inline std::string FormatEVBStatusCheck(uint32_t value, const std::string& dtc,
 		group("Data lost", (1u << 0) | (1u << 1) | (1u << 9) | (1u << 12));
 		// bits 14-15 (ROC input checks, fault already present upstream of EVB3) are in the
 		// "data corrupt" group per the corrected B3 text (hw agent, 2026-09-21)
-		group("Data corrupt", (1u << 3) | (1u << 6) | (1u << 8) | (1u << 10) | (1u << 11) |
-		                          (1u << 13) | (1u << 14) | (1u << 15));
+		group("Data corrupt", (1u << 3) | (1u << 6) | (1u << 8) | (1u << 10) | (1u << 11) | (1u << 13) | (1u << 14) | (1u << 15));
 		group("Protocol / config", (1u << 2) | (1u << 4) | (1u << 5) | (1u << 7));
 		output << "Use end-of-run word-count parity as the authoritative loss check; 0x9370 identifies the stage.\n";
 	}

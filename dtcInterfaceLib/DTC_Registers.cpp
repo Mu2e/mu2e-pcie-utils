@@ -2455,7 +2455,7 @@ void DTCLib::DTC_Registers::SetEVBIdleBurst(uint16_t count)
 uint16_t DTCLib::DTC_Registers::ReadEVBIdleBurst(std::optional<uint32_t> val)
 {
 	return static_cast<uint16_t>(
-	    (val.has_value() ? *val : ReadRegister_(DTC_Register_EVBIdleBurst)) & 0xFFFFu);
+		(val.has_value() ? *val : ReadRegister_(DTC_Register_EVBIdleBurst)) & 0xFFFFu);
 }
 
 /// Formats the EVB idle-burst register for register dumps
