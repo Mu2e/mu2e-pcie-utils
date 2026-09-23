@@ -1,4 +1,5 @@
 #include "DTC_Registers.h"
+#include "EVBErrorStatus.h"
 
 #include <assert.h>
 #include <unistd.h>
@@ -2166,6 +2167,11 @@ void DTCLib::DTC_Registers::ClearROCTimeoutError(DTC_Link_ID const& link)
 	WriteRegister_(data.to_ulong(), DTC_Register_ROCReplyTimeoutError);
 }
 
+uint32_t DTCLib::DTC_Registers::ReadROCReplyTimeoutErrorRegister()
+{
+	return ReadRegister_(DTC_Register_ROCReplyTimeoutError);
+}
+
 /// <summary>
 /// Formats the register's current value for register dumps
 /// </summary>
@@ -2437,6 +2443,34 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBPacketControlInfo()
 	return form;
 }
 
+/// Set the EVB idle-burst count (0x9170 [15:0]).
+/// 0 or 1 keeps the default one-idle-per-window behavior.  N sends up to N idle
+/// packets per destination window, each through the normal header/CRC/gap path.
+void DTCLib::DTC_Registers::SetEVBIdleBurst(uint16_t count)
+{
+	WriteRegister_(static_cast<uint32_t>(count), DTC_Register_EVBIdleBurst);
+}
+
+/// Read the EVB idle-burst count (0x9170 [15:0])
+uint16_t DTCLib::DTC_Registers::ReadEVBIdleBurst(std::optional<uint32_t> val)
+{
+	return static_cast<uint16_t>(
+		(val.has_value() ? *val : ReadRegister_(DTC_Register_EVBIdleBurst)) & 0xFFFFu);
+}
+
+/// Formats the EVB idle-burst register for register dumps
+DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBIdleBurst()
+{
+	auto form = CreateFormatter(DTC_Register_EVBIdleBurst);
+	form.description = "EVB Idle Burst";
+	form.vals.push_back("");
+	std::stringstream o;
+	o << "Idle Burst Count: " << std::dec << ReadEVBIdleBurst(form.value)
+	  << " (0 or 1 = one per window)";
+	form.vals.push_back(o.str());
+	return form;
+}
+
 /// Read theHardware Event Building Stats data based on type and DTC mac address
 uint32_t DTCLib::DTC_Registers::ReadEVBStats(DTC_EVBStatsType type, uint8_t dtc_mac, std::optional<uint32_t> val)
 {
@@ -2455,6 +2489,8 @@ uint32_t DTCLib::DTC_Registers::ReadEVBStats(DTC_EVBStatsType type, uint8_t dtc_
 
 	WriteRegister_(t, DTC_Register_EVBStats);
 
+	// first read drains any stale capture from the TX FSM holding the BRAM port
+	ReadRegister_(DTC_Register_EVBStats);
 	return ReadRegister_(DTC_Register_EVBStats);
 }  // end ReadEVBStats()
 
@@ -2596,6 +2632,9 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 					break;
 				case DTC_EVBStatsType_RxIdleCount:
 					o << "RX Idle Packet Count:                  ";
+					break;
+				case DTC_EVBStatsType_TxPacketCount:
+					o << "TX Packet Count:                       ";
 					break;
 				default:
 					__SS__ << "Invalid DTC EVB Stat type: " << t << __E__;
@@ -4809,20 +4848,8 @@ bool DTCLib::DTC_Registers::ReadEventBuilder_TransmitDMAByteCountFIFOFull(std::o
 DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEventBuilderErrorRegister()
 {
 	auto form = CreateFormatter(DTC_Register_EventBuilderErrorFlags);
-	form.description = "Event Builder Error Flags";
-	form.vals.push_back("([ x = 1 (hi) ])");  // translation
-	form.vals.push_back(std::string("Sub-Event Received Flags Buffer Error: [") +
-						(ReadEventBuilder_SubEventReceiverFlagsBufferError(form.value) ? "x" : " ") + "]");
-	form.vals.push_back(std::string("Input FIFO Full:                       [") +
-						(ReadEventBuilder_EthernetInputFIFOFull(form.value) ? "x" : " ") + "]");
-	form.vals.push_back(std::string("Link Error:                            [") +
-						(ReadEventBuilder_LinkError(form.value) ? "x" : " ") + "]");
-	form.vals.push_back(std::string("TX Packet Error:                       [") +
-						(ReadEventBuilder_TXPacketError(form.value) ? "x" : " ") + "]");
-	form.vals.push_back(std::string("Local Data Pointer FIFO Queue Error:   [") +
-						(ReadEventBuilder_LocalDataPointerFIFOQueueError(form.value) ? "x" : " ") + "]");
-	form.vals.push_back(std::string("Transmit DMA Byte Count FIFO Full:     [") +
-						(ReadEventBuilder_TransmitDMAByteCountFIFOFull(form.value) ? "x" : " ") + "]");
+	form.description = "EVB Errors / Status";
+	form.vals = DecodeEVBErrorStatus(form.value);
 	return form;
 }
 
@@ -7463,6 +7490,43 @@ DTCLib::DTC_Register DTCLib::DTC_Registers::GetTXEventWindowMarkerCountLinkRegis
 }  // end GetTXEventWindowMarkerCountLinkRegister()
 
 // TX Null Heartbeat Packet Count
+// Receive DH Timeout Count
+uint32_t DTCLib::DTC_Registers::ReadReceiveDHTimeoutCount(DTC_Link_ID const& link, std::optional<uint32_t> val)
+{
+	return val.has_value() ? *val : ReadRegister_(GetReceiveDHTimeoutCountLinkRegister(link));
+}  // end ReadReceiveDHTimeoutCount()
+
+DTCLib::DTC_Register DTCLib::DTC_Registers::GetReceiveDHTimeoutCountLinkRegister(DTC_Link_ID const& link)
+{
+	DTC_Register reg;
+	switch (link)
+	{
+		case DTC_Link_0:
+			reg = DTC_Register_ReceiveDHTimeoutCount_Link0;
+			break;
+		case DTC_Link_1:
+			reg = DTC_Register_ReceiveDHTimeoutCount_Link1;
+			break;
+		case DTC_Link_2:
+			reg = DTC_Register_ReceiveDHTimeoutCount_Link2;
+			break;
+		case DTC_Link_3:
+			reg = DTC_Register_ReceiveDHTimeoutCount_Link3;
+			break;
+		case DTC_Link_4:
+			reg = DTC_Register_ReceiveDHTimeoutCount_Link4;
+			break;
+		case DTC_Link_5:
+			reg = DTC_Register_ReceiveDHTimeoutCount_Link5;
+			break;
+		default: {
+			__SS__ << "Illegal link index provided: " << link << __E__;
+			__SS_THROW__;
+		}
+	}
+	return reg;
+}  // end GetReceiveDHTimeoutCountLinkRegister()
+
 uint32_t DTCLib::DTC_Registers::ReadTXNullHeartbeatCount(DTC_Link_ID const& link, std::optional<uint32_t> val)
 {
 	return val.has_value() ? *val : ReadRegister_(GetTXNullHeartbeatCountLinkRegister(link));
@@ -7708,7 +7772,8 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatCFOCDCDiag()
 ///        Encoded as 0xTMmm where T is type (B = EVBuilding), M is major, mm is minor.
 std::string DTCLib::DTC_Registers::ReadEVBFirmwareVersion(std::optional<uint32_t> val)
 {
-	uint16_t ver = ReadEVBROCInputWords(val);
+	uint32_t reg = val.has_value() ? *val : ReadRegister_(CFOandDTC_Register_DesignVersion);
+	uint16_t ver = reg & 0xFFFF;
 	char type = static_cast<char>((ver >> 12) & 0xF);
 	int major = (ver >> 8) & 0xF;
 	int minor = ver & 0xFF;
@@ -7721,8 +7786,8 @@ std::string DTCLib::DTC_Registers::ReadEVBFirmwareVersion(std::optional<uint32_t
 DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDeviceTimeAlive()
 {
 	auto form = CFOandDTC_Registers::FormatDeviceTimeAlive();
-	uint16_t evbRaw = ReadEVBROCInputWords();
-	uint8_t typeNibble = (evbRaw >> 12) & 0xF;
+	uint32_t designVer = ReadRegister_(CFOandDTC_Register_DesignVersion);
+	uint8_t typeNibble = (designVer >> 12) & 0xF;
 	if (typeNibble == 0xB)  // 'B' = EVB firmware present
 	{
 		auto& line = form.vals.back();
@@ -7733,7 +7798,7 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatDeviceTimeAlive()
 		{
 			while (pos > 0 && line[pos - 1] != ' ')
 				--pos;
-			line.insert(pos, "EVB  ");
+			line.insert(pos, "EVB ");
 		}
 		else
 			line += ", EVB";

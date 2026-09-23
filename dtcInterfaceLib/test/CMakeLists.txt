@@ -3,6 +3,9 @@ cet_make_exec(NAME packetReader SOURCE packetReader.cc)
 
 cet_make_exec(NAME dtcUnitTests SOURCE dtcUnitTests.cc LIBRARIES mu2e-pcie-utils::DTCInterface)
 
+cet_make_exec(NAME evbErrorStatusTest SOURCE evbErrorStatusTest.cc)
+add_test(NAME evbErrorStatusTest COMMAND evbErrorStatusTest)
+
 cet_make_exec(NAME tester SOURCE tester.cc LIBRARIES mu2e-pcie-utils::DTCInterface)
 
 cet_make_exec(NAME sizeof_buffdesc SOURCE sizeof_buffdesc.cc LIBRARIES mu2e-pcie-utils::DTCInterface)
