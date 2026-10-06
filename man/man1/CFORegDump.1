@@ -1,0 +1,65 @@
+.TH CFOREGDUMP 1 "2026-10-06" "mu2e-pcie-utils 9.01.00" "Mu2e DAQ Manual"
+.SH NAME
+CFORegDump \- print a formatted dump of a CFO's registers and counters
+.SH SYNOPSIS
+.B CFORegDump
+.RB [ \-d
+.IR cfo ]
+.RB [ \-R ]
+.RB [ \-s ]
+.RB [ \-h ]
+.SH DESCRIPTION
+Constructs
+.B CFOLib::CFO_Registers
+with
+.B skipInit
+set and prints the formatted register dump
+.RB ( formattedDumpFunctions_ )
+and, with
+.BR \-s ,
+the counters
+.RB ( formattedCounterFunctions_ ).
+.SH OPTIONS
+.TP
+.BI \-d " cfo"
+Card index.
+Default:
+.B CFOLIB_CFO
+if set, else
+.BR DTCLIB_DTC ,
+else 0.
+.TP
+.B \-R
+Do not print the register dump.
+.TP
+.B \-s
+Print the counter registers.
+.TP
+.B \-h
+Usage, exit 0.
+The usage also lists
+.BR \-p ;
+it is not implemented and is reported as an unknown option.
+.SH EXIT STATUS
+0 on success; abort (134) if the device cannot be opened.
+.SH ENVIRONMENT
+.BR CFOLIB_CFO ,
+.BR DTCLIB_DTC ;
+.B CFOLIB_SIM_ENABLE
+(then
+.BR DTCLIB_SIM_ENABLE )
+overrides the hardware mode as in
+.BR DTCRegDump (1).
+.SH EXAMPLES
+.EX
+CFORegDump \-d 0 \-s
+.EE
+.SH SEE ALSO
+.BR DTCRegDump (1),
+.BR cfoUtil (1),
+.BR libCFOInterface (3),
+.BR mu2e (4)
+.SH AUTHOR
+Mu2e TDAQ group (Eric Flumerfelt, Ryan Rivera, Ron Rechenmacher and others).
+Manual page written for the September 2026 DAQ mega-review from the source
+at commit a5c0ce7.

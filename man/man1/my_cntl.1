@@ -1,0 +1,296 @@
+.TH MY_CNTL 1 "2026-10-06" "mu2e-pcie-utils 9.01.00" "Mu2e DAQ Manual"
+.SH NAME
+my_cntl \- raw register and driver test commands for a Mu2e DTC/CFO card
+.SH SYNOPSIS
+.B my_cntl
+.RB [ \-d
+.IR dtc ]
+.RB [ \-l
+.IR loops ]
+.RB [ \-t ]
+.B read
+.I offset
+.br
+.B my_cntl
+.RB [ \-d
+.IR dtc ]
+.B write
+.I offset value
+.br
+.B my_cntl
+.RB [ \-d
+.IR dtc ]
+.BR start | stop | dump
+.br
+.B my_cntl
+.RB [ \-d
+.IR dtc ]
+.RB [ \-c
+.IR chn ]
+.B spy
+.RI [ optsmask ]
+.br
+.B my_cntl
+.RB [ \-d
+.IR dtc ]
+.B hash
+.RI [ hostname ]
+.br
+.B my_cntl
+.BR \-h | \-V
+.SH DESCRIPTION
+.B my_cntl
+is the lowest-level userspace tool for the
+.BR mu2e (4)
+driver.
+It talks to
+.BI /dev/mu2e N
+directly, without constructing a
+.B DTC
+or
+.B DTC_Registers
+object, so it never re-initialises the card.
+Operations scripts use it for register polling: mu2edaq-operations
+.B read_dtc_temps.sh
+reads the FPGA die temperature at 0x9010 with it and powers the host
+off on over-temperature.
+.PP
+Commands:
+.TP
+.BI read " offset"
+Open
+.BI /dev/mu2e N
+read-only and issue
+.B M_IOC_REG_ACCESS
+with
+.I access_type
+0 once per loop.
+.I offset
+is parsed with
+.BR strtoul (3)
+base 0 and stored in the 16-bit
+.I reg_offset
+field, so offsets above 0xFFFF are silently truncated.
+.TP
+.BI write " offset value"
+Initialise a
+.B mu2edev
+handle (opens the node read-write and maps the DMA rings) and call
+.BR write_register_checked() ,
+which issues
+.B M_IOC_REG_ACCESS
+with
+.I access_type
+2 (write, then read back under the driver's readback mutex).
+If the read-back differs from the written value it prints
+.B "NOTE: Write value mismatch 0x\fIW\fP vs readback 0x\fIR\fP"
+\(em normal for self-clearing or read-only bits.
+.TP
+.BR start ", " stop
+Issue
+.B M_IOC_TEST_START
+/
+.B M_IOC_TEST_STOP
+with an uninitialised
+.B m_ioc_cmd_t
+argument.
+Legacy XPMON test hooks.
+.TP
+.B dump
+Issue
+.BR M_IOC_DUMP ;
+the driver writes its DMA ring state to the kernel TRACE buffer
+.RI ( /proc/trace/buffer )
+or printk, not to stdout.
+.TP
+.BR spy " [\fIoptsmask\fP]"
+Call
+.BR mu2edev::spy() ,
+printing part of each receive (C2S) buffer of channel
+.I chn
+until interrupted.
+.TP
+.BR hash " [\fIhostname\fP]"
+Print
+.BI "hash: " X
+where
+.I X
+is
+.BR mu2e_host_hash() :
+the 16-bit TRACE name hash of
+.I hostname
+(default: this host) in bits 31:16 and
+.I dtc
+in bits 15:0.
+The driver writes the same value to the scratch register 0x9030 when it
+allocates the card's DMA memory at probe time, so a register dump
+identifies the host and index that loaded it.
+.SH OPTIONS
+.TP
+.BI \-d " dtc"
+Device index
+.IR N " of " /dev/mu2e N .
+Default:
+.B DTCLIB_DTC
+if set, else 0.
+.TP
+.BI \-l " loops"
+Repeat
+.B read
+this many times (default 1).
+.TP
+.B \-t
+With
+.BR read :
+print only the initial value and every change, then a summary.
+.TP
+.BI \-c " chn"
+DMA channel for
+.BR spy :
+0 = DAQ (ROC data), 1 = DCS.
+.TP
+.BR \-h ", " \-?
+Print usage to stdout and exit 0.
+.TP
+.B \-V
+Print the RCS revision string and exit 0.
+.TP
+.BR \-v ", " \-p " \fIn\fP, " \-m " \fIn\fP, " \-\-mem\-to\-malloc " \fIn\fP"
+Accepted and ignored.
+.SH OUTPUT FORMAT
+.B read
+writes one line per loop to stdout, exactly
+.B 0x%08x
+(eight lowercase hex digits), followed by the line
+.BR sts=0 .
+The
+.B sts=
+line contains no
+.BR 0x ,
+so
+.B "my_cntl read 0x9010 | grep 0x"
+yields only the value line.
+With
+.B \-t
+the lines are
+.BR "initial val: 0x%08x" ,
+.BR "val changed from 0x%08x \- new val: 0x%08x" ,
+and
+.B "value changed %d times"
+or
+.BR "value did not change during %u loops" .
+.PP
+.BR write ", " start ", " stop ", " dump
+print only
+.BR sts=%d .
+All
+.BR perror (3)
+text goes to stderr; on any failure stdout carries no
+.B 0x
+line.
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+Also returned for
+.BR \-h ,
+for an unknown option (getopt returns
+.B ?
+and usage is printed), and when no command is given
+(prints
+.B "Need cmd"
+and usage on stdout).
+.TP
+.B 1
+Unknown command; missing operand to
+.B read
+or
+.BR write ;
+.BR open (2)
+of the node failed
+.RB ( read ,
+.BR start ,
+.BR stop ,
+.BR dump ;
+message
+.BR "open: ..." );
+or the
+.B M_IOC_REG_ACCESS
+ioctl failed during
+.B read
+(message
+.BR "ioctl M_IOC_REG_ACCESS read: ..." ),
+or
+.B M_IOC_DUMP
+failed.
+.TP
+.B 134
+.RB ( SIGABRT )
+.B write
+or
+.B spy
+when the node cannot be opened:
+.B mu2edev::init()
+throws and nothing catches it.
+.PP
+.B write
+does not check the ioctl result: it prints
+.B sts=0
+and exits 0 even if the register write failed.
+.B start
+and
+.B stop
+likewise exit 0 regardless of the ioctl result.
+.PP
+.B open
+fails with
+.B EBUSY
+when another non-root UID currently holds the card open (see
+.BR mu2e (4));
+a script running as an unprivileged user can therefore fail while
+the DAQ owns the device.
+.SH FILES
+.TP
+.BI /dev/mu2e N
+Card device node, N = 0..3.
+.SH ENVIRONMENT
+.TP
+.B DTCLIB_DTC
+Default device index when
+.B \-d
+is absent.
+.TP
+.BR TRACE_NAME ", " TRACE_FILE ", " TRACE_LVLS
+TRACE configuration for diagnostic messages.
+.SH EXAMPLES
+Read the FPGA die temperature code of card 1 and convert it with
+the same formula as
+.BR CFOandDTC_Registers::ReadFPGATemperature() :
+.PP
+.EX
+code=$(my_cntl \-d 1 read 0x9010 | grep 0x)
+python3 \-c "print(($code * 503.975 / 4096) \- 273.15)"
+.EE
+.PP
+Watch the SERDES CDR lock register for changes over 1000 reads:
+.PP
+.EX
+my_cntl \-l 1000 \-t read 0x9140
+.EE
+.PP
+Soft-reset card 0 (destructive \(em interrupts any running partition):
+.PP
+.EX
+my_cntl write 0x9100 0x80000000
+my_cntl write 0x9100 0x00000000
+.EE
+.SH SEE ALSO
+.BR mu2e (4),
+.BR DTCRegDump (1),
+.BR rocUtil (1),
+.BR libDTCInterface (3)
+.SH AUTHOR
+Ron Rechenmacher (original), Mu2e TDAQ group.
+Manual page written for the September 2026 DAQ mega-review from
+.I dtcInterfaceLib/my_cntl.cc
+at commit a5c0ce7.

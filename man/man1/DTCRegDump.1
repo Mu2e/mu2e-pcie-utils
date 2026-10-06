@@ -1,0 +1,103 @@
+.TH DTCREGDUMP 1 "2026-10-06" "mu2e-pcie-utils 9.01.00" "Mu2e DAQ Manual"
+.SH NAME
+DTCRegDump \- print a formatted dump of a DTC's registers and counters
+.SH SYNOPSIS
+.B DTCRegDump
+.RB [ \-d
+.IR dtc ]
+.RB [ \-m
+.IR file ]
+.RB [ \-R ]
+.RB [ \-p ]
+.RB [ \-e ]
+.RB [ \-c ]
+.RB [ \-s ]
+.RB [ \-h ]
+.SH DESCRIPTION
+.B DTCRegDump
+constructs a
+.B DTCLib::DTC_Registers
+object with
+.B skipInit
+set, so it reads the card without reconfiguring it.
+It first prints
+.BR "Terminal is \fIC\fPx\fIL\fP" ,
+then
+.BR "Driver Version: \fIstring\fP"
+(from
+.BR M_IOC_GET_VERSION ),
+then the register dump: one
+.B RegisterFormatter
+block per register with address, raw value, name and decoded fields.
+Width follows the terminal (capped at 120 columns when wider than 400).
+.SH OPTIONS
+.TP
+.BI \-d " dtc"
+Card index
+.RI ( /dev/mu2e N ).
+Default:
+.B DTCLIB_DTC
+if set, else 0.
+.TP
+.BI \-m " file"
+Simulator memory file (default
+.IR mu2esim.bin );
+used only in simulation mode.
+.TP
+.B \-R
+Do not print the register dump.
+.TP
+.B \-p
+Print the performance counters.
+.TP
+.B \-e
+Print the SERDES error counters.
+.TP
+.B \-c
+Print the Mu2e protocol packet counters.
+.TP
+.B \-s
+Prints
+.B "NOT IMPLEMENTED"
+(SERDES byte/packet counters were removed).
+.TP
+.B \-h
+Usage, exit 0.
+An unknown option prints
+.B "Unknown option"
+and the usage, and exits 0.
+.SH EXIT STATUS
+0 on success.
+If the node cannot be opened the library throws and the process aborts
+(status 134).
+.SH ENVIRONMENT
+.TP
+.B DTCLIB_DTC
+Default card index.
+.TP
+.B DTCLIB_SIM_ENABLE
+If set, overrides the requested hardware mode in the
+.B DTC_Registers
+constructor; any value that maps to a simulator mode (e.g.
+.BR 1 ,
+which
+.B Setup_DTC.sh
+exports on hosts whose name lacks \(dqmu2edaq\(dq) makes this tool dump the
+software simulator instead of the card.
+.SH FILES
+.BI /dev/mu2e N
+.SH EXAMPLES
+.EX
+DTCRegDump \-d 1 | grep \-A1 \(aqFPGA Temperature\(aq
+DTCRegDump \-R \-e \-c
+.EE
+.SH SEE ALSO
+.BR my_cntl (1),
+.BR CFORegDump (1),
+.BR dtcPrometheusExporter (1),
+.BR mu2e (4),
+.BR libDTCInterface (3)
+.SH AUTHOR
+Mu2e TDAQ group (Eric Flumerfelt, Ryan Rivera, Ron Rechenmacher and others).
+Manual page written for the September 2026 DAQ mega-review from the source
+at commit a5c0ce7.

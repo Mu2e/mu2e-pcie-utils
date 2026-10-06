@@ -1,0 +1,235 @@
+.TH MU2EUTIL 1 "2026-10-06" "mu2e-pcie-utils 9.01.00" "Mu2e DAQ Manual"
+.SH NAME
+mu2eUtil \- DTC DMA, detector-emulator and clock test utility
+.SH SYNOPSIS
+.B mu2eUtil
+.RI [ options ]
+.I operation
+.SH DESCRIPTION
+.I operation
+is one of
+.BR read_data ,
+.BR toggle_serdes ,
+.BR reset_ddr ,
+.BR reset_detemu ,
+.BR verify_simfile ,
+.BR verify_stream ,
+.BR buffer_test ,
+.BR read_release ,
+.BR program_clock ,
+.BR dma_info .
+The usage text also lists
+.B reset_ddrread
+and
+.BR loopback ,
+which are not implemented (they print
+.B "Unrecognized operation"
+and the usage).
+.TP
+.B buffer_test
+Send requests (DTC CFO emulator, or
+.B DTCSoftwareCFO
+with
+.BR \-e )
+and read DAQ DMA buffers, checking each for the 0xCAFE/0xDEAD timeout markers.
+.TP
+.B verify_stream
+Read and verify the DMA stream.
+.TP
+.BR read_data ", " read_release
+Read DAQ DMA buffers; release them.
+.TP
+.B verify_simfile
+Check that the detector-emulator file landed in DTC DDR memory.
+.TP
+.BR reset_ddr ", " reset_detemu ", " toggle_serdes
+Reset DDR / detector emulator; toggle SERDES clock.
+.TP
+.B program_clock
+Program oscillator
+.B \-C
+to frequency
+.BR \-F .
+.TP
+.B dma_info
+Print the driver's DMA ring metadata
+.RB ( mu2edev::meta_dump() );
+does not reconfigure the card.
+.SH OPTIONS
+Values may be attached
+.RB ( \-n5 ,
+.BR \-n=5 )
+or separate.
+.TP
+.BI \-n " num"
+Repetitions (default 1).
+.TP
+.BI \-o " ts"
+Starting event-window tag (48 bits).
+.TP
+.B \-i
+Do not increment the tag.
+.TP
+.B \-S
+Synchronous request mode.
+.TP
+.BI \-d " us"
+Delay between tests.
+.TP
+.BI \-D " n"
+CFO request delay interval.
+.TP
+.BI \-c " n"
+Debug packets to request.
+.TP
+.B \-N
+Do not set the debug flag in data requests.
+.TP
+.BI \-b " n"
+Data blocks per event.
+.TP
+.BI \-E " n"
+Events per DMA block.
+.TP
+.BI \-a " n"
+Requests to send ahead of reads.
+.TP
+.BI \-q " n"
+Quiet; limit buffer dumps to
+.I n
+packets.
+.TP
+.B \-Q
+Really quiet.
+.TP
+.B \-s
+Stop on SERDES error.
+.TP
+.B \-e
+Use the software CFO instead of the DTC CFO emulator.
+.TP
+.BR \-t ", " \-T " \fIn\fP"
+Debug-type handling.
+.TP
+.BI \-f " file"
+Raw output file (appended).
+.TP
+.B \-H
+Write DMA headers to the raw file.
+.TP
+.B \-p
+Load
+.B DTCLIB_SIM_FILE
+into the DTC and enable detector-emulator mode.
+.TP
+.BI \-P " file"
+Intended to load
+.IR file ;
+the value is parsed as an integer and assigned to a
+.BR std::string ,
+so the file name is lost (use
+.B \-p
+with
+.BR DTCLIB_SIM_FILE ).
+.TP
+.B \-G
+Enable detector-emulator mode.
+.TP
+.BI \-r " mask"
+ROC mask, one hex nibble per link (default 0x1).
+.TP
+.BI \-F " Hz"
+Frequency for
+.B program_clock
+(default 166666667).
+.TP
+.BI \-C " n"
+Clock: 0 SERDES, 1 DDR, 2 Timing.
+.TP
+.BI \-v " ver"
+Expected design version; mismatch throws.
+.TP
+.B \-V
+Skip sim-file verification.
+.TP
+.BI \-\-dtc " n"
+Card index (default
+.BR DTCLIB_DTC ,
+else 0).
+.TP
+.BI \-\-timestamp\-list " file"
+Request the tags listed in
+.IR file .
+.TP
+.B \-\-cfoDRP
+Data-request packets from the CFO emulator.
+.TP
+.BI \-\-heartbeats " n"
+Heartbeats after each request.
+.TP
+.BI \-\-binary\-file\-mode " file"
+Write DMA sizes and data to
+.IR file .
+.TP
+.BR \-\-stop\-verify ", " \-\-stop\-on\-timeout ", " \-\-extra\-reads " \fIn\fP"
+Verification controls.
+.TP
+.BR \-h ", " \-\-help
+Usage, exit 0; an unknown option also prints the usage and exits 0.
+.SH EXIT STATUS
+0, including for an unrecognised operation.
+Uncaught library exceptions abort the process.
+.SH ENVIRONMENT
+.TP
+.B DTCLIB_DTC
+Default card.
+.TP
+.B DTCLIB_SIM_ENABLE
+Overrides the mode (see
+.BR DTCRegDump (1));
+.B make_test_file.sh
+sets it to
+.B E
+to drive the software simulator.
+.TP
+.B DTCLIB_SIM_FILE
+Detector-emulator input for
+.BR \-p .
+.TP
+.BR DTCLIB_NUM_TRACKER_BLOCKS ", " DTCLIB_NUM_CALORIMETER_BLOCKS ", " DTCLIB_NUM_CALORIMETER_HITS ", " DTCLIB_NUM_CRV_BLOCKS
+Simulator event content.
+.SH WARNINGS
+This tool constructs
+.B DTCLib::DTC
+in mode
+.B DTC_SimMode_NoCFO
+without
+.BR skipInit .
+Construction therefore reconfigures the card before the requested operation
+runs, even for a read: for each of the six ROC links it enables the link if its
+nibble in the ROC mask is set, otherwise disables the link and its ROC emulator;
+it clears SERDES loopback and the ROC emulator on every link, and sets the
+CFO-emulation bit (bit 15 of 0x9100).
+Do not run it against a card that belongs to a running partition.
+.B dma_info
+and
+.B program_clock
+are the exceptions
+.RB ( program_clock
+uses
+.BR skipInit ).
+.SH EXAMPLES
+.EX
+mu2eUtil \-\-dtc 0 dma_info
+DTCLIB_SIM_ENABLE=E mu2eUtil \-Q \-n 10000 \e
+    \-\-binary\-file\-mode DTC_packets.bin buffer_test
+.EE
+.SH SEE ALSO
+.BR rocUtil (1),
+.BR make_test_file.sh (1),
+.BR Setup_DTC.sh (1),
+.BR libDTCInterface (3)
+.SH AUTHOR
+Mu2e TDAQ group (Eric Flumerfelt, Ryan Rivera, Ron Rechenmacher and others).
+Manual page written for the September 2026 DAQ mega-review from the source
+at commit a5c0ce7.

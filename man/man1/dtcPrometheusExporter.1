@@ -1,0 +1,113 @@
+.TH DTCPROMETHEUSEXPORTER 1 "2026-10-06" "mu2e-pcie-utils 9.01.00" "Mu2e DAQ Manual"
+.SH NAME
+dtcPrometheusExporter \- Prometheus HTTP exporter for Mu2e DTC and CFO register values
+.SH SYNOPSIS
+.B dtcPrometheusExporter
+.RB [ \-p
+.IR port ]
+.RB [ \-d
+.IR index ]
+.RB [ \-m
+.IR file ]
+.RB [ \-h ]
+.SH DESCRIPTION
+A single-threaded HTTP/1.x server on
+.B INADDR_ANY
+(all interfaces), no authentication.
+.B GET /metrics
+returns the gauge family
+.B dtc_register_value
+with labels
+.BR dtc ,
+.BR device_type " (" dtc | cfo ),
+.B address
+and
+.BR register ;
+the value is the raw 32-bit register.
+Any other path returns 404.
+.PP
+On every scrape the exporter enumerates
+.BI /dev/mu2e N
+(or uses
+.BR \-d ),
+constructs a
+.B DTC_Registers
+object with
+.B skipInit
+for each card, and if the design flavour is CFO constructs
+.B CFO_Registers
+instead.
+For a DTC it emits the simple dump, full dump, performance, SERDES-error and
+packet-counter register sets; for a CFO the simple dump, full dump and counters.
+Each address is emitted once.
+Every exception is swallowed: a card that cannot be opened (for example
+.B EBUSY
+because another UID owns it, see
+.BR mu2e (4))
+simply disappears from the output with no error metric.
+.PP
+Because each scrape opens the device, an exporter running as a non-root user
+holds ownership of the node for the duration of the scrape; a DAQ process of a
+different UID that opens the node in that window gets
+.BR EBUSY .
+.SH OPTIONS
+.TP
+.BI \-p " port"
+TCP port.
+Default
+.BR 9100 ,
+which is the conventional
+.B node_exporter
+port; mu2edaq-operations runs it with
+.BR "\-p 9194" .
+.TP
+.BI \-d " index"
+Scrape only this card.
+.TP
+.BI \-m " file"
+Simulator memory file passed to
+.B DTC_Registers
+(default
+.IR mu2esim.bin ).
+.TP
+.B \-h
+Usage, exit 0.
+An unknown option prints the usage and exits 0.
+.SH EXIT STATUS
+0 after
+.B SIGINT
+or
+.BR SIGTERM ;
+1 if
+.BR socket (2),
+.BR bind (2)
+or
+.BR listen (2)
+fails.
+.SH ENVIRONMENT
+.B DTCLIB_SIM_ENABLE
+and
+.B CFOLIB_SIM_ENABLE
+override hardware mode (see
+.BR DTCRegDump (1)).
+.SH FILES
+.BI /dev/mu2e N
+.SH EXAMPLES
+.EX
+dtcPrometheusExporter \-p 9194 &
+curl \-s http://localhost:9194/metrics | grep \(aqregister="FPGA Temperature"\(aq
+.EE
+.PP
+The systemd unit in mu2edaq-operations:
+.PP
+.EX
+ExecStart=.../spack\-env/view/bin/dtcPrometheusExporter \-p 9194
+.EE
+.SH SEE ALSO
+.BR DTCRegDump (1),
+.BR CFORegDump (1),
+.BR mu2e (4)
+.SH AUTHOR
+Mu2e TDAQ group (Eric Flumerfelt, Ryan Rivera, Ron Rechenmacher and others).
+Manual page written for the September 2026 DAQ mega-review from the source
+at commit a5c0ce7.

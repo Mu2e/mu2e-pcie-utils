@@ -1,0 +1,155 @@
+.TH ROCUTIL 1 "2026-10-06" "mu2e-pcie-utils 9.01.00" "Mu2e DAQ Manual"
+.SH NAME
+rocUtil \- DCS register and block access to a ROC through a DTC
+.SH SYNOPSIS
+.B rocUtil
+.RI [ options ]
+.I operation
+.SH DESCRIPTION
+Sends DCS request packets over the DTC's DCS DMA channel and reads the replies.
+.I operation
+is one of:
+.TP
+.B read_register
+.BR ReadROCRegister (link,
+.IR address ),
+repeated
+.B \-n
+times; the value is logged through TRACE/TLOG.
+.TP
+.B simple_read
+As
+.BR read_register ,
+but prints
+.I "iteration value"
+(value in hex with 0x) on stdout and puts TRACE in slow-only mode for the run.
+.TP
+.B write_register
+.BR WriteROCRegister (link,
+.IR address ,
+.IR data )
+without acknowledgement.
+.TP
+.BR read_extregister ", " write_extregister
+Extended (firmware block) register access using
+.BR \-b .
+.TP
+.B reset_roc
+Writes 0x11 to extended register 1 of blocks 12, 11, 10, 9, 8.
+.TP
+.B toggle_serdes
+Switches the SERDES oscillator between 2.5 and 3.125 Gbps.
+.TP
+.BR block_read ", " raw_block_read
+Read
+.B \-c
+words from
+.IR address .
+.TP
+.B block_write
+Writes the
+.B \-c
+words 0,1,2,... to
+.I address
+(a test pattern, not user data).
+.TP
+.BR test_read ", " read_release
+Read and release raw DCS DMA buffers under the DCS lock.
+.SH OPTIONS
+Values may be attached
+.RB ( \-n5 ,
+.BR \-n=5 )
+or separate
+.RB ( "\-n 5" );
+a separate value that is not numeric and does not start with 0 is not consumed
+and the option takes 0.
+.TP
+.BI \-l " link"
+ROC link 0\-5 (default 0).
+.TP
+.BI \-a " address"
+ROC register address.
+.TP
+.BI \-w " data"
+Data to write.
+.TP
+.BI \-b " block"
+Firmware block for the extended operations.
+.TP
+.BI \-c " count"
+Word count for block operations (default 0).
+.TP
+.B \-i
+Clear the increment-address bit for block operations.
+.TP
+.BI \-n " num"
+Repeat count (default 1).
+.TP
+.BI \-d " us"
+Delay between iterations.
+.TP
+.BR \-q ", " \-Q
+Quiet, really quiet.
+.TP
+.BI \-\-dtc " n"
+Card index (default
+.BR DTCLIB_DTC ,
+else 0).
+.TP
+.BI \-\-link\-mask " mask"
+ROC mask applied when the DTC object is constructed (default 0x111111);
+the nibble of
+.B \-l
+is always added.
+.TP
+.BI \-\-timeout\-ms " ms"
+DCS reply timeout (default 10).
+.TP
+.B \-\-stop\-on\-error
+Stop the loop at the first exception.
+.TP
+.BR \-h ", " \-\-help
+Usage, exit 0.
+The usage lists
+.BR \-v ;
+it is not parsed and is reported as an unknown option (usage, exit 0).
+.SH EXIT STATUS
+0 in all handled cases, including errors logged per iteration and an
+unrecognised operation.
+Uncaught library exceptions (device open, DCS lock timeout) abort the process.
+.SH ENVIRONMENT
+.BR DTCLIB_DTC ,
+.BR DTCLIB_SIM_ENABLE ,
+TRACE variables.
+.SH WARNINGS
+This tool constructs
+.B DTCLib::DTC
+in mode
+.B DTC_SimMode_NoCFO
+without
+.BR skipInit .
+Construction therefore reconfigures the card before the requested operation
+runs, even for a read: for each of the six ROC links it enables the link if its
+nibble in the ROC mask is set, otherwise disables the link and its ROC emulator;
+it clears SERDES loopback and the ROC emulator on every link, and sets the
+CFO-emulation bit (bit 15 of 0x9100).
+Do not run it against a card that belongs to a running partition.
+.PP
+The DCS lock is a driver flag shared by every process on the host.
+If the library cannot take it within 1 s it force-releases it (even if
+another process holds it) and throws; see
+.BR libDTCInterface (3).
+.SH EXAMPLES
+.EX
+rocUtil \-l 0 \-a 18 simple_read
+rocUtil \-\-dtc 1 \-l 2 \-a 14 \-w 0x10 write_register
+.EE
+.SH SEE ALSO
+.BR mu2eUtil (1),
+.BR my_cntl (1),
+.BR libDTCInterface (3),
+.BR mu2e (4)
+.SH AUTHOR
+Mu2e TDAQ group (Eric Flumerfelt, Ryan Rivera, Ron Rechenmacher and others).
+Manual page written for the September 2026 DAQ mega-review from the source
+at commit a5c0ce7.

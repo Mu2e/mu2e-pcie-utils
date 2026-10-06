@@ -1,0 +1,276 @@
+.TH MU2E 4 "2026-10-06" "mu2e-pcie-utils 9.01.00" "Mu2e DAQ Manual"
+.SH NAME
+mu2e \- Mu2e DTC/CFO PCIe card driver and its /dev/mu2eN device nodes
+.SH SYNOPSIS
+.B #include \(dqmu2e_driver/mu2e_mmap_ioctl.h\(dq
+.PP
+.BI /dev/mu2e N
+.RI ( N " = 0 .. 3)"
+.SH DESCRIPTION
+The
+.B mu2e
+kernel module
+.RI ( mu2e.ko ,
+built from
+.IR mu2e_driver/ )
+binds Xilinx PCI devices 10ee:7042 and 10ee:7043 (DTC and CFO firmware).
+It allocates a character-device region named
+.B mu2e_drv
+with
+.B MU2E_MAX_NUM_DTCS
+= 4 minors, a device class
+.BR mu2e_dev ,
+and one node
+.BI mu2e N
+per probed card.
+The minor number is the card index used everywhere else
+.RB ( \-d ,
+.BR DTCLIB_DTC ,
+.BR \-\-dtc ).
+.PP
+The file operations are
+.BR open ,
+.BR release ,
+.B unlocked_ioctl
+and
+.BR mmap .
+There is no
+.BR read (2),
+.BR write (2)
+or
+.BR poll (2),
+and no
+.B compat_ioctl
+(32-bit userspace on a 64-bit kernel is not supported).
+.PP
+At probe time the driver allocates the DMA rings and writes two registers:
+0x9030 (scratch) receives
+.BR mu2e_host_hash() ,
+the 16-bit TRACE name hash of the host name in bits 31:16 and the card index in
+bits 15:0;
+0x9188 receives the load time in Unix seconds.
+.SS Open and ownership
+The first
+.BR open (2)
+by a process without
+.B CAP_DAC_OVERRIDE
+records that process's UID as owner and sets the inode owner to it.
+While the open count is non-zero, an open by a different UID
+(real and effective) fails with
+.BR EBUSY .
+The last close returns the inode to root.
+Processes with
+.B CAP_DAC_OVERRIDE
+bypass the check and are not counted.
+.PP
+The driver does not look at the open mode: a descriptor opened
+.B O_RDONLY
+can write registers through
+.BR M_IOC_REG_ACCESS .
+Access control therefore rests entirely on the node's mode;
+.B setup_dkms.sh
+installs the udev rule
+.B KERNEL==\(dqmu2e*\(dq, MODE=\(dq0666\(dq
+(see
+.BR setup_dkms.sh (1)).
+.SS Register access
+.EX
+typedef uint16_t dtc_address_t;
+typedef uint32_t dtc_data_t;
+typedef struct {
+    dtc_address_t reg_offset;   /* byte offset from BAR0          */
+    int           access_type;  /* 0 read, 1 write, 2 write+read  */
+    dtc_data_t    val;
+} m_ioc_reg_access_t;           /* 12 bytes; offsets 0, 4, 8      */
+.EE
+.PP
+Type 0 reads
+.IR val ;
+type 1 writes and returns without copying back;
+type 2 writes then reads back under a single global mutex.
+The 16-bit offset limits the reachable space to the first 64 KiB of BAR0, which
+holds the NWL DMA engine registers (0x0000\-0x40FF) and the DTC/CFO register map
+(0x9000\-0xA454).
+The driver checks neither the offset against the BAR length nor its alignment.
+.SS ioctl requests
+Magic
+.BR \(aqC\(aq .
+Command values are for Linux x86_64.
+.EX
+Request              nr dir  argument (size)           cmd value
+M_IOC_GET_TST_STATE   1 RW   m_ioc_cmd_t (16)          0xC0104301
+M_IOC_TEST_START      2 W    m_ioc_cmd_t (16)          0x40104302
+M_IOC_TEST_STOP       3 W    m_ioc_cmd_t (16)          0x40104303
+M_IOC_GET_PCI_STATE   4 R    m_ioc_pcistate_t (60)     0x803C4304
+M_IOC_GET_ENG_STATE   5 RW   m_ioc_engstate_t (36)     0xC0244305
+M_IOC_GET_DMA_STATS   6 RW   m_ioc_engstats_t (16)     0xC0104306
+M_IOC_GET_TRN_STATS   7 RW   TRNStatsArray (16)        0xC0104307
+M_IOC_REG_ACCESS      9 RW   m_ioc_reg_access_t (12)   0xC00C4309
+M_IOC_GET_INFO       12 RW   m_ioc_get_info_t (28)     0xC01C430C
+M_IOC_BUF_GIVE       13 none integer                   0x0000430D
+M_IOC_DUMP           14 none \-                         0x0000430E
+M_IOC_BUF_XMIT       16 none integer                   0x00004310
+M_IOC_DCS_LOCK       17 none \-                         0x00004311
+M_IOC_DCS_RELEASE    18 none \-                         0x00004312
+M_IOC_GET_VERSION    19 R    mu2e_string_t (100)       0x80644313
+.EE
+.PP
+.B M_IOC_GET_DMA_STATS
+and
+.B M_IOC_GET_TRN_STATS
+carry a user pointer, so their size and command value differ on ILP32.
+Unknown commands return
+.B ENOSYS
+(not
+.BR ENOTTY );
+a wrong magic returns
+.BR ENOTTY .
+.TP
+.B M_IOC_GET_INFO
+In:
+.IR chn ,
+.IR dir ,
+.IR tmo_ms .
+Out:
+.IR buff_size ,
+.IR num_buffs ,
+.I hwIdx
+(hardware ring index) and
+.I swIdx
+(software index).
+The number of filled receive buffers is
+.BR mu2e_chn_info_delta_() .
+.TP
+.B M_IOC_BUF_GIVE
+Argument
+.BR "(chn << 24) | (dir << 16) | num" :
+return
+.I num
+received buffers to the hardware.
+.TP
+.B M_IOC_BUF_XMIT
+Argument
+.BR "(chn << 24) | (bytes & 0xFFFFFF)" :
+transmit the S2C buffer at the current software index.
+.TP
+.BR M_IOC_DCS_LOCK ", " M_IOC_DCS_RELEASE
+A per-card test-and-set flag.
+.B LOCK
+returns
+.B EAGAIN
+if the flag is set; it never blocks.
+.B RELEASE
+clears the flag unconditionally; it has no owner and is not cleared when the
+holder closes the device or exits.
+.TP
+.B M_IOC_GET_VERSION
+Copies the 100-byte
+.B DRIVER_VERSION_STRING
+(\(dqv3_00_00\(dq in the source;
+.B setup_dkms.sh
+replaces it with
+.B git describe \-\-tags
+of the DKMS source tree).
+.TP
+.BR M_IOC_DUMP
+Writes the ring state to the kernel TRACE buffer or printk.
+.SS DMA buffers and mmap
+Each card has two DMA channels, 0 = DAQ and 1 = DCS
+.RB ( DTC_DMA_Engine ),
+each with two directions, C2S = 0 (card to system, receive) and
+S2C = 1 (system to card, send).
+A receive ring has
+.B MU2E_NUM_RECV_BUFFS
+= 100 buffers, a send ring
+.B MU2E_NUM_SEND_BUFFS
+= 60; every buffer is a 64 KiB
+.B mu2e_databuff_t
+allocated with
+.BR dma_alloc_coherent() .
+The header also defines
+.B SET_DTC_MAX_DMA_SIZE
+0xFFF8, which no driver source uses.
+Hardware descriptors are the 32-byte packed NWL formats
+.B mu2e_buffdesc_C2S_t
+and
+.B mu2e_buffdesc_S2C_t
+.RI ( xdma_hw.h );
+they are not mapped to userspace.
+.PP
+The
+.BR mmap (2)
+offset selects one region: page index
+.IR pg " = " chn "\(mu4 + " dir "\(mu2 + " map ,
+computed by
+.BR chnDirMap2offset() .
+.I map
+0
+.RB ( MU2E_MAP_BUFF )
+is the data-buffer array
+.RI ( num_buffs " \(mu " buff_size );
+.I map
+1
+.RB ( MU2E_MAP_META )
+is
+.I num_buffs
+.BR int s
+of per-buffer metadata.
+.B libDTCInterface
+maps buffers with
+.B PROT_WRITE
+and metadata with
+.BR PROT_READ .
+.SH FILES
+.TP
+.BI /dev/mu2e N
+Card nodes.
+.TP
+.I /etc/udev/rules.d/98\-mu2e.rules
+Node mode, written by
+.BR setup_dkms.sh .
+.TP
+.I /etc/modules\-load.d/mu2e.conf
+Loads the module at boot, written by
+.BR setup_dkms.sh .
+.TP
+.I /lib/modules/*/extra/mu2e.ko
+DKMS-installed module (with
+.I TRACE.ko
+and
+.IR pci_devel_main.ko ).
+.SH NOTES
+The companion module
+.B pci_devel_main
+.RI ( mcs/basic_driver )
+creates
+.BI /dev/pcidev N
+with magic
+.B \(aqD\(aq
+(hello, ioremap/iounmap, 32-bit register access, and
+.B IOC_IOOP
+read/write); it is used only by
+.BR mcs (1)
+and
+.BR devl (1)
+to reprogram the configuration PROM.
+.SH EXAMPLES
+Find the cards and the driver version:
+.PP
+.EX
+ls \-l /dev/mu2e*
+DTCRegDump \-d 0 | grep \(aq^Driver Version\(aq
+dkms status mu2e_pcie_utils
+.EE
+.SH SEE ALSO
+.BR my_cntl (1),
+.BR DTCRegDump (1),
+.BR setup_dkms.sh (1),
+.BR libDTCInterface (3),
+.BR ioctl (2),
+.BR mmap (2)
+.SH AUTHOR
+Ron Rechenmacher (driver), Eric Flumerfelt, Ryan Rivera and the Mu2e TDAQ group.
+Manual page written for the September 2026 DAQ mega-review from
+.IR mu2e_driver/*.h
+at commit a5c0ce7; command values computed from the header with an
+LP64 compiler.
