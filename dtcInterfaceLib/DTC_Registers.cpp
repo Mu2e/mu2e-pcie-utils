@@ -2471,6 +2471,36 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBIdleBurst()
 	return form;
 }
 
+/// Read the EVB resends served by this DTC's TX (0x9174 [31:16]): rewinds performed for peers
+uint16_t DTCLib::DTC_Registers::ReadEVBResendsServed(std::optional<uint32_t> val)
+{
+	return static_cast<uint16_t>(
+		((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBResendCount)) >> 16) & 0xFFFFu);
+}
+
+/// Read the EVB resends requested by this DTC's RX (0x9174 [15:0]): sequence gaps that entered discard
+uint16_t DTCLib::DTC_Registers::ReadEVBResendsRequested(std::optional<uint32_t> val)
+{
+	return static_cast<uint16_t>(
+		(val.has_value() ? *val : ReadRegister_(DTC_Register_EVBResendCount)) & 0xFFFFu);
+}
+
+/// Formats the EVB resend-count register for register dumps
+DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBResendCount()
+{
+	auto form = CreateFormatter(DTC_Register_EVBResendCount);
+	form.description = "EVB Resend Count";
+	form.vals.push_back("");
+	std::stringstream o;
+	o << "Resends served by TX: " << std::dec << ReadEVBResendsServed(form.value);
+	form.vals.push_back(o.str());
+	o.str("");
+	o.clear();
+	o << "Resends requested by RX: " << std::dec << ReadEVBResendsRequested(form.value);
+	form.vals.push_back(o.str());
+	return form;
+}
+
 /// Read theHardware Event Building Stats data based on type and DTC mac address
 uint32_t DTCLib::DTC_Registers::ReadEVBStats(DTC_EVBStatsType type, uint8_t dtc_mac, std::optional<uint32_t> val)
 {
@@ -2635,6 +2665,9 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 					break;
 				case DTC_EVBStatsType_TxPacketCount:
 					o << "TX Packet Count:                       ";
+					break;
+				case DTC_EVBStatsType_RxAckPosition:
+					o << "Rx Ack Position (peer resend feedback): ";
 					break;
 				default:
 					__SS__ << "Invalid DTC EVB Stat type: " << t << __E__;

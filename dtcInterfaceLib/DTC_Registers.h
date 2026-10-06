@@ -29,7 +29,7 @@ enum DTC_Register : uint16_t
 	DTC_Register_EVBStats                  = 0x9160,
 	DTC_Register_SERDESClock_IICBusControl = 0x9164,
 	DTC_Register_EVBIdleBurst              = 0x9170,
-	// DTC_Register_DDRClock_IICBusControl = 0x9174,
+	DTC_Register_EVBResendCount            = 0x9174,  // [31:16] resends served by TX, [15:0] requested by RX
 	// DTC_Register_DDRClock_IICBusLow = 0x9178,
 	// DTC_Register_DDRClock_IICBusHigh = 0x917C,
 	// Reserved - formerly... DTC_Register_DDRWriteResponseTimer = 0x9180,
@@ -620,6 +620,11 @@ class DTC_Registers : public CFOandDTC_Registers
 	void              SetEVBIdleBurst(uint16_t count);
 	uint16_t          ReadEVBIdleBurst(std::optional<uint32_t> val = std::nullopt);
 	RegisterFormatter FormatEVBIdleBurst();
+
+	// EVB Resend Count (0x9174, read-only, SoftReset clear, 16-bit wrap)
+	uint16_t          ReadEVBResendsServed(std::optional<uint32_t> val = std::nullopt);
+	uint16_t          ReadEVBResendsRequested(std::optional<uint32_t> val = std::nullopt);
+	RegisterFormatter FormatEVBResendCount();
 
 	// EVB Stats
 	uint32_t                                           ReadEVBStats(DTC_EVBStatsType type, uint8_t dtc_mac, std::optional<uint32_t> val = std::nullopt);
