@@ -2,7 +2,9 @@
 #define DTC_H
 
 #include <array>
+#include <chrono>
 #include <list>
+#include <map>
 #include <memory>
 #include <vector>
 
@@ -100,6 +102,28 @@ class DTC : public DTC_Registers
 	/// <returns>A vector of DTC_SubEvent objects, but only one DTC_SubEvent is expected</returns>
 	std::vector<std::unique_ptr<DTC_SubEvent>> GetSubEventData(DTC_EventWindowTag when = DTC_EventWindowTag(), bool matchEventWindowTag = false);
 	std::vector<std::shared_ptr<DTC_Event>>    GetSubEventDataAsEvents(DTC_EventWindowTag when = DTC_EventWindowTag(), bool matchEventWindowTag = false, const size_t vectorBundleTarget = 1, const size_t retries = 3);
+
+	std::vector<std::shared_ptr<DTC_Event>> GetEVBDataAsEvents(DTC_EventWindowTag when = DTC_EventWindowTag(), bool matchEventWindowTag = false, const size_t retries = 3);
+	uint64_t                                GetEVBChunksParsed() const { return evbChunksParsed_; }    ///< cumulative FAFA chunks parsed by GetEVBDataAsEvents
+	uint64_t                                GetEVBFramingErrors() const { return evbFramingErrors_; }  ///< cumulative FAFA framing / record errors in GetEVBDataAsEvents
+	// EVB event assembly (see otsdaq-mu2e/docs/EVB3_software_DMA_parsing.md section 4)
+	void                      SetEVBEventTimeout(std::chrono::milliseconds t) { evbEventTimeout_ = t; }  ///< max age of an incomplete event, first subevent arrival to now, before GetEVBDataAsEvents throws (default 2000 ms)
+	std::chrono::milliseconds GetEVBEventTimeout() const { return evbEventTimeout_; }
+	size_t                    GetEVBOpenTagCount() const { return evbPendingTags_.size(); }  ///< tags holding at least one but not yet all N subevents
+	uint64_t                  GetEVBEventsReleased() const { return evbEventsReleased_; }    ///< complete N-subevent events returned so far
+	uint8_t                   GetEVBNumSources() const { return evbNumSources_; }            ///< N used for completion (EVB destination-node count)
+	/// Reset all EVB assembly state and counters.  Call at run start.
+	void ResetEVBAssembly()
+	{
+		evbPerSourceReassembly_.clear();
+		evbLastGoodRecord_.clear();
+		evbPendingTags_.clear();
+		evbHaveReleasedTag_ = false;
+		evbLastReleasedTag_ = 0;
+		evbEventsReleased_  = 0;
+		evbChunksParsed_    = 0;
+		evbFramingErrors_   = 0;
+	}
 
 	/// <summary>
 	/// Read a file into the DTC memory. Will truncate the file so that it fits in the DTC memory.
@@ -352,6 +376,26 @@ class DTC : public DTC_Registers
 	size_t               pendingSubEventTotalBytes_{0};  ///< Expected total byte count of the pending subevent (0 = header not yet complete)
 	// bool                 lastDMABufferWasFull_{false};   ///< True when the last DMA buffer was completely full (dmaBytes==sizeof(mu2e_databuff_t)); used for payloadBytes/tlast calculation
 	bool pendingPrefixConsumed_{false};  ///< True when the previous buffer ended with a prefix-only (0 subevent bytes after the prefix); next buffer starts with raw subevent header data at offset 0
+
+	// State for GetEVBDataAsEvents: per-source FAFA chunk reassembly
+	std::map<uint8_t /*chunk_src*/, std::vector<uint8_t>> evbPerSourceReassembly_;
+	std::map<uint8_t /*chunk_src*/, std::vector<uint8_t>> evbLastGoodRecord_;  ///< last cleanly-parsed record per source, dumped alongside a bad one for comparison
+	// Per-tag event assembly: a tag is complete when all N source DTCs have delivered their subevent
+	struct EVBPendingTag
+	{
+		std::chrono::steady_clock::time_point                     firstArrival;  ///< when the first subevent for this tag was staged
+		std::map<uint8_t /*source_dtc_id*/, std::vector<uint8_t>> subevents;     ///< raw subevent bytes (record header stripped), keyed by source
+	};
+	std::map<uint64_t /*event window tag*/, EVBPendingTag> evbPendingTags_;
+	std::chrono::milliseconds                              evbEventTimeout_{2000};
+	size_t                                                 evbMaxOpenTags_{1024};
+	uint8_t                                                evbNumSources_{1};
+	uint8_t                                                evbLocalMac_{0};
+	bool                                                   evbHaveReleasedTag_{false};
+	uint64_t                                               evbLastReleasedTag_{0};
+	uint64_t                                               evbEventsReleased_{0};
+	uint64_t                                               evbChunksParsed_{0};
+	uint64_t                                               evbFramingErrors_{0};
 
 	uint8_t lastDTCErrorBitsValue_ = 0;
 };

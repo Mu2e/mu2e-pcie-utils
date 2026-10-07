@@ -28,7 +28,7 @@ enum DTC_Register : uint16_t
 	DTC_Register_EVBPacketControl          = 0x915C,
 	DTC_Register_EVBStats                  = 0x9160,
 	DTC_Register_SERDESClock_IICBusControl = 0x9164,
-	// DTC_Register_DDRReferenceClockFrequency = 0x9170,
+	DTC_Register_EVBIdleBurst              = 0x9170,
 	// DTC_Register_DDRClock_IICBusControl = 0x9174,
 	// DTC_Register_DDRClock_IICBusLow = 0x9178,
 	// DTC_Register_DDRClock_IICBusHigh = 0x917C,
@@ -337,6 +337,13 @@ enum DTC_Register : uint16_t
 	DTC_Register_TXEventWindowMarkerCount_Link5    = 0xA414,
 	DTC_Register_CFOTXEventWindowMarkerCount_Link6 = 0xA418,
 
+	DTC_Register_ReceiveDHTimeoutCount_Link0 = 0xA420,
+	DTC_Register_ReceiveDHTimeoutCount_Link1 = 0xA424,
+	DTC_Register_ReceiveDHTimeoutCount_Link2 = 0xA428,
+	DTC_Register_ReceiveDHTimeoutCount_Link3 = 0xA42C,
+	DTC_Register_ReceiveDHTimeoutCount_Link4 = 0xA430,
+	DTC_Register_ReceiveDHTimeoutCount_Link5 = 0xA434,
+
 	DTC_Register_TXNullHeartbeatCount_Link0 = 0xA440,
 	DTC_Register_TXNullHeartbeatCount_Link1 = 0xA444,
 	DTC_Register_TXNullHeartbeatCount_Link2 = 0xA448,
@@ -572,9 +579,10 @@ class DTC_Registers : public CFOandDTC_Registers
 	uint32_t          ReadROCTimeoutPreset(std::optional<uint32_t> val = std::nullopt);
 	RegisterFormatter FormatROCReplyTimeout();
 
-	// ROC Timeout Error Register
+	// ROC Timeout Error Register — DEPRECATED: 0x914C no longer implemented in hardware
 	void              ClearROCTimeoutError(DTC_Link_ID const& link);
 	bool              ReadROCTimeoutError(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
+	uint32_t          ReadROCReplyTimeoutErrorRegister();  // DEPRECATED
 	RegisterFormatter FormatROCReplyTimeoutError();
 
 	//----------------- Hardware Event Building configuration -----------------------
@@ -607,6 +615,11 @@ class DTC_Registers : public CFOandDTC_Registers
 	uint8_t           ReadEVBInterpacketGap(std::optional<uint32_t> val = std::nullopt);
 	uint8_t           ReadEVBLoopbackCalibratedOffset(std::optional<uint32_t> val = std::nullopt);
 	RegisterFormatter FormatEVBPacketControlInfo();
+
+	// EVB Idle Burst (0x9170)
+	void              SetEVBIdleBurst(uint16_t count);
+	uint16_t          ReadEVBIdleBurst(std::optional<uint32_t> val = std::nullopt);
+	RegisterFormatter FormatEVBIdleBurst();
 
 	// EVB Stats
 	uint32_t                                           ReadEVBStats(DTC_EVBStatsType type, uint8_t dtc_mac, std::optional<uint32_t> val = std::nullopt);
@@ -1154,6 +1167,10 @@ class DTC_Registers : public CFOandDTC_Registers
 
 	RegisterFormatter FormatCFOTXClockMarkerCountLink6();
 	uint32_t          ReadCFOTXClockMarkerCountLink6(std::optional<uint32_t> val = std::nullopt);
+
+	// Receive DH Timeout Count
+	uint32_t     ReadReceiveDHTimeoutCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
+	DTC_Register GetReceiveDHTimeoutCountLinkRegister(DTC_Link_ID const& link);
 
 	// TX Heartbeat Packet Count
 	uint32_t          ReadTXHeartbeatPacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
