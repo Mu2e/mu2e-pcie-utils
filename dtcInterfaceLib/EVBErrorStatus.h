@@ -15,11 +15,36 @@ namespace DTCLib
 // by the hw agent 2026-09-21.
 constexpr uint32_t EVBDefinedErrorMask = 0xFFFFu;
 
+// Retransmission (2026-09-28 protocol): bit 1 still latches on every lost frame, but the
+// link re-sends it, so on a retransmission bitfile bit 1 alone is not data loss.  Status
+// bit 27 is live while a source is in discard or this TX is serving a rewind; still set
+// once traffic has stopped means a resend never landed.
+constexpr uint32_t EVBRxSequenceGapBit = 1u << 1;
+constexpr uint32_t EVBResendActiveBit  = 1u << 27;
+
+// RX FCS-bad event count, [31:28] since bit 27 was taken (was [31:27]); saturates at 15
+inline uint32_t EVBFCSBadCount(uint32_t value) { return value >> 28; }
+
+// Stats BRAM row 0xA (RX_ACKPOS), by source: that peer's feedback about OUR stream to it,
+// as carried in the last header received from it.  A snapshot, not a counter.
+struct EVBAckPosition
+{
+	bool     resendRequested;   // [31] peer is discarding our frames and wants a resend
+	uint8_t  lastSequenceSeen;  // [27:20] seq of our last frame the peer had when it sent
+	uint32_t ackPosition;       // [19:0] stream offset of the first word of ours not stored
+};
+
+inline EVBAckPosition DecodeEVBAckPosition(uint32_t value)
+{
+	return {(value >> 31) != 0, static_cast<uint8_t>((value >> 20) & 0xFFu), value & 0xFFFFFu};
+}
+
 struct EVBStatusCheck
 {
 	uint32_t stickyErrors;
 	bool     ddrCalibrated;
 	bool     missingFrontier;
+	bool     resendActive;
 
 	bool readyToStart() const { return stickyErrors == 0 && ddrCalibrated; }
 };
@@ -27,7 +52,7 @@ struct EVBStatusCheck
 // Evaluate one caller-owned snapshot; never read or clear hardware here.
 inline EVBStatusCheck CheckEVBStatus(uint32_t value, bool trafficStarted = false, bool hasPeers = true)
 {
-	return {value & EVBDefinedErrorMask, (value & (1u << 25)) != 0, trafficStarted && hasPeers && !(value & (1u << 24))};
+	return {value & EVBDefinedErrorMask, (value & (1u << 25)) != 0, trafficStarted && hasPeers && !(value & (1u << 24)), (value & EVBResendActiveBit) != 0};
 }
 
 inline std::vector<std::string> DecodeEVBErrorStatus(uint32_t value)
@@ -76,6 +101,7 @@ inline std::vector<std::string> DecodeEVBErrorStatus(uint32_t value)
 	    "peer frontier known: min event tag delivered by all peer DTCs; self-throttle armed",
 	    "DDR calibration complete",
 	    "frame not for this DTC: non-EVB start, or destination MAC DTC byte / partition byte not ours; sticky since SoftReset, informational; normal on a shared switch",
+	    "resend active: a source is in discard waiting for a resend, or this TX is serving a rewind; normal for a few rotations after a loss, still set once traffic has stopped means a resend never landed",
 	};
 	for(std::size_t index = 0; index < sizeof(statusNames) / sizeof(statusNames[0]); ++index)
 	{
@@ -83,6 +109,9 @@ inline std::vector<std::string> DecodeEVBErrorStatus(uint32_t value)
 		if((value >> bit) & 1u)
 			lines.push_back("  Bit " + std::to_string(bit) + " set: " + statusNames[index]);
 	}
+	if(EVBFCSBadCount(value))
+		lines.push_back("  RX FCS-bad count [31:28]: " + std::to_string(EVBFCSBadCount(value)) +
+		                " (bit-13 events since SoftReset or RX enable; 15 = saturated)");
 	return lines;
 }
 
@@ -139,6 +168,10 @@ inline std::string FormatEVBStatusCheck(uint32_t value, const std::string& dtc, 
 		output << "No defined sticky errors; this alone does not establish loss-free data.\n";
 	if(ignored)
 		output << "Informational (excluded from run validity): 0x" << std::hex << ignored << std::dec << "\n";
+	if(ignored & EVBRxSequenceGapBit)
+		output << "  Bit 1 RX_SEQ_GAP: a frame was lost and the link re-sent it (0x9174 counts the resends); not a bad run unless bit 27 is still set after traffic stops.\n";
+	if(check.resendActive)
+		output << "Bit 27 RESEND_ACTIVE: a resend is in progress; normal right after a loss, but still set after traffic stops means a resend never landed.\n";
 	if(!check.ddrCalibrated)
 		output << "ERROR: Bit 25 clear: DDR not calibrated; do not start.\n";
 	if(check.missingFrontier)

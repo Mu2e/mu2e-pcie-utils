@@ -751,6 +751,94 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 
 			size_t totalRecordBytes = RECORD_HEADER_SIZE + subEvtByteCount;
 
+			// Split records (EVB3_DMA_FAFA_protocol.md "Split-record layout", hw agent 2026-10-05):
+			// a subevent larger than one AXIMux DMA transfer (~64 KB) arrives as several records.
+			// The first carries the subevent header; each continuation record is only its own
+			// 8-byte count word (bytes incl. itself, low nibble 8) followed by the next raw words.
+			// Payloads (record bytes - 8) must add up exactly to the inclusive count.  Wait until
+			// every piece has arrived, then remove the continuation count words so the subevent
+			// is contiguous behind the first count word.
+			bool splitRecordJoined = false;
+			{
+				const uint64_t firstCountWord = *reinterpret_cast<const uint64_t*>(srcBuf.data());
+				const size_t firstRecordBytes = static_cast<size_t>(firstCountWord & 0xFFFF);
+				if ((firstRecordBytes & 0xF) == 0x8 && firstRecordBytes > RECORD_HEADER_SIZE + sizeof(DTC_SubEventHeader) &&
+					firstRecordBytes < totalRecordBytes)
+				{
+					std::vector<size_t> continuationCountWordOffsets;
+					size_t payloadBytesCollected = firstRecordBytes - RECORD_HEADER_SIZE;
+					size_t nextRecordOffset = firstRecordBytes;
+					bool allPiecesPresent = true;
+					std::string splitError;
+					while (payloadBytesCollected < subEvtByteCount)
+					{
+						if (srcBuf.size() < nextRecordOffset + RECORD_HEADER_SIZE)
+						{
+							allPiecesPresent = false;
+							break;
+						}
+						const uint64_t continuationCountWord = *reinterpret_cast<const uint64_t*>(srcBuf.data() + nextRecordOffset);
+						const size_t continuationRecordBytes = static_cast<size_t>(continuationCountWord & 0xFFFF);
+						const size_t continuationPayloadBytes = continuationRecordBytes - RECORD_HEADER_SIZE;
+						if ((continuationRecordBytes & 0xF) != 0x8 || continuationRecordBytes <= RECORD_HEADER_SIZE)
+						{
+							std::stringstream reason;
+							reason << "continuation count word at byte " << nextRecordOffset << " = 0x" << std::hex << std::setw(16) << std::setfill('0')
+								   << continuationCountWord << std::setfill(' ') << std::dec << " is not a count quadword (low nibble must be 8)";
+							splitError = reason.str();
+							break;
+						}
+						if (payloadBytesCollected + continuationPayloadBytes > subEvtByteCount)
+						{
+							std::stringstream reason;
+							reason << "continuation record at byte " << nextRecordOffset << " (" << continuationRecordBytes << " bytes) overshoots: "
+								   << payloadBytesCollected << " + " << continuationPayloadBytes << " > " << subEvtByteCount;
+							splitError = reason.str();
+							break;
+						}
+						if (srcBuf.size() < nextRecordOffset + continuationRecordBytes)
+						{
+							allPiecesPresent = false;
+							break;
+						}
+						continuationCountWordOffsets.push_back(nextRecordOffset);
+						payloadBytesCollected += continuationPayloadBytes;
+						nextRecordOffset += continuationRecordBytes;
+					}
+
+					if (!splitError.empty())
+					{
+						std::stringstream ss;
+						ss << "GetEVBDataAsEvents: split subevent from src=0x" << std::hex << static_cast<int>(src) << std::dec
+						   << " cannot be reassembled: first record " << firstRecordBytes << " bytes, subevent inclusive count " << subEvtByteCount
+						   << "; " << splitError << "; tag_low=" << subHdr->event_tag_low << ".\n";
+						dumpRecord(ss, "BAD split record (reassembly buffer head)", src, srcBuf.data(), std::min(srcBuf.size(), static_cast<size_t>(1024)));
+						if (nextRecordOffset < srcBuf.size())
+							dumpRecord(ss, "at the bad continuation", src, srcBuf.data() + nextRecordOffset,
+									   std::min(srcBuf.size() - nextRecordOffset, static_cast<size_t>(256)));
+						dumpEVBErrorStatus(ss);
+						DTC_TLOG(TLVL_ERROR) << ss.str();
+						++evbFramingErrors_;
+						srcBuf.clear();
+						throw std::runtime_error(ss.str());
+					}
+					if (!allPiecesPresent)
+					{
+						DTC_TLOG(TLVL_DEBUG + 1) << "GetEVBDataAsEvents: src=0x" << std::hex << static_cast<int>(src) << std::dec
+												 << " split subevent incomplete: have " << payloadBytesCollected << " of " << subEvtByteCount
+												 << " payload bytes in " << (continuationCountWordOffsets.size() + 1) << " record(s); waiting for more chunks";
+						break;
+					}
+					// remove the continuation count words, last first so earlier offsets stay valid
+					for (auto offsetIterator = continuationCountWordOffsets.rbegin(); offsetIterator != continuationCountWordOffsets.rend(); ++offsetIterator)
+						srcBuf.erase(srcBuf.begin() + *offsetIterator, srcBuf.begin() + *offsetIterator + RECORD_HEADER_SIZE);
+					splitRecordJoined = true;
+					++evbSplitSubeventsJoined_;
+					DTC_TLOG(TLVL_DEBUG + 1) << "GetEVBDataAsEvents: src=0x" << std::hex << static_cast<int>(src) << std::dec << " joined split subevent tag_low="
+											 << subHdr->event_tag_low << " from " << (continuationCountWordOffsets.size() + 1) << " records, " << subEvtByteCount << " bytes";
+				}
+			}
+
 			// Header consistency BEFORE waiting for more data: the observed firmware record
 			// header word bits[15:0] = total record bytes = subevent inclusive count + 8.  If a
 			// word-replacement corruption lands on either size field, the two disagree; without
@@ -758,7 +846,7 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 			{
 				uint64_t recHdrWord = *reinterpret_cast<const uint64_t*>(srcBuf.data());
 				size_t recHdrBytes = static_cast<size_t>(recHdrWord & 0xFFFF);
-				bool recHdrOK = (recHdrBytes == totalRecordBytes);
+				bool recHdrOK = splitRecordJoined || (recHdrBytes == totalRecordBytes);
 				bool numRocsOK = (subHdr->num_rocs >= 1 && subHdr->num_rocs <= 6);
 				if (!recHdrOK || !numRocsOK)
 				{

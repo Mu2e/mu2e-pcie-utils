@@ -104,8 +104,9 @@ class DTC : public DTC_Registers
 	std::vector<std::shared_ptr<DTC_Event>>    GetSubEventDataAsEvents(DTC_EventWindowTag when = DTC_EventWindowTag(), bool matchEventWindowTag = false, const size_t vectorBundleTarget = 1, const size_t retries = 3);
 
 	std::vector<std::shared_ptr<DTC_Event>> GetEVBDataAsEvents(DTC_EventWindowTag when = DTC_EventWindowTag(), bool matchEventWindowTag = false, const size_t retries = 3);
-	uint64_t                                GetEVBChunksParsed() const { return evbChunksParsed_; }    ///< cumulative FAFA chunks parsed by GetEVBDataAsEvents
-	uint64_t                                GetEVBFramingErrors() const { return evbFramingErrors_; }  ///< cumulative FAFA framing / record errors in GetEVBDataAsEvents
+	uint64_t                                GetEVBChunksParsed() const { return evbChunksParsed_; }                  ///< cumulative FAFA chunks parsed by GetEVBDataAsEvents
+	uint64_t                                GetEVBFramingErrors() const { return evbFramingErrors_; }                ///< cumulative FAFA framing / record errors in GetEVBDataAsEvents
+	uint64_t                                GetEVBSplitSubeventsJoined() const { return evbSplitSubeventsJoined_; }  ///< subevents reassembled from more than one record (> ~64 KB)
 	// EVB event assembly (see otsdaq-mu2e/docs/EVB3_software_DMA_parsing.md section 4)
 	void                      SetEVBEventTimeout(std::chrono::milliseconds t) { evbEventTimeout_ = t; }  ///< max age of an incomplete event, first subevent arrival to now, before GetEVBDataAsEvents throws (default 2000 ms)
 	std::chrono::milliseconds GetEVBEventTimeout() const { return evbEventTimeout_; }
@@ -118,11 +119,12 @@ class DTC : public DTC_Registers
 		evbPerSourceReassembly_.clear();
 		evbLastGoodRecord_.clear();
 		evbPendingTags_.clear();
-		evbHaveReleasedTag_ = false;
-		evbLastReleasedTag_ = 0;
-		evbEventsReleased_  = 0;
-		evbChunksParsed_    = 0;
-		evbFramingErrors_   = 0;
+		evbHaveReleasedTag_      = false;
+		evbLastReleasedTag_      = 0;
+		evbEventsReleased_       = 0;
+		evbChunksParsed_         = 0;
+		evbFramingErrors_        = 0;
+		evbSplitSubeventsJoined_ = 0;
 	}
 
 	/// <summary>
@@ -396,6 +398,7 @@ class DTC : public DTC_Registers
 	uint64_t                                               evbEventsReleased_{0};
 	uint64_t                                               evbChunksParsed_{0};
 	uint64_t                                               evbFramingErrors_{0};
+	uint64_t                                               evbSplitSubeventsJoined_{0};
 
 	uint8_t lastDTCErrorBitsValue_ = 0;
 };
