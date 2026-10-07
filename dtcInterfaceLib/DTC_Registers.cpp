@@ -7876,15 +7876,14 @@ std::vector<uint32_t> DTCLib::DTC_Registers::ReadEVBStallCounters()
 	return values;
 }  // end ReadEVBStallCounters()
 
-namespace
-{
+namespace {
 /// Rows for the six stall counters against the timebase (last element): clocks, ms (4 ns per clock), share
 std::string formatEVBStallRows(const std::vector<uint32_t>& values, const std::string& indent, const std::string& timebaseLabel)
 {
 	static const char* const names[] = {
 		"TX credit stall   (0x9210)", "TX wire busy      (0x9214)", "BM self chunk     (0x9218)",
 		"BM remote waiting (0x921C)", "DDR read busy     (0x9220)", "ROC input held    (0x9224)"};
-	const uint32_t     timebase = values.empty() ? 0 : values.back();
+	const uint32_t timebase = values.empty() ? 0 : values.back();
 	std::ostringstream o;
 	o << indent << "Timebase (0x9228): " << timebase << " clocks = " << std::fixed << std::setprecision(1)
 	  << (timebase * 4.0e-6) << " ms " << timebaseLabel
