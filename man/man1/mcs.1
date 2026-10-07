@@ -1,0 +1,73 @@
+.TH MCS 1 "2026-10-06" "mu2e-pcie-utils 9.01.00" "Mu2e DAQ Manual"
+.SH NAME
+mcs \- write an Intel-HEX (.mcs) FPGA image to a card's configuration PROM
+.SH SYNOPSIS
+.B mcs
+.RB [ \-e ]
+.RB [ \-\-swap\-data ]
+.RB [ \-v ]
+.I devnum mcs_file
+.SH DESCRIPTION
+Opens
+.BI /dev/pcidev devnum
+(created by the
+.B pci_devel_main
+module, not by
+.BR mu2e (4))
+and programs the PROM from the Intel-HEX records of
+.IR mcs_file :
+it computes the block range, erases it, then writes the data records.
+Normally run through
+.BR mcs.sh (1),
+which unloads
+.B mu2e
+first.
+The usage text omits the
+.I devnum
+operand.
+.SH OPTIONS
+.TP
+.B \-e
+Erase only, then exit.
+.TP
+.B \-\-swap\-data
+Byte-swap the data words.
+.TP
+.B \-v
+Verbose.
+.TP
+.BR \-h ", " \-?
+Usage, exit 0.
+.TP
+.B \-V
+RCS revision, exit 0.
+.SH EXIT STATUS
+0 on completion; 255 (\-1) if fewer than two operands.
+A failed open of the device is reported
+.RB ( "open: ..." )
+but not fatal \(em the program continues with an invalid descriptor;
+a missing
+.I mcs_file
+is not checked before
+.BR fscanf (3).
+.SH ENVIRONMENT
+Forces
+.B TRACE_LVLS
+to 0xf if unset and enables TRACE memory+slow output.
+.SH FILES
+.BI /dev/pcidev N
+.SH WARNINGS
+Rewrites FPGA firmware; a power cycle is needed afterwards.
+No confirmation is asked.
+.SH EXAMPLES
+.EX
+sudo mcs.sh 0 DTC_v2025.mcs
+.EE
+.SH SEE ALSO
+.BR mcs.sh (1),
+.BR devl (1),
+.BR mu2e (4)
+.SH AUTHOR
+Mu2e TDAQ group (Eric Flumerfelt, Ryan Rivera, Ron Rechenmacher and others).
+Manual page written for the September 2026 DAQ mega-review from the source
+at commit a5c0ce7.

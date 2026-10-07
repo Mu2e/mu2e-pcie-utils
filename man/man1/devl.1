@@ -1,0 +1,58 @@
+.TH DEVL 1 "2026-10-06" "mu2e-pcie-utils 9.01.00" "Mu2e DAQ Manual"
+.SH NAME
+devl \- poke the pci_devel_main development driver
+.SH SYNOPSIS
+.B devl
+.I devnum
+.BR hello | ioremap | iounmap
+.br
+.B devl
+.I devnum
+.B uint32
+.I offset
+.SH DESCRIPTION
+Opens
+.BI /dev/pcidev devnum
+and issues one ioctl of magic
+.BR \(aqD\(aq :
+.B IOC_HELLO
+(TRACE hello),
+.BR IOC_IOREMAP ,
+.BR IOC_IOUNMAP ,
+or
+.B IOC_UINT32
+(read the 32-bit register at
+.IR offset ).
+The value read is reported only through TRACE
+.RB ( "val at off=0x%08x" ),
+not on stdout unless TRACE slow output is enabled, as
+.BR mcs.sh (1)
+does with
+.BR "tonSg 0\-7" .
+The usage also lists
+.BR register ,
+.B unregister
+and
+.BR read_loop ,
+which are not implemented (TRACE
+.BR "invalid cmd" ,
+exit 0).
+.SH EXIT STATUS
+0 on success, with no arguments, or for an unimplemented command;
+1 if the open or the ioctl fails, or
+.B uint32
+lacks an offset.
+.SH FILES
+.BI /dev/pcidev N
+.SH EXAMPLES
+.EX
+export TRACE_FILE=/proc/trace/buffer; tonSg 0\-7
+devl 0 uint32 0x9004
+.EE
+.SH SEE ALSO
+.BR mcs (1),
+.BR mcs.sh (1)
+.SH AUTHOR
+Mu2e TDAQ group (Eric Flumerfelt, Ryan Rivera, Ron Rechenmacher and others).
+Manual page written for the September 2026 DAQ mega-review from the source
+at commit a5c0ce7.

@@ -1,0 +1,49 @@
+.TH MU2ECOMPILER 1 "2026-10-06" "mu2e-pcie-utils 9.01.00" "Mu2e DAQ Manual"
+.SH NAME
+mu2eCompiler \- compile a CFO run-plan source file to binary (fixed paths)
+.SH SYNOPSIS
+.B mu2eCompiler
+.SH DESCRIPTION
+Runs
+.B CFOLib::CFO_Compiler::processFile()
+on the hard-coded input
+.I /home/mu2ehwdev/ots/srcs/mu2e_pcie_utils/cfoInterfaceLib/Commands.txt
+and writes
+.IR .../Commands.bin
+in the same directory.
+Command-line arguments are ignored: the argument parser
+.RB ( setIOFiles() ,
+which handled
+.BR \-\-help ,
+.B \-\-new
+and
+.I "infile outfile"
+operands) is defined but never called.
+The instruction language (SET_TAG, LOOP/DO_LOOP, HEARTBEAT, MARKER, WAIT, INC_TAG,
+END, ...) is described in
+.I cfoInterfaceLib/README.txt
+and the example
+.IR Commands.txt ,
+installed under the package data directory.
+.PP
+To compile an arbitrary file use
+.B cfoUtil \-C \-p
+.I in
+.B \-f
+.I out
+.BR write_program .
+.SH EXIT STATUS
+0; failures inside the compiler are reported on stdout.
+.SH FILES
+.I /home/mu2ehwdev/ots/srcs/mu2e_pcie_utils/cfoInterfaceLib/Commands.txt
+.SH EXAMPLES
+.EX
+cfoUtil \-C \-p myplan.txt \-f myplan.bin write_program
+.EE
+.SH SEE ALSO
+.BR cfoUtil (1),
+.BR libCFOInterface (3)
+.SH AUTHOR
+Mu2e TDAQ group (Eric Flumerfelt, Ryan Rivera, Ron Rechenmacher and others).
+Manual page written for the September 2026 DAQ mega-review from the source
+at commit a5c0ce7.

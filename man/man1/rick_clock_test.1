@@ -1,0 +1,58 @@
+.TH RICK_CLOCK_TEST 1 "2026-10-06" "mu2e-pcie-utils 9.01.00" "Mu2e DAQ Manual"
+.SH NAME
+rick_clock_test \- reprogram the DTC timing-card oscillator to 200 MHz (development test)
+.SH SYNOPSIS
+.B rick_clock_test
+.RB [ \-h | \-V | \-v ]
+.SH DESCRIPTION
+Opens
+.BI /dev/mu2e N
+(N from
+.BR DTCLIB_DTC ,
+else 0) read-only and, unconditionally, performs the IIC write sequence through
+registers 0x9168/0x916C that freezes the DCO of the oscillator at IIC address
+0x5D, writes new HS_DIV/N1/RFREQ values for 200 MHz, unfreezes it and sets
+NewFreq.
+After each write it polls 0x916C until it reads other than 1, with no timeout.
+.PP
+The usage text (start, stop, dump, read, write, write_loopback_data) is stale:
+command arguments are ignored and every invocation other than
+.BR \-h ,
+.BR \-?
+and
+.B \-V
+reprograms the clock.
+.B \-d
+appears in the source but not in the getopt string, so it is rejected
+(usage, exit 0).
+.SH OPTIONS
+.TP
+.BR \-h ", " \-?
+Usage, exit 0.
+.TP
+.B \-V
+RCS revision, exit 0.
+.TP
+.B \-v
+Accepted, no effect.
+.SH EXIT STATUS
+0 after the sequence (prints
+.BR sts=0 );
+1 if the open or any ioctl fails.
+.SH ENVIRONMENT
+.B DTCLIB_DTC
+selects the card.
+.SH WARNINGS
+Destructive: changes the clock of a live card with no confirmation.
+.SH EXAMPLES
+.EX
+DTCLIB_DTC=2 rick_clock_test
+.EE
+.SH SEE ALSO
+.BR my_cntl (1),
+.BR mu2eUtil (1),
+.BR mu2e (4)
+.SH AUTHOR
+Mu2e TDAQ group (Eric Flumerfelt, Ryan Rivera, Ron Rechenmacher and others).
+Manual page written for the September 2026 DAQ mega-review from the source
+at commit a5c0ce7.

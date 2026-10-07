@@ -1,0 +1,37 @@
+.TH DTC_BINARY_FILE_COMPARE 1 "2026-10-06" "mu2e-pcie-utils 9.01.00" "Mu2e DAQ Manual"
+.SH NAME
+DTC_binary_file_compare \- compare two DTC binary files event by event
+.SH SYNOPSIS
+.B DTC_binary_file_compare
+.RB [ \-h | \-\-help ]
+.I file1 file2
+.SH DESCRIPTION
+Reads both files, matches data blocks by event-window tag, subsystem, DTC and
+ROC, and logs every disagreement
+.RB ( "Disagreement found! TS ..." )
+and the counts of unmatched events at warning/info level through TLOG.
+Does not open any device.
+.SH OPTIONS
+.TP
+.BR \-h ", " \-\-help
+Usage, exit 0.
+.SH EXIT STATUS
+.TP
+.B 0
+Comparison completed (differences do not change the status); also when fewer
+than two files are given (the usage routine exits 0 before the intended
+.BR exit(1) ).
+.TP
+.B 2
+A file cannot be read.
+.SH EXAMPLES
+.EX
+DTC_binary_file_compare a.bin b.bin 2>&1 | grep Disagreement
+.EE
+.SH SEE ALSO
+.BR data_file_verifier (1),
+.BR binary_dump_to_DTC_file (1)
+.SH AUTHOR
+Mu2e TDAQ group (Eric Flumerfelt, Ryan Rivera, Ron Rechenmacher and others).
+Manual page written for the September 2026 DAQ mega-review from the source
+at commit a5c0ce7.

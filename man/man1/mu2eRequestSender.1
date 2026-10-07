@@ -1,0 +1,75 @@
+.TH MU2EREQUESTSENDER 1 "2026-10-06" "mu2e-pcie-utils 9.01.00" "Mu2e DAQ Manual"
+.SH NAME
+mu2eRequestSender \- send readout/data requests to a DTC from the software CFO
+.SH SYNOPSIS
+.B mu2eRequestSender
+.RB [ \-n
+.IR num ]
+.RB [ \-o
+.IR ts ]
+.RB [ \-i ]
+.RB [ \-d
+.IR us ]
+.RB [ \-c
+.IR n ]
+.RB [ \-q ]
+.RB [ \-h ]
+.SH DESCRIPTION
+Constructs a default
+.B DTCLib::DTC
+(card
+.B DTCLIB_DTC
+or 0, ROC mask 0x1, full initialisation) and a
+.B DTCSoftwareCFO
+that sends requests over DMA.
+With
+.B \-n
+greater than 1 it sends a range of requests starting at tag
+.BR \-o ,
+otherwise a single request.
+The usage text calls the program
+.BR requestSender .
+.SH OPTIONS
+.TP
+.BI \-n " num"
+Number of requests (default 1).
+.TP
+.BI \-o " ts"
+Starting event-window tag (default 1).
+.TP
+.B \-i
+Do not increment the tag.
+.TP
+.BI \-d " us"
+Delay between requests.
+.TP
+.BI \-c " n"
+Debug packets per request.
+.TP
+.B \-q
+Quiet.
+.TP
+.B \-h
+Usage, exit 0.
+.SH EXIT STATUS
+0; library exceptions abort the process.
+.SH ENVIRONMENT
+.BR DTCLIB_DTC ,
+.BR DTCLIB_SIM_ENABLE .
+.SH WARNINGS
+The DTC object is constructed before the options are parsed, so even
+.B \-h
+initialises the card: ROC mask 0x1 disables links 1\-5 and their ROC emulators,
+clears SERDES loopback, and clears the CFO-emulation bit.
+Never run it on a card in a running partition.
+.SH EXAMPLES
+.EX
+DTCLIB_DTC=1 mu2eRequestSender \-n 100 \-o 0x1000 \-d 100
+.EE
+.SH SEE ALSO
+.BR mu2eUtil (1),
+.BR libDTCInterface (3)
+.SH AUTHOR
+Mu2e TDAQ group (Eric Flumerfelt, Ryan Rivera, Ron Rechenmacher and others).
+Manual page written for the September 2026 DAQ mega-review from the source
+at commit a5c0ce7.

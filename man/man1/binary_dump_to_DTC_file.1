@@ -1,0 +1,46 @@
+.TH BINARY_DUMP_TO_DTC_FILE 1 "2026-10-06" "mu2e-pcie-utils 9.01.00" "Mu2e DAQ Manual"
+.SH NAME
+binary_dump_to_DTC_file \- convert raw binary data dumps to DTC binary files
+.SH SYNOPSIS
+.B binary_dump_to_DTC_file
+.RB [ \-h | \-\-help ]
+.IR file ...
+.SH DESCRIPTION
+For each input
+.IR dir / name
+writes
+.IR dir /DTC_packets_ name
+(truncating any existing file).
+The input is a sequence of DMA records, each a 64-bit size word (low 16 bits
+used) followed by payload; events that span several DMAs are reassembled,
+checked with
+.BR DTC_Data_Verifier::VerifyEvent() ,
+and written as whole
+.B DTC_Event
+records.
+Reading stops at the first zero-length event.
+Does not open any device.
+.SH OPTIONS
+.TP
+.BR \-h ", " \-\-help
+Usage, exit 0; an unknown option prints the usage and exits 0.
+.SH EXIT STATUS
+0.
+An unreadable input is logged
+.RB ( "Cannot read file" )
+and skipped.
+.SH FILES
+.IR dir /DTC_packets_ name
+\(em output, overwritten without warning.
+.SH EXAMPLES
+.EX
+binary_dump_to_DTC_file /data/dump/run1234.bin
+data_file_verifier /data/dump/DTC_packets_run1234.bin
+.EE
+.SH SEE ALSO
+.BR data_file_verifier (1),
+.BR DTC_binary_file_compare (1)
+.SH AUTHOR
+Mu2e TDAQ group (Eric Flumerfelt, Ryan Rivera, Ron Rechenmacher and others).
+Manual page written for the September 2026 DAQ mega-review from the source
+at commit a5c0ce7.

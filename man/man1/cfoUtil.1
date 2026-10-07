@@ -1,0 +1,109 @@
+.TH CFOUTIL 1 "2026-10-06" "mu2e-pcie-utils 9.01.00" "Mu2e DAQ Manual"
+.SH NAME
+cfoUtil \- compile or load a CFO run plan, program the CFO clock, show DMA state
+.SH SYNOPSIS
+.B cfoUtil
+.RI [ options ]
+.BR write_program | program_clock | dma_info
+.SH DESCRIPTION
+.TP
+.B write_program
+With
+.BR \-C :
+compile the source
+.B \-p
+to
+.B \-f
+with
+.B CFO_Compiler
+and exit 0 without touching the card (whether or not
+.B \-f
+was given, contrary to the usage text).
+Without
+.BR \-C :
+read the binary
+.BR \-p ,
+prefix its size + 8 as a 64-bit word, and send it as one DAQ-channel DMA
+to the CFO.
+The file is read into a 64 KiB stack buffer without a size check; a file larger
+than 65528 bytes overruns it, and a missing file is reported but the write
+proceeds.
+.TP
+.B program_clock
+Set the oscillator to
+.B \-F
+Hz.
+.TP
+.B dma_info
+Print the driver's ring metadata
+.RB ( mu2edev::meta_dump() ).
+.PP
+.B write_program
+(without
+.BR \-C )
+and
+.B program_clock
+construct
+.B CFO_Registers
+in mode
+.B DTC_SimMode_NoCFO
+without
+.BR skipInit ,
+which runs the CFO initialisation.
+.SH OPTIONS
+.TP
+.BI \-p " file"
+Input (default
+.IR /tmp/cfoUtil.raw ).
+.TP
+.BI \-f " file"
+Compiler output (default
+.IR /tmp/cfoUtil.raw ).
+.TP
+.B \-C
+Input is source to compile.
+.TP
+.BI \-F " Hz"
+Frequency for
+.B program_clock
+(default 166666667).
+.TP
+.BI \-c " Hz"
+CFO clock speed (default 40000000); parsed but not used.
+.TP
+.BI \-\-cfo " n"
+Card index (default
+.B DTCLIB_DTC
+for
+.BR dma_info ;
+otherwise
+.BR CFOLIB_CFO ,
+then
+.BR DTCLIB_DTC ,
+then 0).
+.TP
+.BR \-h ", " \-\-help
+Usage, exit 0; an unknown option also prints the usage and exits 0.
+.SH EXIT STATUS
+0, including for an unrecognised operation; library exceptions abort.
+.SH ENVIRONMENT
+.BR CFOLIB_CFO ,
+.BR DTCLIB_DTC ,
+.BR CFOLIB_SIM_ENABLE ,
+.BR DTCLIB_SIM_ENABLE .
+.SH FILES
+.I /tmp/cfoUtil.raw
+\(em default input and output.
+.SH EXAMPLES
+.EX
+cfoUtil \-C \-p plan.txt \-f plan.bin write_program
+cfoUtil \-\-cfo 0 \-p plan.bin write_program
+.EE
+.SH SEE ALSO
+.BR mu2eCompiler (1),
+.BR CFORegDump (1),
+.BR libCFOInterface (3)
+.SH AUTHOR
+Mu2e TDAQ group (Eric Flumerfelt, Ryan Rivera, Ron Rechenmacher and others).
+Manual page written for the September 2026 DAQ mega-review from the source
+at commit a5c0ce7.

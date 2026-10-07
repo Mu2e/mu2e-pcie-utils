@@ -1,0 +1,45 @@
+.TH DATA_FILE_VERIFIER 1 "2026-10-06" "mu2e-pcie-utils 9.01.00" "Mu2e DAQ Manual"
+.SH NAME
+data_file_verifier \- check the DMA and data-block structure of DTC binary files
+.SH SYNOPSIS
+.B data_file_verifier
+.RB [ \-h | \-\-help ]
+.IR file ...
+.SH DESCRIPTION
+Runs
+.B DTCLib::DTC_Data_Verifier::VerifyFile()
+on each
+.IR file
+(a DTC binary file: 64-bit DMA size words followed by DMA payloads, as written
+by
+.B mu2eUtil \-\-binary\-file\-mode
+or
+.BR binary_dump_to_DTC_file ).
+Findings are reported through TRACE/TLOG messages.
+Does not open any device.
+.SH OPTIONS
+.TP
+.BR \-h ", " \-\-help
+Usage, exit 0.
+Any other option prints
+.B "Unknown option"
+and the usage, exit 0.
+.SH EXIT STATUS
+Always 0; the verification result is not reflected in the exit status.
+.SH ENVIRONMENT
+.BR TRACE_NAME ,
+.BR TRACE_LVLS ,
+.B TRACE_FILE
+control where messages go.
+.SH EXAMPLES
+.EX
+data_file_verifier run1234_DTC0.bin
+.EE
+.SH SEE ALSO
+.BR binary_dump_to_DTC_file (1),
+.BR DTC_binary_file_compare (1),
+.BR mu2eUtil (1)
+.SH AUTHOR
+Mu2e TDAQ group (Eric Flumerfelt, Ryan Rivera, Ron Rechenmacher and others).
+Manual page written for the September 2026 DAQ mega-review from the source
+at commit a5c0ce7.
