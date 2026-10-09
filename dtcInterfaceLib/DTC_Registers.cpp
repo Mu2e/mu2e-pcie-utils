@@ -7905,7 +7905,7 @@ std::string formatEVBStallRows(const std::vector<uint64_t>& values, const std::s
 		"BM remote waiting (0x921C)", "DDR read busy     (0x9220)", "ROC input held    (0x9224)",
 		"timebase          (0x9228)",
 		"ROC held part 1   (0x922C)", "ROC held part 2   (0x9230)", "ROC held part 3   (0x9234)",
-		"ROC held part 4   (0x9238)", "share 5           (0x923C)",
+		"ROC held part 4   (0x9238)", "DDR write busy    (0x923C)",
 		"output hold       (0x9240)", "longest hold      (0x9244)", "words accepted    (0x9248)"};
 	const size_t   timebaseIndex = 6;
 	const uint64_t timebase      = values.size() > timebaseIndex ? values[timebaseIndex] : 0;

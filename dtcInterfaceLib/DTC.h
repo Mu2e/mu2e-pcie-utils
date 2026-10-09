@@ -129,7 +129,7 @@ class DTC : public DTC_Registers
 		uint64_t timeoutScanNs{0};      ///< Step 0: open-tag timeout / overflow scan
 		uint64_t readDataNs{0};         ///< Step 1: device read_data (includes waiting up to 1 ms when idle)
 		uint64_t chunkWalkNs{0};        ///< Step 3: FAFA chunk walk incl. copy into per-source reassembly
-		uint64_t registerReadNs{0};     ///< Step 4a: 0x9150/0x9154 reads (dest nodes, local MAC) once per data buffer
+		uint64_t registerReadNs{0};     ///< Step 2b: dest-node count and local MAC reads, once per run
 		uint64_t recordScanNs{0};       ///< Step 4b: record framing, split join, header consistency, pre-parse checks
 		uint64_t subeventSetupNs{0};    ///< Step 4c: per-record DTC_Event alloc + memcpy + SetupEvent + IsCorrupt
 		uint64_t stagingNs{0};          ///< Step 4d: last-good copy, per-tag staging copy, reassembly erase
@@ -160,6 +160,7 @@ class DTC : public DTC_Registers
 		evbDrainedBytes_   = 0;
 		evbDMABuffersRead_ = 0;
 		evbReadProfile_    = EVBReadProfile{};
+		evbSourcesKnown_   = false;
 	}
 
 	/// <summary>
@@ -431,6 +432,7 @@ class DTC : public DTC_Registers
 	uint64_t                                               evbDMABuffersRead_{0};
 	EVBReadProfile                                         evbReadProfile_;
 	uint8_t                                                evbNumSources_{1};
+	bool                                                   evbSourcesKnown_{false};
 	uint8_t                                                evbLocalMac_{0};
 	bool                                                   evbHaveReleasedTag_{false};
 	uint64_t                                               evbLastReleasedTag_{0};

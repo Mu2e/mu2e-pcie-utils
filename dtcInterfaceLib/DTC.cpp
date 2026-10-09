@@ -709,6 +709,18 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 	const uint64_t* words = static_cast<const uint64_t*>(buffer);
 	++evbDMABuffersRead_;
 
+	// Step 2b: expected number of source DTCs per tag (= EVB destination-node count) and this DTC's
+	// MAC, read once per run (first data buffer after ResetEVBAssembly); both are constant for a run
+	// and the two register reads per buffer they used to cost are now gone from the data path.
+	if (!evbSourcesKnown_)
+	{
+		uint8_t n = ReadEVBNumberOfDestinationNodes();
+		evbNumSources_ = (n == 0) ? 1 : n;
+		evbLocalMac_ = ReadEVBLocalMACAddress();
+		evbSourcesKnown_ = true;
+	}
+	lap(evbReadProfile_.registerReadNs);
+
 	// Step 3: FAFA chunk walk
 	size_t ptr = 0;
 	std::ostringstream chunksSeenInThisBuffer;  // "word:src/wc" per chunk, for the framing-error report
@@ -790,15 +802,6 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 	// this word).  The AXI demux routes the full ROC transfer to both the
 	// local buffer manager and the DDR->10GbE path, so the record header
 	// is present in both.  Skip it to reach the DTC_SubEventHeader.
-	// Expected number of source DTCs per tag (= EVB destination-node count) and this DTC's MAC,
-	// refreshed once per DMA buffer that carries data.
-	{
-		uint8_t n = ReadEVBNumberOfDestinationNodes();
-		evbNumSources_ = (n == 0) ? 1 : n;
-		evbLocalMac_ = ReadEVBLocalMACAddress();
-	}
-	lap(evbReadProfile_.registerReadNs);
-
 	for (auto& [src, srcBuf] : evbPerSourceReassembly_)
 	{
 		while (srcBuf.size() >= RECORD_HEADER_SIZE + sizeof(DTC_SubEventHeader))
@@ -1183,7 +1186,7 @@ std::string DTCLib::DTC::FormatEVBReadProfile() const
 	row("Step 0 open-tag timeout scan", profile.timeoutScanNs, profile.calls, "call");
 	row("Step 1 read_data (incl. idle wait)", profile.readDataNs, profile.calls, "call");
 	row("Step 3 FAFA chunk walk + copy", profile.chunkWalkNs, dataCalls, "buffer");
-	row("Step 4a register reads (N, MAC)", profile.registerReadNs, dataCalls, "buffer");
+	row("Step 2b register reads (N, MAC, once)", profile.registerReadNs, dataCalls, "buffer");
 	row("Step 4b record scan + checks", profile.recordScanNs, dataCalls, "buffer");
 	row("Step 4c DTC_Event alloc+copy+Setup", profile.subeventSetupNs, profile.recordsExtracted, "record");
 	row("Step 4d staging copies + erase", profile.stagingNs, profile.recordsExtracted, "record");

@@ -83,7 +83,7 @@ enum DTC_Register : uint16_t
 	DTC_Register_EVBStallROCHeldPart2            = 0x9230,
 	DTC_Register_EVBStallROCHeldPart3            = 0x9234,
 	DTC_Register_EVBStallROCHeldPart4            = 0x9238,
-	DTC_Register_EVBStallShare5                  = 0x923C,  // fifth share named by the hw agent; meaning pending
+	DTC_Register_EVBStallShare5                  = 0x923C,  // DDR write busy (hw agent 2026-10-08)
 	// Reserved - formerly... DTC_Register_ReceivePacketCount_Link3 = 0x922C,
 	// Reserved - formerly... DTC_Register_ReceivePacketCount_Link4 = 0x9230,
 	// Reserved - formerly... DTC_Register_ReceivePacketCount_Link5 = 0x9234,
