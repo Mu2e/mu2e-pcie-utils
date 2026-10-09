@@ -104,9 +104,41 @@ class DTC : public DTC_Registers
 	std::vector<std::shared_ptr<DTC_Event>>    GetSubEventDataAsEvents(DTC_EventWindowTag when = DTC_EventWindowTag(), bool matchEventWindowTag = false, const size_t vectorBundleTarget = 1, const size_t retries = 3);
 
 	std::vector<std::shared_ptr<DTC_Event>> GetEVBDataAsEvents(DTC_EventWindowTag when = DTC_EventWindowTag(), bool matchEventWindowTag = false, const size_t retries = 3);
-	uint64_t                                GetEVBChunksParsed() const { return evbChunksParsed_; }    ///< cumulative FAFA chunks parsed by GetEVBDataAsEvents
-	uint64_t                                GetEVBFramingErrors() const { return evbFramingErrors_; }  ///< cumulative FAFA framing / record errors in GetEVBDataAsEvents
+	uint64_t                                GetEVBChunksParsed() const { return evbChunksParsed_; }                  ///< cumulative FAFA chunks parsed by GetEVBDataAsEvents
+	uint64_t                                GetEVBFramingErrors() const { return evbFramingErrors_; }                ///< cumulative FAFA framing / record errors in GetEVBDataAsEvents
+	uint64_t                                GetEVBSplitSubeventsJoined() const { return evbSplitSubeventsJoined_; }  ///< subevents reassembled from more than one record (> ~64 KB)
+	/// FAFA chunk word-count histogram, remote sources only (chunk_src != local MAC): index = words, 0..8191
+	const std::vector<uint64_t>& GetEVBRemoteChunkSizeHistogram() const { return evbRemoteChunkSizeHistogram_; }
+	std::string                  FormatEVBRemoteChunkSizes() const;  ///< count, median, mean, share under 64 words, top sizes
 	// EVB event assembly (see otsdaq-mu2e/docs/EVB3_software_DMA_parsing.md section 4)
+	/// Drain-only: GetEVBDataAsEvents walks the FAFA chunks (counting bytes and chunk sizes) but skips
+	/// reassembly, subevent validation and event completion, and returns no events.  Measures how much
+	/// of the EVB-mode throughput limit is the software assembly path.
+	void     SetEVBDrainOnly(bool drainOnly) { evbDrainOnly_ = drainOnly; }
+	bool     GetEVBDrainOnly() const { return evbDrainOnly_; }
+	uint64_t GetEVBDrainedBytes() const { return evbDrainedBytes_; }  ///< chunk payload bytes seen (both modes)
+	uint64_t GetEVBDMABuffersRead() const { return evbDMABuffersRead_; }
+	/// Step profile of GetEVBDataAsEvents: wall time (steady_clock ns) accumulated per step over all
+	/// calls since ResetEVBAssembly, plus call/record counts.  Always on; one clock read per step
+	/// boundary (about 25 ns each, ~0.1 us per call), negligible against the ~60 us a DMA buffer takes.
+	struct EVBReadProfile
+	{
+		uint64_t calls{0};             ///< GetEVBDataAsEvents calls
+		uint64_t callsWithData{0};     ///< calls where read_data returned a buffer
+		uint64_t recordsExtracted{0};  ///< subevent records validated and staged (Step 4)
+		uint64_t timeoutScanNs{0};     ///< Step 0: open-tag timeout / overflow scan
+		uint64_t readDataNs{0};        ///< Step 1: device read_data (includes waiting up to 1 ms when idle)
+		uint64_t chunkWalkNs{0};       ///< Step 3: FAFA chunk walk incl. copy into per-source reassembly
+		uint64_t registerReadNs{0};    ///< Step 2b: dest-node count and local MAC reads, once per run
+		uint64_t recordScanNs{0};      ///< Step 4b: record framing, split join, header consistency, pre-parse checks
+		uint64_t subeventSetupNs{0};   ///< Step 4c: per-record DTC_Event alloc + memcpy + SetupEvent + IsCorrupt
+		uint64_t stagingNs{0};         ///< Step 4d: last-good copy, per-tag staging copy, reassembly erase
+		uint64_t eventReleaseNs{0};    ///< Step 5: assemble N-subevent event, SetupEvent, release
+		uint64_t releaseBufferNs{0};   ///< read_release of the DMA buffer (RAII on return)
+		uint64_t totalNs{0};           ///< whole call, entry to return
+	};
+	const EVBReadProfile&     GetEVBReadProfile() const { return evbReadProfile_; }
+	std::string               FormatEVBReadProfile() const;                                              ///< one line per step: ms, share of call time, per-call / per-record cost
 	void                      SetEVBEventTimeout(std::chrono::milliseconds t) { evbEventTimeout_ = t; }  ///< max age of an incomplete event, first subevent arrival to now, before GetEVBDataAsEvents throws (default 2000 ms)
 	std::chrono::milliseconds GetEVBEventTimeout() const { return evbEventTimeout_; }
 	size_t                    GetEVBOpenTagCount() const { return evbPendingTags_.size(); }  ///< tags holding at least one but not yet all N subevents
@@ -118,11 +150,17 @@ class DTC : public DTC_Registers
 		evbPerSourceReassembly_.clear();
 		evbLastGoodRecord_.clear();
 		evbPendingTags_.clear();
-		evbHaveReleasedTag_ = false;
-		evbLastReleasedTag_ = 0;
-		evbEventsReleased_  = 0;
-		evbChunksParsed_    = 0;
-		evbFramingErrors_   = 0;
+		evbHaveReleasedTag_      = false;
+		evbLastReleasedTag_      = 0;
+		evbEventsReleased_       = 0;
+		evbChunksParsed_         = 0;
+		evbFramingErrors_        = 0;
+		evbSplitSubeventsJoined_ = 0;
+		evbRemoteChunkSizeHistogram_.assign(8192, 0);
+		evbDrainedBytes_   = 0;
+		evbDMABuffersRead_ = 0;
+		evbReadProfile_    = EVBReadProfile{};
+		evbSourcesKnown_   = false;
 	}
 
 	/// <summary>
@@ -389,13 +427,20 @@ class DTC : public DTC_Registers
 	std::map<uint64_t /*event window tag*/, EVBPendingTag> evbPendingTags_;
 	std::chrono::milliseconds                              evbEventTimeout_{2000};
 	size_t                                                 evbMaxOpenTags_{1024};
+	bool                                                   evbDrainOnly_{false};
+	uint64_t                                               evbDrainedBytes_{0};
+	uint64_t                                               evbDMABuffersRead_{0};
+	EVBReadProfile                                         evbReadProfile_;
 	uint8_t                                                evbNumSources_{1};
+	bool                                                   evbSourcesKnown_{false};
 	uint8_t                                                evbLocalMac_{0};
 	bool                                                   evbHaveReleasedTag_{false};
 	uint64_t                                               evbLastReleasedTag_{0};
 	uint64_t                                               evbEventsReleased_{0};
 	uint64_t                                               evbChunksParsed_{0};
+	std::vector<uint64_t>                                  evbRemoteChunkSizeHistogram_ = std::vector<uint64_t>(8192, 0);
 	uint64_t                                               evbFramingErrors_{0};
+	uint64_t                                               evbSplitSubeventsJoined_{0};
 
 	uint8_t lastDTCErrorBitsValue_ = 0;
 };

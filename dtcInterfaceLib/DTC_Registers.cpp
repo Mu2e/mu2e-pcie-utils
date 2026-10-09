@@ -2471,6 +2471,36 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBIdleBurst()
 	return form;
 }
 
+/// Read the EVB resends served by this DTC's TX (0x9174 [31:16]): rewinds performed for peers
+uint16_t DTCLib::DTC_Registers::ReadEVBResendsServed(std::optional<uint32_t> val)
+{
+	return static_cast<uint16_t>(
+		((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBResendCount)) >> 16) & 0xFFFFu);
+}
+
+/// Read the EVB resends requested by this DTC's RX (0x9174 [15:0]): sequence gaps that entered discard
+uint16_t DTCLib::DTC_Registers::ReadEVBResendsRequested(std::optional<uint32_t> val)
+{
+	return static_cast<uint16_t>(
+		(val.has_value() ? *val : ReadRegister_(DTC_Register_EVBResendCount)) & 0xFFFFu);
+}
+
+/// Formats the EVB resend-count register for register dumps
+DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBResendCount()
+{
+	auto form = CreateFormatter(DTC_Register_EVBResendCount);
+	form.description = "EVB Resend Count";
+	form.vals.push_back("");
+	std::stringstream o;
+	o << "Resends served by TX: " << std::dec << ReadEVBResendsServed(form.value);
+	form.vals.push_back(o.str());
+	o.str("");
+	o.clear();
+	o << "Resends requested by RX: " << std::dec << ReadEVBResendsRequested(form.value);
+	form.vals.push_back(o.str());
+	return form;
+}
+
 /// Read theHardware Event Building Stats data based on type and DTC mac address
 uint32_t DTCLib::DTC_Registers::ReadEVBStats(DTC_EVBStatsType type, uint8_t dtc_mac, std::optional<uint32_t> val)
 {
@@ -2635,6 +2665,9 @@ DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBStats(DTCLib::DTC_EVBS
 					break;
 				case DTC_EVBStatsType_TxPacketCount:
 					o << "TX Packet Count:                       ";
+					break;
+				case DTC_EVBStatsType_RxAckPosition:
+					o << "Rx Ack Position (peer resend feedback): ";
 					break;
 				default:
 					__SS__ << "Invalid DTC EVB Stat type: " << t << __E__;
@@ -7825,6 +7858,119 @@ uint32_t DTCLib::DTC_Registers::ReadEVBHighLevelCounters3(std::optional<uint32_t
 {
 	return val.has_value() ? *val : ReadRegister_(DTC_Register_EVBHighLevelCounters3);
 }  // end ReadEVBHighLevelCounters3()
+
+uint16_t DTCLib::DTC_Registers::ReadEVBLocalChunkCap(std::optional<uint32_t> val)
+{
+	return static_cast<uint16_t>((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBLocalChunkCap)) & 0xFFFFu);
+}  // end ReadEVBLocalChunkCap()
+
+void DTCLib::DTC_Registers::SetEVBLocalChunkCap(uint16_t words)
+{
+	const uint32_t upperHalf = ReadRegister_(DTC_Register_EVBLocalChunkCap) & 0xFFFF0000u;
+	WriteRegister_(upperHalf | words, DTC_Register_EVBLocalChunkCap);
+}  // end SetEVBLocalChunkCap()
+
+uint32_t DTCLib::DTC_Registers::ReadEVBRemoteChunkControl(std::optional<uint32_t> val)
+{
+	return val.has_value() ? *val : ReadRegister_(DTC_Register_EVBRemoteChunkControl);
+}  // end ReadEVBRemoteChunkControl()
+
+void DTCLib::DTC_Registers::SetEVBRemoteChunkControl(uint32_t value)
+{
+	WriteRegister_(value, DTC_Register_EVBRemoteChunkControl);
+}  // end SetEVBRemoteChunkControl()
+
+std::vector<uint32_t> DTCLib::DTC_Registers::ReadEVBStallCounters()
+{
+	static const DTC_Register stallRegisters[] = {
+		DTC_Register_EVBStallTXCredit, DTC_Register_EVBStallTXWire, DTC_Register_EVBStallBufferManagerLocal,
+		DTC_Register_EVBStallBufferManagerRemoteWait, DTC_Register_EVBStallDDRRead, DTC_Register_EVBStallROCHeld,
+		DTC_Register_EVBStallTimebase, DTC_Register_EVBStallROCHeldPart1, DTC_Register_EVBStallROCHeldPart2,
+		DTC_Register_EVBStallROCHeldPart3, DTC_Register_EVBStallROCHeldPart4, DTC_Register_EVBStallShare5,
+		DTC_Register_EVBOutputHoldClocks, DTC_Register_EVBOutputLongestHold, DTC_Register_EVBOutputWordsAccepted};
+	std::vector<uint32_t> values;
+	for (auto stallRegister : stallRegisters)
+		values.push_back(ReadRegister_(stallRegister));
+	return values;
+}  // end ReadEVBStallCounters()
+
+namespace {
+/// Rows for the stall counters against the timebase (index 6 = 0x9228): clocks, ms (4 ns per
+/// clock) and share.  Indices 7-10 are the four parts of ROC-held time and must add up to index 5;
+/// index 11 is the fifth share (0x923C).  Shorter vectors (older bitfiles) print what they have.
+std::string formatEVBStallRows(const std::vector<uint64_t>& values, const std::string& indent, const std::string& timebaseLabel)
+{
+	static const char* const names[] = {
+		"TX credit stall   (0x9210)", "TX wire busy      (0x9214)", "BM self chunk     (0x9218)",
+		"BM remote waiting (0x921C)", "DDR read busy     (0x9220)", "ROC input held    (0x9224)",
+		"timebase          (0x9228)",
+		"ROC held part 1   (0x922C)", "ROC held part 2   (0x9230)", "ROC held part 3   (0x9234)",
+		"ROC held part 4   (0x9238)", "DDR write busy    (0x923C)",
+		"output hold       (0x9240)", "longest hold      (0x9244)", "words accepted    (0x9248)"};
+	const size_t timebaseIndex = 6;
+	const uint64_t timebase = values.size() > timebaseIndex ? values[timebaseIndex] : 0;
+	std::ostringstream o;
+	o << indent << "Timebase (0x9228): " << timebase << " clocks = " << std::fixed << std::setprecision(1)
+	  << (timebase * 4.0e-6) << " ms " << timebaseLabel
+	  << (timebase == 0 ? "  (zero: counters not in this bitfile or just reset)" : "") << "\n";
+	auto row = [&](size_t index) {
+		if (index >= values.size()) return;
+		o << indent << names[index] << ": " << std::setw(10) << values[index] << " clocks = " << std::setw(8) << std::setprecision(1)
+		  << (values[index] * 4.0e-6) << " ms";
+		if (timebase)
+			o << "  " << std::setw(5) << std::setprecision(1) << (100.0 * values[index] / timebase) << " %";
+		o << "\n";
+	};
+	for (size_t index = 0; index < timebaseIndex; ++index) row(index);
+	if (values.size() > 11)
+	{
+		for (size_t index = 7; index < 12; ++index) row(index);
+		// the five registers are read one after another while they count, so a skew of a few
+		// hundred clocks is the readout, not the firmware; 0x9224 itself must be matched to 1e-5
+		const uint64_t heldPartsSum = values[7] + values[8] + values[9] + values[10];
+		const uint64_t difference = heldPartsSum > values[5] ? heldPartsSum - values[5] : values[5] - heldPartsSum;
+		const uint64_t tolerance = std::max<uint64_t>(10000, values[5] / 100000);
+		o << indent << "ROC held parts 1-4 sum: " << heldPartsSum << " vs 0x9224 " << values[5] << "  "
+		  << (difference <= tolerance ? "OK" : "MISMATCH") << " (" << (heldPartsSum >= values[5] ? "+" : "-") << difference
+		  << " clocks, readout skew allowance " << tolerance << ")\n";
+	}
+	if (values.size() > 14)
+	{
+		// output stage into the PCIe engine (hw agent 2026-10-07): hold share ~60 % in EVB mode with ~0 in
+		// direct mode means the host is the holder; small in both means it is not
+		row(12);
+		o << indent << names[13] << ": " << std::setw(10) << values[13] << " clocks = " << std::setw(8) << std::setprecision(1)
+		  << (values[13] * 4.0e-3) << " us" << (values[13] >= 65536 ? "  (a hold of 262 us or more happened)" : "") << "\n";
+		o << indent << names[14] << ": " << std::setw(10) << values[14] << " words = " << std::setw(8) << std::setprecision(1)
+		  << (values[14] * 8.0e-6) << " MB";
+		if (timebase)
+			o << "  delivered " << std::setprecision(1) << (values[14] * 8.0 / (timebase * 4.0e-9) * 1e-6) << " MB/s";
+		o << "\n";
+	}
+	return o.str();
+}
+}  // namespace
+
+/// Counters since SoftReset.  They wrap at 2^32 (~17 s), so prefer the delta form for a run.
+std::string DTCLib::DTC_Registers::FormatEVBStallCountersText(const std::string& indent)
+{
+	const auto values = ReadEVBStallCounters();
+	return formatEVBStallRows(std::vector<uint64_t>(values.begin(), values.end()), indent, "since SoftReset");
+}  // end FormatEVBStallCountersText()
+
+/// Difference of two snapshots (32-bit wrap-safe), so the shares cover only the run itself
+std::string DTCLib::DTC_Registers::FormatEVBStallCountersDeltaText(const std::vector<uint32_t>& startValues, const std::vector<uint32_t>& endValues, const std::string& indent)
+{
+	std::vector<uint64_t> deltas;
+	for (size_t index = 0; index < startValues.size() && index < endValues.size(); ++index)
+		deltas.push_back(static_cast<uint32_t>(endValues[index] - startValues[index]));
+	return formatEVBStallRows(deltas, indent, "between the two snapshots");
+}  // end FormatEVBStallCountersDeltaText()
+
+std::string DTCLib::DTC_Registers::FormatEVBStallCountersTotalsText(const std::vector<uint64_t>& totals, const std::string& indent)
+{
+	return formatEVBStallRows(totals, indent, "over the run (summed mid-run snapshots, wrap-safe)");
+}  // end FormatEVBStallCountersTotalsText()
 
 /// @brief 0x9200 [15:0] - ROC input words
 uint16_t DTCLib::DTC_Registers::ReadEVBROCInputWords(std::optional<uint32_t> val)

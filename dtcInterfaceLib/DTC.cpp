@@ -586,6 +586,23 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 	(void)matchEventWindowTag;
 	std::vector<std::shared_ptr<DTC_Event>> output;
 
+	// Step profile: one steady_clock read per step boundary; totals are reported by FormatEVBReadProfile().
+	using ProfileClock = std::chrono::steady_clock;
+	const ProfileClock::time_point callStart = ProfileClock::now();
+	ProfileClock::time_point lapStart = callStart;
+	auto lap = [&lapStart](uint64_t& accumulator) {
+		const ProfileClock::time_point now = ProfileClock::now();
+		accumulator += static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(now - lapStart).count());
+		lapStart = now;
+	};
+	++evbReadProfile_.calls;
+	struct ProfileTotal
+	{
+		uint64_t& total;
+		ProfileClock::time_point start;
+		~ProfileTotal() { total += static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(ProfileClock::now() - start).count()); }
+	} profileTotal{evbReadProfile_.totalNs, callStart};
+
 	static const size_t RECORD_HEADER_SIZE = sizeof(uint64_t);  // 8 bytes: firmware record header word
 
 	// Hex-dump a record / subevent as 64-bit words in DMA order, 4 per line
@@ -647,9 +664,12 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 		}
 	}
 
+	lap(evbReadProfile_.timeoutScanNs);
+
 	// Step 1: read one DMA buffer directly from hardware
 	void* buffer = nullptr;
 	int dmaBytes = device_.read_data(DTC_DMA_Engine_DAQ, &buffer, 1 /*tmo_ms*/);
+	lap(evbReadProfile_.readDataNs);
 
 	if (dmaBytes <= 0 || buffer == nullptr)
 	{
@@ -657,6 +677,7 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 			DTC_TLOG(TLVL_ERROR) << "GetEVBDataAsEvents: read_data error " << dmaBytes;
 		return output;
 	}
+	++evbReadProfile_.callsWithData;
 
 	// DMA buffer lifetime: this one buffer is released when the function exits by ANY path
 	// (normal return or a throw from any check below).  Step 3 copies every chunk payload out
@@ -666,16 +687,19 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 	struct DmaRelease
 	{
 		decltype(device_)& d;
+		uint64_t& releaseNs;
 		~DmaRelease()
 		{
+			const ProfileClock::time_point releaseStart = ProfileClock::now();
 			try
 			{
 				d.read_release(DTC_DMA_Engine_DAQ, 1);
 			}
 			catch (...)
 			{}
+			releaseNs += static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(ProfileClock::now() - releaseStart).count());
 		}
-	} dmaRelease{device_};
+	} dmaRelease{device_, evbReadProfile_.releaseBufferNs};
 
 	// Step 2: compute usable payload (strip tlast byte if short DMA)
 	size_t payloadBytes = static_cast<size_t>(dmaBytes);
@@ -683,9 +707,23 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 		payloadBytes -= 1;  // tlast marker byte
 	size_t payloadWords = payloadBytes / sizeof(uint64_t);
 	const uint64_t* words = static_cast<const uint64_t*>(buffer);
+	++evbDMABuffersRead_;
+
+	// Step 2b: expected number of source DTCs per tag (= EVB destination-node count) and this DTC's
+	// MAC, read once per run (first data buffer after ResetEVBAssembly); both are constant for a run
+	// and the two register reads per buffer they used to cost are now gone from the data path.
+	if (!evbSourcesKnown_)
+	{
+		uint8_t n = ReadEVBNumberOfDestinationNodes();
+		evbNumSources_ = (n == 0) ? 1 : n;
+		evbLocalMac_ = ReadEVBLocalMACAddress();
+		evbSourcesKnown_ = true;
+	}
+	lap(evbReadProfile_.registerReadNs);
 
 	// Step 3: FAFA chunk walk
 	size_t ptr = 0;
+	std::ostringstream chunksSeenInThisBuffer;  // "word:src/wc" per chunk, for the framing-error report
 	while (ptr < payloadWords)
 	{
 		uint64_t w = words[ptr];
@@ -696,20 +734,53 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 
 			if (ptr + 1 + chunk_wc > payloadWords)
 			{
-				DTC_TLOG(TLVL_ERROR) << "GetEVBDataAsEvents: FAFA framing error at word " << ptr
-									 << ": chunk_wc=" << chunk_wc << " exceeds remaining " << (payloadWords - ptr - 1) << " words";
+				// A chunk that does not fit its DMA buffer never happens in normal running (hw
+				// agent 2026-10-05: a chunk never straddles a DMA close); it is the aftermath of
+				// a TX disable or reset mid-run, or a firmware fault.  Report everything that
+				// locates it and stop, rather than silently dropping the chunk and continuing.
+				std::stringstream ss;
+				ss << "GetEVBDataAsEvents: FAFA framing error at word " << ptr << " of " << payloadWords
+				   << " (DMA " << dmaBytes << " bytes): chunk header 0x" << std::hex << std::setw(16) << std::setfill('0') << w << std::setfill(' ') << std::dec
+				   << " = src 0x" << std::hex << static_cast<int>(chunk_src) << std::dec << ", chunk_wc=" << chunk_wc
+				   << " exceeds remaining " << (payloadWords - ptr - 1) << " words (short by " << (ptr + 1 + chunk_wc - payloadWords)
+				   << "). Chunks already taken from this buffer (word:src/wc):" << (chunksSeenInThisBuffer.str().empty() ? " none" : chunksSeenInThisBuffer.str())
+				   << ". Last released EWT=" << (evbHaveReleasedTag_ ? std::to_string(evbLastReleasedTag_) : std::string("none")) << " eventsReleased=" << evbEventsReleased_ << " openTags=" << evbPendingTags_.size()
+				   << "; reassembly bytes pending per source:";
+				for (const auto& [sourceId, sourceBuffer] : evbPerSourceReassembly_)
+					ss << " 0x" << std::hex << static_cast<int>(sourceId) << std::dec << "=" << sourceBuffer.size();
+				ss << ".\n";
+				const size_t dumpFromWord = ptr >= 16 ? ptr - 16 : 0;
+				const size_t dumpBytes = std::min(static_cast<size_t>(payloadWords - dumpFromWord) * sizeof(uint64_t), static_cast<size_t>(1024));
+				dumpRecord(ss, "DMA buffer from 16 words before the bad chunk header (offsets relative to that point)", chunk_src,
+						   reinterpret_cast<const uint8_t*>(&words[dumpFromWord]), dumpBytes);
+				auto lg = evbLastGoodRecord_.find(chunk_src);
+				if (lg != evbLastGoodRecord_.end())
+					dumpRecord(ss, "Last GOOD record (same src, for comparison)", chunk_src, lg->second.data(), lg->second.size());
+				else
+					ss << "(no previous good record from src=0x" << std::hex << static_cast<int>(chunk_src) << std::dec << ")\n";
+				dumpEVBErrorStatus(ss);
+				device_.resetSpyHasOccurred();
+				device_.spy(DTC_DMA_Engine_DAQ, 3 | 8 | 16, ss);
+				DTC_TLOG(TLVL_ERROR) << ss.str();
 				++evbFramingErrors_;
-				break;
+				throw std::runtime_error(ss.str());
+			}
+			chunksSeenInThisBuffer << " " << ptr << ":0x" << std::hex << static_cast<int>(chunk_src) << std::dec << "/" << chunk_wc;
+
+			size_t chunkBytes = static_cast<size_t>(chunk_wc) * sizeof(uint64_t);
+			evbDrainedBytes_ += chunkBytes;
+			if (!evbDrainOnly_)
+			{
+				auto& srcBuf = evbPerSourceReassembly_[chunk_src];
+				const uint8_t* chunkData = reinterpret_cast<const uint8_t*>(&words[ptr + 1]);
+				srcBuf.insert(srcBuf.end(), chunkData, chunkData + chunkBytes);
 			}
 
-			auto& srcBuf = evbPerSourceReassembly_[chunk_src];
-			const uint8_t* chunkData = reinterpret_cast<const uint8_t*>(&words[ptr + 1]);
-			size_t chunkBytes = static_cast<size_t>(chunk_wc) * sizeof(uint64_t);
-			srcBuf.insert(srcBuf.end(), chunkData, chunkData + chunkBytes);
-
 			++evbChunksParsed_;
+			if (chunk_src != evbLocalMac_ && chunk_wc < evbRemoteChunkSizeHistogram_.size())
+				++evbRemoteChunkSizeHistogram_[chunk_wc];
 			DTC_TLOG(TLVL_DEBUG + 1) << "GetEVBDataAsEvents: FAFA chunk src=0x" << std::hex << static_cast<int>(chunk_src)
-									 << " wc=" << std::dec << chunk_wc << " words; reassembly[src] now " << srcBuf.size() << " bytes";
+									 << " wc=" << std::dec << chunk_wc << " words";
 			ptr += 1 + chunk_wc;
 		}
 		else
@@ -719,20 +790,18 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 		}
 	}
 
+	lap(evbReadProfile_.chunkWalkNs);
+
+	// Drain-only: the DMA buffer is released on return; nothing else is done with the data
+	if (evbDrainOnly_)
+		return output;
+
 	// Step 4: extract complete subevents from each source's reassembly buffer
 	// Each subevent (local and remote) is preceded by an 8-byte firmware
 	// record header word (bits [15:0] = total record byte count including
 	// this word).  The AXI demux routes the full ROC transfer to both the
 	// local buffer manager and the DDR->10GbE path, so the record header
 	// is present in both.  Skip it to reach the DTC_SubEventHeader.
-	// Expected number of source DTCs per tag (= EVB destination-node count) and this DTC's MAC,
-	// refreshed once per DMA buffer that carries data.
-	{
-		uint8_t n = ReadEVBNumberOfDestinationNodes();
-		evbNumSources_ = (n == 0) ? 1 : n;
-		evbLocalMac_ = ReadEVBLocalMACAddress();
-	}
-
 	for (auto& [src, srcBuf] : evbPerSourceReassembly_)
 	{
 		while (srcBuf.size() >= RECORD_HEADER_SIZE + sizeof(DTC_SubEventHeader))
@@ -751,6 +820,94 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 
 			size_t totalRecordBytes = RECORD_HEADER_SIZE + subEvtByteCount;
 
+			// Split records (EVB3_DMA_FAFA_protocol.md "Split-record layout", hw agent 2026-10-05):
+			// a subevent larger than one AXIMux DMA transfer (~64 KB) arrives as several records.
+			// The first carries the subevent header; each continuation record is only its own
+			// 8-byte count word (bytes incl. itself, low nibble 8) followed by the next raw words.
+			// Payloads (record bytes - 8) must add up exactly to the inclusive count.  Wait until
+			// every piece has arrived, then remove the continuation count words so the subevent
+			// is contiguous behind the first count word.
+			bool splitRecordJoined = false;
+			{
+				const uint64_t firstCountWord = *reinterpret_cast<const uint64_t*>(srcBuf.data());
+				const size_t firstRecordBytes = static_cast<size_t>(firstCountWord & 0xFFFF);
+				if ((firstRecordBytes & 0xF) == 0x8 && firstRecordBytes > RECORD_HEADER_SIZE + sizeof(DTC_SubEventHeader) &&
+					firstRecordBytes < totalRecordBytes)
+				{
+					std::vector<size_t> continuationCountWordOffsets;
+					size_t payloadBytesCollected = firstRecordBytes - RECORD_HEADER_SIZE;
+					size_t nextRecordOffset = firstRecordBytes;
+					bool allPiecesPresent = true;
+					std::string splitError;
+					while (payloadBytesCollected < subEvtByteCount)
+					{
+						if (srcBuf.size() < nextRecordOffset + RECORD_HEADER_SIZE)
+						{
+							allPiecesPresent = false;
+							break;
+						}
+						const uint64_t continuationCountWord = *reinterpret_cast<const uint64_t*>(srcBuf.data() + nextRecordOffset);
+						const size_t continuationRecordBytes = static_cast<size_t>(continuationCountWord & 0xFFFF);
+						const size_t continuationPayloadBytes = continuationRecordBytes - RECORD_HEADER_SIZE;
+						if ((continuationRecordBytes & 0xF) != 0x8 || continuationRecordBytes <= RECORD_HEADER_SIZE)
+						{
+							std::stringstream reason;
+							reason << "continuation count word at byte " << nextRecordOffset << " = 0x" << std::hex << std::setw(16) << std::setfill('0')
+								   << continuationCountWord << std::setfill(' ') << std::dec << " is not a count quadword (low nibble must be 8)";
+							splitError = reason.str();
+							break;
+						}
+						if (payloadBytesCollected + continuationPayloadBytes > subEvtByteCount)
+						{
+							std::stringstream reason;
+							reason << "continuation record at byte " << nextRecordOffset << " (" << continuationRecordBytes << " bytes) overshoots: "
+								   << payloadBytesCollected << " + " << continuationPayloadBytes << " > " << subEvtByteCount;
+							splitError = reason.str();
+							break;
+						}
+						if (srcBuf.size() < nextRecordOffset + continuationRecordBytes)
+						{
+							allPiecesPresent = false;
+							break;
+						}
+						continuationCountWordOffsets.push_back(nextRecordOffset);
+						payloadBytesCollected += continuationPayloadBytes;
+						nextRecordOffset += continuationRecordBytes;
+					}
+
+					if (!splitError.empty())
+					{
+						std::stringstream ss;
+						ss << "GetEVBDataAsEvents: split subevent from src=0x" << std::hex << static_cast<int>(src) << std::dec
+						   << " cannot be reassembled: first record " << firstRecordBytes << " bytes, subevent inclusive count " << subEvtByteCount
+						   << "; " << splitError << "; tag_low=" << subHdr->event_tag_low << ".\n";
+						dumpRecord(ss, "BAD split record (reassembly buffer head)", src, srcBuf.data(), std::min(srcBuf.size(), static_cast<size_t>(1024)));
+						if (nextRecordOffset < srcBuf.size())
+							dumpRecord(ss, "at the bad continuation", src, srcBuf.data() + nextRecordOffset,
+									   std::min(srcBuf.size() - nextRecordOffset, static_cast<size_t>(256)));
+						dumpEVBErrorStatus(ss);
+						DTC_TLOG(TLVL_ERROR) << ss.str();
+						++evbFramingErrors_;
+						srcBuf.clear();
+						throw std::runtime_error(ss.str());
+					}
+					if (!allPiecesPresent)
+					{
+						DTC_TLOG(TLVL_DEBUG + 1) << "GetEVBDataAsEvents: src=0x" << std::hex << static_cast<int>(src) << std::dec
+												 << " split subevent incomplete: have " << payloadBytesCollected << " of " << subEvtByteCount
+												 << " payload bytes in " << (continuationCountWordOffsets.size() + 1) << " record(s); waiting for more chunks";
+						break;
+					}
+					// remove the continuation count words, last first so earlier offsets stay valid
+					for (auto offsetIterator = continuationCountWordOffsets.rbegin(); offsetIterator != continuationCountWordOffsets.rend(); ++offsetIterator)
+						srcBuf.erase(srcBuf.begin() + *offsetIterator, srcBuf.begin() + *offsetIterator + RECORD_HEADER_SIZE);
+					splitRecordJoined = true;
+					++evbSplitSubeventsJoined_;
+					DTC_TLOG(TLVL_DEBUG + 1) << "GetEVBDataAsEvents: src=0x" << std::hex << static_cast<int>(src) << std::dec << " joined split subevent tag_low="
+											 << subHdr->event_tag_low << " from " << (continuationCountWordOffsets.size() + 1) << " records, " << subEvtByteCount << " bytes";
+				}
+			}
+
 			// Header consistency BEFORE waiting for more data: the observed firmware record
 			// header word bits[15:0] = total record bytes = subevent inclusive count + 8.  If a
 			// word-replacement corruption lands on either size field, the two disagree; without
@@ -758,7 +915,7 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 			{
 				uint64_t recHdrWord = *reinterpret_cast<const uint64_t*>(srcBuf.data());
 				size_t recHdrBytes = static_cast<size_t>(recHdrWord & 0xFFFF);
-				bool recHdrOK = (recHdrBytes == totalRecordBytes);
+				bool recHdrOK = splitRecordJoined || (recHdrBytes == totalRecordBytes);
 				bool numRocsOK = (subHdr->num_rocs >= 1 && subHdr->num_rocs <= 6);
 				if (!recHdrOK || !numRocsOK)
 				{
@@ -793,6 +950,7 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 										 << " record incomplete: have " << srcBuf.size() << " of " << totalRecordBytes << " bytes; waiting for more chunks";
 				break;  // incomplete subevent, wait for more chunks
 			}
+			lap(evbReadProfile_.recordScanNs);
 
 			size_t eventSize = sizeof(DTC_EventHeader) + subEvtByteCount;
 			auto event = std::make_shared<DTC_Event>(eventSize);
@@ -890,6 +1048,7 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 				throw std::runtime_error(ss.str());
 			}
 
+			lap(evbReadProfile_.subeventSetupNs);
 			evbLastGoodRecord_[src].assign(srcBuf.begin(), srcBuf.begin() + totalRecordBytes);
 
 			// Stage the validated subevent (record header stripped) into the per-tag assembly
@@ -921,8 +1080,11 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 			}
 
 			srcBuf.erase(srcBuf.begin(), srcBuf.begin() + totalRecordBytes);
+			++evbReadProfile_.recordsExtracted;
+			lap(evbReadProfile_.stagingNs);
 		}
 	}
+	lap(evbReadProfile_.recordScanNs);  // loop exits (incomplete record / empty source) land here
 
 	// Step 5: release complete events, strictly in increasing tag order.  Because each source
 	// delivers its tags in increasing order and every source contributes to every tag owned by
@@ -994,10 +1156,85 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 		output.push_back(std::move(event));
 		evbPendingTags_.erase(it);
 	}
+	lap(evbReadProfile_.eventReleaseNs);
 
 	// Step 6: the DMA buffer is released by dmaRelease (RAII, declared after read_data) on return.
 	return output;
 }  // end GetEVBDataAsEvents()
+
+std::string DTCLib::DTC::FormatEVBReadProfile() const
+{
+	const EVBReadProfile& profile = evbReadProfile_;
+	std::ostringstream o;
+	if (profile.calls == 0)
+	{
+		o << "no GetEVBDataAsEvents calls since reset";
+		return o.str();
+	}
+	const double totalMs = profile.totalNs / 1e6;
+	o << "calls " << profile.calls << " (" << profile.callsWithData << " with data, " << (profile.calls - profile.callsWithData) << " idle), records "
+	  << profile.recordsExtracted << ", events released " << evbEventsReleased_ << ", time in GetEVBDataAsEvents " << std::fixed << std::setprecision(1)
+	  << totalMs << " ms\n";
+	auto row = [&](const char* label, uint64_t ns, uint64_t perCount, const char* perLabel) {
+		o << "    " << std::left << std::setw(36) << label << std::right << std::setw(10) << std::fixed << std::setprecision(1) << (ns / 1e6) << " ms "
+		  << std::setw(6) << std::setprecision(1) << (profile.totalNs ? 100.0 * ns / profile.totalNs : 0.0) << " %";
+		if (perCount)
+			o << "   " << std::setw(8) << std::setprecision(2) << (ns / 1e3 / perCount) << " us/" << perLabel;
+		o << "\n";
+	};
+	const uint64_t dataCalls = profile.callsWithData ? profile.callsWithData : 1;
+	row("Step 0 open-tag timeout scan", profile.timeoutScanNs, profile.calls, "call");
+	row("Step 1 read_data (incl. idle wait)", profile.readDataNs, profile.calls, "call");
+	row("Step 3 FAFA chunk walk + copy", profile.chunkWalkNs, dataCalls, "buffer");
+	row("Step 2b register reads (N, MAC, once)", profile.registerReadNs, dataCalls, "buffer");
+	row("Step 4b record scan + checks", profile.recordScanNs, dataCalls, "buffer");
+	row("Step 4c DTC_Event alloc+copy+Setup", profile.subeventSetupNs, profile.recordsExtracted, "record");
+	row("Step 4d staging copies + erase", profile.stagingNs, profile.recordsExtracted, "record");
+	row("Step 5 event assembly + release", profile.eventReleaseNs, evbEventsReleased_, "event");
+	row("DMA read_release", profile.releaseBufferNs, dataCalls, "buffer");
+	const uint64_t accounted = profile.timeoutScanNs + profile.readDataNs + profile.chunkWalkNs + profile.registerReadNs + profile.recordScanNs +
+							   profile.subeventSetupNs + profile.stagingNs + profile.eventReleaseNs + profile.releaseBufferNs;
+	row("(unaccounted: clock reads, returns)", profile.totalNs > accounted ? profile.totalNs - accounted : 0, 0, "");
+	return o.str();
+}  // end FormatEVBReadProfile()
+
+std::string DTCLib::DTC::FormatEVBRemoteChunkSizes() const
+{
+	uint64_t total = 0, under64 = 0, weightedWords = 0;
+	for (size_t words = 0; words < evbRemoteChunkSizeHistogram_.size(); ++words)
+	{
+		total += evbRemoteChunkSizeHistogram_[words];
+		weightedWords += evbRemoteChunkSizeHistogram_[words] * words;
+		if (words < 64) under64 += evbRemoteChunkSizeHistogram_[words];
+	}
+	std::ostringstream o;
+	if (total == 0)
+	{
+		o << "no remote chunks seen";
+		return o.str();
+	}
+	uint64_t running = 0;
+	size_t median = 0;
+	for (size_t words = 0; words < evbRemoteChunkSizeHistogram_.size(); ++words)
+	{
+		running += evbRemoteChunkSizeHistogram_[words];
+		if (running * 2 >= total)
+		{
+			median = words;
+			break;
+		}
+	}
+	std::vector<std::pair<uint64_t, size_t>> topSizes;
+	for (size_t words = 0; words < evbRemoteChunkSizeHistogram_.size(); ++words)
+		if (evbRemoteChunkSizeHistogram_[words]) topSizes.emplace_back(evbRemoteChunkSizeHistogram_[words], words);
+	std::sort(topSizes.rbegin(), topSizes.rend());
+	o << total << " remote chunks, median " << median << " words, mean " << std::fixed << std::setprecision(1)
+	  << (static_cast<double>(weightedWords) / total) << " words, under 64 words: " << under64 << " (" << std::setprecision(1)
+	  << (100.0 * under64 / total) << " %); most common sizes (words:count):";
+	for (size_t index = 0; index < topSizes.size() && index < 8; ++index)
+		o << " " << topSizes[index].second << ":" << topSizes[index].first;
+	return o.str();
+}  // end FormatEVBRemoteChunkSizes()
 
 // ---------------------------------------------------------------------------
 // GetSubEventData v2 -- simplified, one-buffer-per-call subevent extractor
