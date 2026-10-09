@@ -7907,8 +7907,8 @@ std::string formatEVBStallRows(const std::vector<uint64_t>& values, const std::s
 		"ROC held part 1   (0x922C)", "ROC held part 2   (0x9230)", "ROC held part 3   (0x9234)",
 		"ROC held part 4   (0x9238)", "DDR write busy    (0x923C)",
 		"output hold       (0x9240)", "longest hold      (0x9244)", "words accepted    (0x9248)"};
-	const size_t   timebaseIndex = 6;
-	const uint64_t timebase      = values.size() > timebaseIndex ? values[timebaseIndex] : 0;
+	const size_t timebaseIndex = 6;
+	const uint64_t timebase = values.size() > timebaseIndex ? values[timebaseIndex] : 0;
 	std::ostringstream o;
 	o << indent << "Timebase (0x9228): " << timebase << " clocks = " << std::fixed << std::setprecision(1)
 	  << (timebase * 4.0e-6) << " ms " << timebaseLabel
@@ -7928,8 +7928,8 @@ std::string formatEVBStallRows(const std::vector<uint64_t>& values, const std::s
 		// the five registers are read one after another while they count, so a skew of a few
 		// hundred clocks is the readout, not the firmware; 0x9224 itself must be matched to 1e-5
 		const uint64_t heldPartsSum = values[7] + values[8] + values[9] + values[10];
-		const uint64_t difference   = heldPartsSum > values[5] ? heldPartsSum - values[5] : values[5] - heldPartsSum;
-		const uint64_t tolerance    = std::max<uint64_t>(10000, values[5] / 100000);
+		const uint64_t difference = heldPartsSum > values[5] ? heldPartsSum - values[5] : values[5] - heldPartsSum;
+		const uint64_t tolerance = std::max<uint64_t>(10000, values[5] / 100000);
 		o << indent << "ROC held parts 1-4 sum: " << heldPartsSum << " vs 0x9224 " << values[5] << "  "
 		  << (difference <= tolerance ? "OK" : "MISMATCH") << " (" << (heldPartsSum >= values[5] ? "+" : "-") << difference
 		  << " clocks, readout skew allowance " << tolerance << ")\n";

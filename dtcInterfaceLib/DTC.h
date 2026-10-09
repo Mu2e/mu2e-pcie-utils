@@ -108,8 +108,8 @@ class DTC : public DTC_Registers
 	uint64_t                                GetEVBFramingErrors() const { return evbFramingErrors_; }                ///< cumulative FAFA framing / record errors in GetEVBDataAsEvents
 	uint64_t                                GetEVBSplitSubeventsJoined() const { return evbSplitSubeventsJoined_; }  ///< subevents reassembled from more than one record (> ~64 KB)
 	/// FAFA chunk word-count histogram, remote sources only (chunk_src != local MAC): index = words, 0..8191
-	const std::vector<uint64_t>&            GetEVBRemoteChunkSizeHistogram() const { return evbRemoteChunkSizeHistogram_; }
-	std::string                             FormatEVBRemoteChunkSizes() const;  ///< count, median, mean, share under 64 words, top sizes
+	const std::vector<uint64_t>& GetEVBRemoteChunkSizeHistogram() const { return evbRemoteChunkSizeHistogram_; }
+	std::string                  FormatEVBRemoteChunkSizes() const;  ///< count, median, mean, share under 64 words, top sizes
 	// EVB event assembly (see otsdaq-mu2e/docs/EVB3_software_DMA_parsing.md section 4)
 	/// Drain-only: GetEVBDataAsEvents walks the FAFA chunks (counting bytes and chunk sizes) but skips
 	/// reassembly, subevent validation and event completion, and returns no events.  Measures how much
@@ -123,22 +123,22 @@ class DTC : public DTC_Registers
 	/// boundary (about 25 ns each, ~0.1 us per call), negligible against the ~60 us a DMA buffer takes.
 	struct EVBReadProfile
 	{
-		uint64_t calls{0};              ///< GetEVBDataAsEvents calls
-		uint64_t callsWithData{0};      ///< calls where read_data returned a buffer
-		uint64_t recordsExtracted{0};   ///< subevent records validated and staged (Step 4)
-		uint64_t timeoutScanNs{0};      ///< Step 0: open-tag timeout / overflow scan
-		uint64_t readDataNs{0};         ///< Step 1: device read_data (includes waiting up to 1 ms when idle)
-		uint64_t chunkWalkNs{0};        ///< Step 3: FAFA chunk walk incl. copy into per-source reassembly
-		uint64_t registerReadNs{0};     ///< Step 2b: dest-node count and local MAC reads, once per run
-		uint64_t recordScanNs{0};       ///< Step 4b: record framing, split join, header consistency, pre-parse checks
-		uint64_t subeventSetupNs{0};    ///< Step 4c: per-record DTC_Event alloc + memcpy + SetupEvent + IsCorrupt
-		uint64_t stagingNs{0};          ///< Step 4d: last-good copy, per-tag staging copy, reassembly erase
-		uint64_t eventReleaseNs{0};     ///< Step 5: assemble N-subevent event, SetupEvent, release
-		uint64_t releaseBufferNs{0};    ///< read_release of the DMA buffer (RAII on return)
-		uint64_t totalNs{0};            ///< whole call, entry to return
+		uint64_t calls{0};             ///< GetEVBDataAsEvents calls
+		uint64_t callsWithData{0};     ///< calls where read_data returned a buffer
+		uint64_t recordsExtracted{0};  ///< subevent records validated and staged (Step 4)
+		uint64_t timeoutScanNs{0};     ///< Step 0: open-tag timeout / overflow scan
+		uint64_t readDataNs{0};        ///< Step 1: device read_data (includes waiting up to 1 ms when idle)
+		uint64_t chunkWalkNs{0};       ///< Step 3: FAFA chunk walk incl. copy into per-source reassembly
+		uint64_t registerReadNs{0};    ///< Step 2b: dest-node count and local MAC reads, once per run
+		uint64_t recordScanNs{0};      ///< Step 4b: record framing, split join, header consistency, pre-parse checks
+		uint64_t subeventSetupNs{0};   ///< Step 4c: per-record DTC_Event alloc + memcpy + SetupEvent + IsCorrupt
+		uint64_t stagingNs{0};         ///< Step 4d: last-good copy, per-tag staging copy, reassembly erase
+		uint64_t eventReleaseNs{0};    ///< Step 5: assemble N-subevent event, SetupEvent, release
+		uint64_t releaseBufferNs{0};   ///< read_release of the DMA buffer (RAII on return)
+		uint64_t totalNs{0};           ///< whole call, entry to return
 	};
-	const EVBReadProfile& GetEVBReadProfile() const { return evbReadProfile_; }
-	std::string           FormatEVBReadProfile() const;  ///< one line per step: ms, share of call time, per-call / per-record cost
+	const EVBReadProfile&     GetEVBReadProfile() const { return evbReadProfile_; }
+	std::string               FormatEVBReadProfile() const;                                              ///< one line per step: ms, share of call time, per-call / per-record cost
 	void                      SetEVBEventTimeout(std::chrono::milliseconds t) { evbEventTimeout_ = t; }  ///< max age of an incomplete event, first subevent arrival to now, before GetEVBDataAsEvents throws (default 2000 ms)
 	std::chrono::milliseconds GetEVBEventTimeout() const { return evbEventTimeout_; }
 	size_t                    GetEVBOpenTagCount() const { return evbPendingTags_.size(); }  ///< tags holding at least one but not yet all N subevents

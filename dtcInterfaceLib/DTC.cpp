@@ -687,7 +687,7 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 	struct DmaRelease
 	{
 		decltype(device_)& d;
-		uint64_t&          releaseNs;
+		uint64_t& releaseNs;
 		~DmaRelease()
 		{
 			const ProfileClock::time_point releaseStart = ProfileClock::now();
@@ -1213,11 +1213,16 @@ std::string DTCLib::DTC::FormatEVBRemoteChunkSizes() const
 		o << "no remote chunks seen";
 		return o.str();
 	}
-	uint64_t running = 0; size_t median = 0;
+	uint64_t running = 0;
+	size_t median = 0;
 	for (size_t words = 0; words < evbRemoteChunkSizeHistogram_.size(); ++words)
 	{
 		running += evbRemoteChunkSizeHistogram_[words];
-		if (running * 2 >= total) { median = words; break; }
+		if (running * 2 >= total)
+		{
+			median = words;
+			break;
+		}
 	}
 	std::vector<std::pair<uint64_t, size_t>> topSizes;
 	for (size_t words = 0; words < evbRemoteChunkSizeHistogram_.size(); ++words)
