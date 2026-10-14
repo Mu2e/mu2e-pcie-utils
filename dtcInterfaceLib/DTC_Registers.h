@@ -29,9 +29,9 @@ enum DTC_Register : uint16_t
 	DTC_Register_EVBStats                  = 0x9160,
 	DTC_Register_SERDESClock_IICBusControl = 0x9164,
 	DTC_Register_EVBIdleBurst              = 0x9170,
-	// DTC_Register_DDRClock_IICBusControl = 0x9174,
-	// DTC_Register_DDRClock_IICBusLow = 0x9178,
-	// DTC_Register_DDRClock_IICBusHigh = 0x917C,
+	DTC_Register_EVBResendCount            = 0x9174,  // [31:16] resends served by TX, [15:0] requested by RX
+	DTC_Register_EVBLocalChunkCap          = 0x9178,  // [15:0] longest self chunk in 8-byte words; reset 0x0400, 0 = whole-record chunks, 1..31 act as 32
+	DTC_Register_EVBRemoteChunkControl     = 0x917C,  // build 3 (hw agent 2026-10-07): [31:16] hold clocks, [15:0] minimum remote chunk words; reset 0x0400_0080
 	// Reserved - formerly... DTC_Register_DDRWriteResponseTimer = 0x9180,
 	DTC_Register_CFOEmulation_LoopbackDelayMeasure = 0x9184,
 	// Reserved - formerly... DTC_Register_DataPendingTimer = 0x9188,
@@ -69,21 +69,31 @@ enum DTC_Register : uint16_t
 	DTC_Register_EVBHighLevelCounters1                 = 0x9204,  // [31:16] DDR->TX words,      [15:0] DDR FIFO write words
 	DTC_Register_EVBHighLevelCounters2                 = 0x9208,  // [31:16] DMA output words,   [15:0] Buffer manager output words
 	DTC_Register_EVBHighLevelCounters3                 = 0x920C,  // [15:0] GBE RX words
-	// Reserved - formerly... DTC_Register_ReceiveByteCount_Link4 = 0x9210,
-	// Reserved - formerly... DTC_Register_ReceiveByteCount_Link5 = 0x9214,
-	// Reserved - formerly... DTC_Register_ReceiveByteCount_CFOLink = 0x9218,
-	// 0x921C Reserved
-	// Reserved - formerly... DTC_Register_ReceivePacketCount_Link0 = 0x9220,
-	// Reserved - formerly... DTC_Register_ReceivePacketCount_Link1 = 0x9224,
-	// Reserved - formerly... DTC_Register_ReceivePacketCount_Link2 = 0x9228,
+	// EVB3 stall-time counters (hw agent 2026-10-06, status doc A2): 32-bit counts of user_clk clocks
+	// (4 ns) the condition was true since SoftReset, wrap at 2^32 (~17 s); divide by 0x9228 for a duty ratio
+	DTC_Register_EVBStallTXCredit                = 0x9210,  // TX idle with words but no RX credit (0x9370 bit 18)
+	DTC_Register_EVBStallTXWire                  = 0x9214,  // a frame on the 10GbE wire
+	DTC_Register_EVBStallBufferManagerLocal      = 0x9218,  // buffer manager streaming a self chunk to DMA
+	DTC_Register_EVBStallBufferManagerRemoteWait = 0x921C,  // a remote source FIFO held words while no remote chunk was served
+	DTC_Register_EVBStallDDRRead                 = 0x9220,  // a DDR read burst in flight on the TX side
+	DTC_Register_EVBStallROCHeld                 = 0x9224,  // ROC input valid and not ready (0x9370 bit 16)
+	DTC_Register_EVBStallTimebase                = 0x9228,  // clocks since SoftReset (denominator)
+	// build after 0xe6100696 (hw agent 2026-10-07): ROC-held time split four ways; the four must add up to 0x9224
+	DTC_Register_EVBStallROCHeldPart1 = 0x922C,
+	DTC_Register_EVBStallROCHeldPart2 = 0x9230,
+	DTC_Register_EVBStallROCHeldPart3 = 0x9234,
+	DTC_Register_EVBStallROCHeldPart4 = 0x9238,
+	DTC_Register_EVBStallShare5       = 0x923C,  // DDR write busy (hw agent 2026-10-08)
 	// Reserved - formerly... DTC_Register_ReceivePacketCount_Link3 = 0x922C,
 	// Reserved - formerly... DTC_Register_ReceivePacketCount_Link4 = 0x9230,
 	// Reserved - formerly... DTC_Register_ReceivePacketCount_Link5 = 0x9234,
 	// Reserved - formerly... DTC_Register_ReceivePacketCount_CFOLink = 0x9238,
 	// 0x923C Reserved
-	// Reserved - formerly... DTC_Register_TransmitByteCount_Link0 = 0x9240,
-	// Reserved - formerly... DTC_Register_TransmitByteCount_Link1 = 0x9244,
-	// Reserved - formerly... DTC_Register_TransmitByteCount_Link2 = 0x9248,
+	// EVB3 output stage (build after 0xd6100794, hw agent 2026-10-07): registered copies of the handshake
+	// into the PCIe engine; 0x9240/0x9228 is the exact share behind polled 0x9370 bit 23
+	DTC_Register_EVBOutputHoldClocks    = 0x9240,  // clocks the output held a word the PCIe engine would not take
+	DTC_Register_EVBOutputLongestHold   = 0x9244,  // longest single hold since SoftReset, 4 ns clocks (>= 65536 = a 262 us hold)
+	DTC_Register_EVBOutputWordsAccepted = 0x9248,  // words the engine accepted; rate = delta x 8 B / (delta 0x9228 x 4 ns)
 	// Reserved - formerly... DTC_Register_TransmitByteCount_Link3 = 0x924C,
 	// Reserved - formerly... DTC_Register_TransmitByteCount_Link4 = 0x9250,
 	// Reserved - formerly... DTC_Register_TransmitByteCount_Link5 = 0x9254,
@@ -620,6 +630,11 @@ class DTC_Registers : public CFOandDTC_Registers
 	void              SetEVBIdleBurst(uint16_t count);
 	uint16_t          ReadEVBIdleBurst(std::optional<uint32_t> val = std::nullopt);
 	RegisterFormatter FormatEVBIdleBurst();
+
+	// EVB Resend Count (0x9174, read-only, SoftReset clear, 16-bit wrap)
+	uint16_t          ReadEVBResendsServed(std::optional<uint32_t> val = std::nullopt);
+	uint16_t          ReadEVBResendsRequested(std::optional<uint32_t> val = std::nullopt);
+	RegisterFormatter FormatEVBResendCount();
 
 	// EVB Stats
 	uint32_t                                           ReadEVBStats(DTC_EVBStatsType type, uint8_t dtc_mac, std::optional<uint32_t> val = std::nullopt);
@@ -1200,18 +1215,27 @@ class DTC_Registers : public CFOandDTC_Registers
 	RegisterFormatter FormatDeviceTimeAlive() override;
 
 	// EVB Firmware Version and High Level Counters (0x9200/0x9204/0x9208/0x920C)
-	std::string ReadEVBFirmwareVersion(std::optional<uint32_t> val = std::nullopt);           // 0x9200 [15:0] as "Bx.yy"
-	uint32_t    ReadEVBHighLevelCounters0(std::optional<uint32_t> val = std::nullopt);        // 0x9200 raw
-	uint32_t    ReadEVBHighLevelCounters1(std::optional<uint32_t> val = std::nullopt);        // 0x9204 raw
-	uint32_t    ReadEVBHighLevelCounters2(std::optional<uint32_t> val = std::nullopt);        // 0x9208 raw
-	uint32_t    ReadEVBHighLevelCounters3(std::optional<uint32_t> val = std::nullopt);        // 0x920C raw
-	uint16_t    ReadEVBROCInputWords(std::optional<uint32_t> val = std::nullopt);             // 0x9200 [15:0]
-	uint16_t    ReadEVBSelfTransferWords(std::optional<uint32_t> val = std::nullopt);         // 0x9200 [31:16]
-	uint16_t    ReadEVBDDRFIFOWriteWords(std::optional<uint32_t> val = std::nullopt);         // 0x9204 [15:0]
-	uint16_t    ReadEVBDDRToTXWords(std::optional<uint32_t> val = std::nullopt);              // 0x9204 [31:16]
-	uint16_t    ReadEVBBufferManagerOutputWords(std::optional<uint32_t> val = std::nullopt);  // 0x9208 [15:0]
-	uint16_t    ReadEVBDMAOutputWords(std::optional<uint32_t> val = std::nullopt);            // 0x9208 [31:16]
-	uint16_t    ReadEVBGBERXWords(std::optional<uint32_t> val = std::nullopt);                // 0x920C [15:0]
+	std::string ReadEVBFirmwareVersion(std::optional<uint32_t> val = std::nullopt);     // 0x9200 [15:0] as "Bx.yy"
+	uint32_t    ReadEVBHighLevelCounters0(std::optional<uint32_t> val = std::nullopt);  // 0x9200 raw
+	uint32_t    ReadEVBHighLevelCounters1(std::optional<uint32_t> val = std::nullopt);  // 0x9204 raw
+	uint32_t    ReadEVBHighLevelCounters2(std::optional<uint32_t> val = std::nullopt);  // 0x9208 raw
+	uint32_t    ReadEVBHighLevelCounters3(std::optional<uint32_t> val = std::nullopt);  // 0x920C raw
+	// EVB3 self-chunk cap (0x9178) and stall-time counters (0x9210-0x9228)
+	uint16_t              ReadEVBLocalChunkCap(std::optional<uint32_t> val = std::nullopt);
+	void                  SetEVBLocalChunkCap(uint16_t words);                                    // [15:0]; upper half kept
+	uint32_t              ReadEVBRemoteChunkControl(std::optional<uint32_t> val = std::nullopt);  // 0x917C raw
+	void                  SetEVBRemoteChunkControl(uint32_t value);                               // 0x917C whole word
+	std::vector<uint32_t> ReadEVBStallCounters();                                                 // 0x9210..0x923C then 0x9240..0x9248 (15 values), read back to back
+	std::string           FormatEVBStallCountersText(const std::string& indent);
+	std::string           FormatEVBStallCountersDeltaText(const std::vector<uint32_t>& startValues, const std::vector<uint32_t>& endValues, const std::string& indent);
+	std::string           FormatEVBStallCountersTotalsText(const std::vector<uint64_t>& totals, const std::string& indent);  // summed deltas (runs longer than the 17 s wrap)
+	uint16_t              ReadEVBROCInputWords(std::optional<uint32_t> val = std::nullopt);                                  // 0x9200 [15:0]
+	uint16_t              ReadEVBSelfTransferWords(std::optional<uint32_t> val = std::nullopt);                              // 0x9200 [31:16]
+	uint16_t              ReadEVBDDRFIFOWriteWords(std::optional<uint32_t> val = std::nullopt);                              // 0x9204 [15:0]
+	uint16_t              ReadEVBDDRToTXWords(std::optional<uint32_t> val = std::nullopt);                                   // 0x9204 [31:16]
+	uint16_t              ReadEVBBufferManagerOutputWords(std::optional<uint32_t> val = std::nullopt);                       // 0x9208 [15:0]
+	uint16_t              ReadEVBDMAOutputWords(std::optional<uint32_t> val = std::nullopt);                                 // 0x9208 [31:16]
+	uint16_t              ReadEVBGBERXWords(std::optional<uint32_t> val = std::nullopt);                                     // 0x920C [15:0]
 
 	// RX Data Packet Count
 	uint32_t          ReadRXDataPacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
