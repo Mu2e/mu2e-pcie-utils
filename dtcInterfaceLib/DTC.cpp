@@ -723,7 +723,7 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 
 	// Step 3: FAFA chunk walk
 	size_t ptr = 0;
-	std::ostringstream chunksSeenInThisBuffer;  // "word:src/wc" per chunk, for the framing-error report
+	std::vector<std::tuple<size_t, uint8_t, uint16_t>> chunksSeenInThisBuffer;
 	while (ptr < payloadWords)
 	{
 		uint64_t w = words[ptr];
@@ -743,9 +743,15 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 				   << " (DMA " << dmaBytes << " bytes): chunk header 0x" << std::hex << std::setw(16) << std::setfill('0') << w << std::setfill(' ') << std::dec
 				   << " = src 0x" << std::hex << static_cast<int>(chunk_src) << std::dec << ", chunk_wc=" << chunk_wc
 				   << " exceeds remaining " << (payloadWords - ptr - 1) << " words (short by " << (ptr + 1 + chunk_wc - payloadWords)
-				   << "). Chunks already taken from this buffer (word:src/wc):" << (chunksSeenInThisBuffer.str().empty() ? " none" : chunksSeenInThisBuffer.str())
-				   << ". Last released EWT=" << (evbHaveReleasedTag_ ? std::to_string(evbLastReleasedTag_) : std::string("none")) << " eventsReleased=" << evbEventsReleased_ << " openTags=" << evbPendingTags_.size()
-				   << "; reassembly bytes pending per source:";
+				   << "). Chunks already taken from this buffer (word:src/wc):";
+				if (chunksSeenInThisBuffer.empty())
+					ss << " none";
+				else
+					for (const auto& [chunkWord, chunkSrc, chunkWordCount] : chunksSeenInThisBuffer)
+						ss << " " << chunkWord << ":0x" << std::hex << static_cast<int>(chunkSrc) << std::dec << "/" << chunkWordCount;
+				ss
+					<< ". Last released EWT=" << (evbHaveReleasedTag_ ? std::to_string(evbLastReleasedTag_) : std::string("none")) << " eventsReleased=" << evbEventsReleased_ << " openTags=" << evbPendingTags_.size()
+					<< "; reassembly bytes pending per source:";
 				for (const auto& [sourceId, sourceBuffer] : evbPerSourceReassembly_)
 					ss << " 0x" << std::hex << static_cast<int>(sourceId) << std::dec << "=" << sourceBuffer.size();
 				ss << ".\n";
@@ -765,7 +771,7 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 				++evbFramingErrors_;
 				throw std::runtime_error(ss.str());
 			}
-			chunksSeenInThisBuffer << " " << ptr << ":0x" << std::hex << static_cast<int>(chunk_src) << std::dec << "/" << chunk_wc;
+			chunksSeenInThisBuffer.emplace_back(ptr, chunk_src, chunk_wc);
 
 			size_t chunkBytes = static_cast<size_t>(chunk_wc) * sizeof(uint64_t);
 			evbDrainedBytes_ += chunkBytes;

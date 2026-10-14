@@ -7958,12 +7958,20 @@ std::string DTCLib::DTC_Registers::FormatEVBStallCountersText(const std::string&
 	return formatEVBStallRows(std::vector<uint64_t>(values.begin(), values.end()), indent, "since SoftReset");
 }  // end FormatEVBStallCountersText()
 
-/// Difference of two snapshots (32-bit wrap-safe), so the shares cover only the run itself
+/// Difference of two snapshots (32-bit wrap-safe), so the shares cover only the run itself.
+/// Element 13 (EVBOutputLongestHold) is a since-reset maximum, not a counter: report the
+/// end-snapshot value directly rather than a meaningless subtraction of two high-water marks.
 std::string DTCLib::DTC_Registers::FormatEVBStallCountersDeltaText(const std::vector<uint32_t>& startValues, const std::vector<uint32_t>& endValues, const std::string& indent)
 {
+	static const size_t longestHoldIndex = 13;
 	std::vector<uint64_t> deltas;
 	for (size_t index = 0; index < startValues.size() && index < endValues.size(); ++index)
-		deltas.push_back(static_cast<uint32_t>(endValues[index] - startValues[index]));
+	{
+		if (index == longestHoldIndex)
+			deltas.push_back(endValues[index]);
+		else
+			deltas.push_back(static_cast<uint32_t>(endValues[index] - startValues[index]));
+	}
 	return formatEVBStallRows(deltas, indent, "between the two snapshots");
 }  // end FormatEVBStallCountersDeltaText()
 
