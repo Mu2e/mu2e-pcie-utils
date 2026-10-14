@@ -61,7 +61,7 @@ enum DTC_Register : uint16_t
 	DTC_Register_EthernetFramePayloadSize       = 0x91EC,
 	DTC_Register_CFOEmulation_DataRequestDelay  = 0x91E8,
 	DTC_Register_EthernetFrameMaxPayload        = 0x91EC,
-	// 0x91F0 Reserved
+	DTC_Register_EVBTxHistoryRead   = 0x91F0,  // hw agent 2026-10-13: TX packet history readback, one entry per read, auto-advance, 0xFFFFFFFF past the end
 	DTC_Register_CFOEmulation_40MHzClockMarkerInterval = 0x91F4,
 	DTC_Register_CFOMarkerEnables                      = 0x91F8,
 	DTC_Register_ROCFinishThreshold                    = 0x91FC,
@@ -98,7 +98,7 @@ enum DTC_Register : uint16_t
 	// Reserved - formerly... DTC_Register_TransmitByteCount_Link4 = 0x9250,
 	// Reserved - formerly... DTC_Register_TransmitByteCount_Link5 = 0x9254,
 	// Reserved - formerly... DTC_Register_TransmitByteCount_CFOLink = 0x9258,
-	// 0x925C Reserved
+	DTC_Register_EVBTxHistoryStatus = 0x925C,  // hw agent 2026-10-13: [31] frozen, [30:26] first resend dest, [25:18] peer last ack seq, [9:0] entries written
 	// Reserved - formerly... DTC_Register_TransmitPacketCount_Link0 = 0x9260,
 	// Reserved - formerly... DTC_Register_TransmitPacketCount_Link1 = 0x9264,
 	// Reserved - formerly... DTC_Register_TransmitPacketCount_Link2 = 0x9268,
@@ -360,6 +360,20 @@ enum DTC_Register : uint16_t
 	DTC_Register_TXNullHeartbeatCount_Link3 = 0xA44C,
 	DTC_Register_TXNullHeartbeatCount_Link4 = 0xA450,
 	DTC_Register_TXNullHeartbeatCount_Link5 = 0xA454,
+
+	DTC_Register_TXBlockedHeartbeatCount_Link0 = 0xA460,
+	DTC_Register_TXBlockedHeartbeatCount_Link1 = 0xA464,
+	DTC_Register_TXBlockedHeartbeatCount_Link2 = 0xA468,
+	DTC_Register_TXBlockedHeartbeatCount_Link3 = 0xA46C,
+	DTC_Register_TXBlockedHeartbeatCount_Link4 = 0xA470,
+	DTC_Register_TXBlockedHeartbeatCount_Link5 = 0xA474,
+
+	DTC_Register_TXNonnullHeartbeatCount_Link0 = 0xA480,
+	DTC_Register_TXNonnullHeartbeatCount_Link1 = 0xA484,
+	DTC_Register_TXNonnullHeartbeatCount_Link2 = 0xA488,
+	DTC_Register_TXNonnullHeartbeatCount_Link3 = 0xA48C,
+	DTC_Register_TXNonnullHeartbeatCount_Link4 = 0xA490,
+	DTC_Register_TXNonnullHeartbeatCount_Link5 = 0xA494,
 
 	DTC_Register_Invalid,
 	// };
@@ -1202,6 +1216,16 @@ class DTC_Registers : public CFOandDTC_Registers
 	RegisterFormatter FormatTXNullHeartbeatCountLink(DTC_Link_ID const& link);
 	DTC_Register      GetTXNullHeartbeatCountLinkRegister(DTC_Link_ID const& link);
 
+	// TX Blocked (Suppressed) Heartbeat Count
+	uint32_t          ReadTXBlockedHeartbeatCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
+	RegisterFormatter FormatTXBlockedHeartbeatCountLink(DTC_Link_ID const& link);
+	DTC_Register      GetTXBlockedHeartbeatCountLinkRegister(DTC_Link_ID const& link);
+
+	// TX Non-null Heartbeat Count
+	uint32_t          ReadTXNonnullHeartbeatCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
+	RegisterFormatter FormatTXNonnullHeartbeatCountLink(DTC_Link_ID const& link);
+	DTC_Register      GetTXNonnullHeartbeatCountLinkRegister(DTC_Link_ID const& link);
+
 	// RX Data Header Packet Count
 	uint32_t          ReadRXDataHeaderPacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
 	RegisterFormatter FormatRXDataHeaderPacketCountLink(DTC_Link_ID const& link);
@@ -1224,6 +1248,39 @@ class DTC_Registers : public CFOandDTC_Registers
 	uint16_t              ReadEVBLocalChunkCap(std::optional<uint32_t> val = std::nullopt);
 	void                  SetEVBLocalChunkCap(uint16_t words);                                    // [15:0]; upper half kept
 	uint32_t              ReadEVBRemoteChunkControl(std::optional<uint32_t> val = std::nullopt);  // 0x917C raw
+	// EVB3 TX packet history (0x925C status, 0x91F0 readback; hw agent 2026-10-13).  The log records every
+	// 10GbE TX packet until a peer requests a retransmission, then freezes: the entries around the peer's
+	// last-acknowledged sequence number show what was on the wire when the drop happened.
+	struct EVBTxHistoryEntry
+	{
+		bool     firstOfSubevent{false};  ///< [28]
+		bool     lastOfSubevent{false};   ///< [27]
+		bool     hasData{false};          ///< [26] 1 = data, 0 = null
+		uint8_t  destinationOffset{0};    ///< [25:21] node offset 0..31
+		uint8_t  sequence{0};             ///< [20:13]
+		uint16_t sizeWords{0};            ///< [12:0] packet size in 64-bit words
+		uint32_t raw{0};
+	};
+	struct EVBTxHistory
+	{
+		uint32_t                       statusRaw{0};
+		bool                           frozen{false};             ///< [31]
+		uint8_t                        firstResendDestination{0};  ///< [30:26]
+		uint8_t                        peerLastAckSequence{0};     ///< [25:18]
+		uint16_t                       entriesWritten{0};          ///< [9:0]
+		std::vector<EVBTxHistoryEntry> entries;                     ///< entries 0..entriesWritten-1 (only read when frozen or asked)
+		bool                           endMarkerSeen{false};       ///< a read past the end returned 0xFFFFFFFF
+		bool                           alreadyWalked{false};       ///< the very first 0x91F0 read returned 0xFFFFFFFF: the log was walked earlier this run
+		bool                           ringWrapped{false};         ///< entries written == 1023: ring full, entries start at the oldest survivor; the last entry is the one just before the freeze
+	};
+	static EVBTxHistoryEntry DecodeEVBTxHistoryEntry(uint32_t raw);
+	uint32_t                 ReadEVBTxHistoryStatus(std::optional<uint32_t> val = std::nullopt);  // 0x925C raw
+	/// Read 0x925C and, when readEntries is set, drain 0x91F0 (count+1 reads: the first loads the output).
+	/// The read pointer only rewinds on SoftReset, so the log can be walked ONCE per run; a second walk
+	/// returns 0xFFFFFFFF immediately (alreadyWalked).  The log is a 1024-entry ring (hw agent 2026-10-14).
+	EVBTxHistory             ReadEVBTxHistory(bool readEntries);
+	/// Status line plus, when frozen, the entries in a window around the peer's last-acknowledged sequence.
+	std::string              FormatEVBTxHistoryText(const EVBTxHistory& history, const std::string& indent, size_t windowEntries = 12);
 	void                  SetEVBRemoteChunkControl(uint32_t value);                               // 0x917C whole word
 	std::vector<uint32_t> ReadEVBStallCounters();                                                 // 0x9210..0x923C then 0x9240..0x9248 (15 values), read back to back
 	std::string           FormatEVBStallCountersText(const std::string& indent);
@@ -1541,6 +1598,20 @@ class DTC_Registers : public CFOandDTC_Registers
 	    [this] { return this->FormatTXNullHeartbeatCountLink(DTC_Link_3); },
 	    [this] { return this->FormatTXNullHeartbeatCountLink(DTC_Link_4); },
 	    [this] { return this->FormatTXNullHeartbeatCountLink(DTC_Link_5); },
+
+	    [this] { return this->FormatTXBlockedHeartbeatCountLink(DTC_Link_0); },
+	    [this] { return this->FormatTXBlockedHeartbeatCountLink(DTC_Link_1); },
+	    [this] { return this->FormatTXBlockedHeartbeatCountLink(DTC_Link_2); },
+	    [this] { return this->FormatTXBlockedHeartbeatCountLink(DTC_Link_3); },
+	    [this] { return this->FormatTXBlockedHeartbeatCountLink(DTC_Link_4); },
+	    [this] { return this->FormatTXBlockedHeartbeatCountLink(DTC_Link_5); },
+
+	    [this] { return this->FormatTXNonnullHeartbeatCountLink(DTC_Link_0); },
+	    [this] { return this->FormatTXNonnullHeartbeatCountLink(DTC_Link_1); },
+	    [this] { return this->FormatTXNonnullHeartbeatCountLink(DTC_Link_2); },
+	    [this] { return this->FormatTXNonnullHeartbeatCountLink(DTC_Link_3); },
+	    [this] { return this->FormatTXNonnullHeartbeatCountLink(DTC_Link_4); },
+	    [this] { return this->FormatTXNonnullHeartbeatCountLink(DTC_Link_5); },
 
 	    [this] { return this->FormatRXDataHeaderPacketCountLink(DTC_Link_0); },
 	    [this] { return this->FormatRXDataHeaderPacketCountLink(DTC_Link_1); },
