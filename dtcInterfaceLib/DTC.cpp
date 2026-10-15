@@ -687,7 +687,7 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 	struct DmaRelease
 	{
 		decltype(device_)& d;
-		uint64_t&          releaseNs;
+		uint64_t& releaseNs;
 		~DmaRelease()
 		{
 			const ProfileClock::time_point releaseStart = ProfileClock::now();
@@ -709,9 +709,21 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 	const uint64_t* words = static_cast<const uint64_t*>(buffer);
 	++evbDMABuffersRead_;
 
+	// Step 2b: expected number of source DTCs per tag (= EVB destination-node count) and this DTC's
+	// MAC, read once per run (first data buffer after ResetEVBAssembly); both are constant for a run
+	// and the two register reads per buffer they used to cost are now gone from the data path.
+	if (!evbSourcesKnown_)
+	{
+		uint8_t n = ReadEVBNumberOfDestinationNodes();
+		evbNumSources_ = (n == 0) ? 1 : n;
+		evbLocalMac_ = ReadEVBLocalMACAddress();
+		evbSourcesKnown_ = true;
+	}
+	lap(evbReadProfile_.registerReadNs);
+
 	// Step 3: FAFA chunk walk
 	size_t ptr = 0;
-	std::ostringstream chunksSeenInThisBuffer;  // "word:src/wc" per chunk, for the framing-error report
+	std::vector<std::tuple<size_t, uint8_t, uint16_t>> chunksSeenInThisBuffer;
 	while (ptr < payloadWords)
 	{
 		uint64_t w = words[ptr];
@@ -731,9 +743,15 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 				   << " (DMA " << dmaBytes << " bytes): chunk header 0x" << std::hex << std::setw(16) << std::setfill('0') << w << std::setfill(' ') << std::dec
 				   << " = src 0x" << std::hex << static_cast<int>(chunk_src) << std::dec << ", chunk_wc=" << chunk_wc
 				   << " exceeds remaining " << (payloadWords - ptr - 1) << " words (short by " << (ptr + 1 + chunk_wc - payloadWords)
-				   << "). Chunks already taken from this buffer (word:src/wc):" << (chunksSeenInThisBuffer.str().empty() ? " none" : chunksSeenInThisBuffer.str())
-				   << ". Last released EWT=" << (evbHaveReleasedTag_ ? std::to_string(evbLastReleasedTag_) : std::string("none")) << " eventsReleased=" << evbEventsReleased_ << " openTags=" << evbPendingTags_.size()
-				   << "; reassembly bytes pending per source:";
+				   << "). Chunks already taken from this buffer (word:src/wc):";
+				if (chunksSeenInThisBuffer.empty())
+					ss << " none";
+				else
+					for (const auto& [chunkWord, chunkSrc, chunkWordCount] : chunksSeenInThisBuffer)
+						ss << " " << chunkWord << ":0x" << std::hex << static_cast<int>(chunkSrc) << std::dec << "/" << chunkWordCount;
+				ss
+					<< ". Last released EWT=" << (evbHaveReleasedTag_ ? std::to_string(evbLastReleasedTag_) : std::string("none")) << " eventsReleased=" << evbEventsReleased_ << " openTags=" << evbPendingTags_.size()
+					<< "; reassembly bytes pending per source:";
 				for (const auto& [sourceId, sourceBuffer] : evbPerSourceReassembly_)
 					ss << " 0x" << std::hex << static_cast<int>(sourceId) << std::dec << "=" << sourceBuffer.size();
 				ss << ".\n";
@@ -753,7 +771,7 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 				++evbFramingErrors_;
 				throw std::runtime_error(ss.str());
 			}
-			chunksSeenInThisBuffer << " " << ptr << ":0x" << std::hex << static_cast<int>(chunk_src) << std::dec << "/" << chunk_wc;
+			chunksSeenInThisBuffer.emplace_back(ptr, chunk_src, chunk_wc);
 
 			size_t chunkBytes = static_cast<size_t>(chunk_wc) * sizeof(uint64_t);
 			evbDrainedBytes_ += chunkBytes;
@@ -790,15 +808,6 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 	// this word).  The AXI demux routes the full ROC transfer to both the
 	// local buffer manager and the DDR->10GbE path, so the record header
 	// is present in both.  Skip it to reach the DTC_SubEventHeader.
-	// Expected number of source DTCs per tag (= EVB destination-node count) and this DTC's MAC,
-	// refreshed once per DMA buffer that carries data.
-	{
-		uint8_t n = ReadEVBNumberOfDestinationNodes();
-		evbNumSources_ = (n == 0) ? 1 : n;
-		evbLocalMac_ = ReadEVBLocalMACAddress();
-	}
-	lap(evbReadProfile_.registerReadNs);
-
 	for (auto& [src, srcBuf] : evbPerSourceReassembly_)
 	{
 		while (srcBuf.size() >= RECORD_HEADER_SIZE + sizeof(DTC_SubEventHeader))
@@ -1183,7 +1192,7 @@ std::string DTCLib::DTC::FormatEVBReadProfile() const
 	row("Step 0 open-tag timeout scan", profile.timeoutScanNs, profile.calls, "call");
 	row("Step 1 read_data (incl. idle wait)", profile.readDataNs, profile.calls, "call");
 	row("Step 3 FAFA chunk walk + copy", profile.chunkWalkNs, dataCalls, "buffer");
-	row("Step 4a register reads (N, MAC)", profile.registerReadNs, dataCalls, "buffer");
+	row("Step 2b register reads (N, MAC, once)", profile.registerReadNs, dataCalls, "buffer");
 	row("Step 4b record scan + checks", profile.recordScanNs, dataCalls, "buffer");
 	row("Step 4c DTC_Event alloc+copy+Setup", profile.subeventSetupNs, profile.recordsExtracted, "record");
 	row("Step 4d staging copies + erase", profile.stagingNs, profile.recordsExtracted, "record");
@@ -1210,11 +1219,16 @@ std::string DTCLib::DTC::FormatEVBRemoteChunkSizes() const
 		o << "no remote chunks seen";
 		return o.str();
 	}
-	uint64_t running = 0; size_t median = 0;
+	uint64_t running = 0;
+	size_t median = 0;
 	for (size_t words = 0; words < evbRemoteChunkSizeHistogram_.size(); ++words)
 	{
 		running += evbRemoteChunkSizeHistogram_[words];
-		if (running * 2 >= total) { median = words; break; }
+		if (running * 2 >= total)
+		{
+			median = words;
+			break;
+		}
 	}
 	std::vector<std::pair<uint64_t, size_t>> topSizes;
 	for (size_t words = 0; words < evbRemoteChunkSizeHistogram_.size(); ++words)
