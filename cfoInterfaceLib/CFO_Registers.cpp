@@ -24,7 +24,7 @@
 
 CFOLib::CFO_Registers::CFO_Registers(DTC_SimMode mode, int cfo, std::string expectedDesignVersion,
 									 bool skipInit, const std::string& uid)
-	: simMode_(mode), dmaSize_(16)
+	: simMode_(mode), usingDetectorEmulator_(false), dmaSize_(16)
 {
 	TLOG(TLVL_INFO) << "CONSTRUCTOR";
 
@@ -124,19 +124,21 @@ DTCLib::DTC_SimMode CFOLib::CFO_Registers::SetSimMode(std::string expectedDesign
 	}
 
 	__COUT__ << "Initialize requested, setting device registers acccording to sim mode " << DTC_SimModeConverter(simMode_).toString();
+	// Keep whatever links the hardware already has enabled; only normalize them to Tx+Rx
+	// and make sure disabled links are out of loopback.
 	for (auto link : CFO_Links)
 	{
-		bool LinkEnabled = ((maxDTCs_ >> (link * 4)) & 0xF) != 0;
+		DTC_LinkEnableMode current = ReadLinkEnabled(link);
+		bool LinkEnabled = current.TransmitEnable || current.ReceiveEnable;
 		if (!LinkEnabled)
 		{
 			DisableLink(link);
+			SetSERDESLoopbackMode(link, DTC_SERDESLoopbackMode_Disabled);
 		}
 		else
 		{
-			int rocCount = (maxDTCs_ >> (link * 4)) & 0xF;
-			EnableLink(link, DTC_LinkEnableMode(true, true), rocCount);
+			EnableLink(link, DTC_LinkEnableMode(true, true));
 		}
-		if (!LinkEnabled) SetSERDESLoopbackMode(link, DTC_SERDESLoopbackMode_Disabled);
 	}
 
 	if (simMode_ != DTC_SimMode_Disabled)
@@ -411,8 +413,7 @@ DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatClockOscillatorStatus()
 }
 
 // Link Enable Register
-void CFOLib::CFO_Registers::EnableLink(const CFO_Link_ID& link, const DTC_LinkEnableMode& mode,
-									   const uint8_t& dtcCount)
+void CFOLib::CFO_Registers::EnableLink(const CFO_Link_ID& link, const DTC_LinkEnableMode& mode)
 {
 	std::bitset<32> data = ReadRegister_(CFOandDTC_Register_LinkEnable);
 	if (link == CFO_Link_ALL)
@@ -429,7 +430,6 @@ void CFOLib::CFO_Registers::EnableLink(const CFO_Link_ID& link, const DTC_LinkEn
 		data[link + 8] = mode.ReceiveEnable;
 	}
 	WriteRegister_(data.to_ulong(), CFOandDTC_Register_LinkEnable);
-	SetMaxDTCNumber(link, dtcCount);
 }
 
 void CFOLib::CFO_Registers::DisableLink(const CFO_Link_ID& link, const DTC_LinkEnableMode& mode)
@@ -967,47 +967,6 @@ time_t CFOLib::CFO_Registers::ReadLinuxTimestamp()
 {
 	auto val = ReadRegister_(CFO_Register_LinuxTimestamp);
 	return val;
-}
-
-// NUMDTCs Register
-void CFOLib::CFO_Registers::SetMaxDTCNumber(const CFO_Link_ID& link, const uint8_t& dtcCount)
-{
-	ReadLinkDTCCount(link, false);
-	if (link == CFO_Link_ALL)
-	{
-		for (uint8_t i = 0; i < 8; ++i)
-		{
-			uint32_t mask = ~(0xF << (i * 4));
-			maxDTCs_ = (maxDTCs_ & mask) + ((dtcCount & 0xF) << (i * 4));
-		}
-	}
-	else
-	{
-		uint32_t mask = ~(0xF << (link * 4));
-		maxDTCs_ = (maxDTCs_ & mask) + ((dtcCount & 0xF) << (link * 4));
-	}
-	WriteRegister_(maxDTCs_, CFO_Register_NUMDTCs);
-}
-
-uint8_t CFOLib::CFO_Registers::ReadLinkDTCCount(const CFO_Link_ID& link, bool local, std::optional<uint32_t> val)
-{
-	if (!local)
-	{
-		auto data = val.has_value() ? *val : ReadRegister_(CFO_Register_NUMDTCs);
-		maxDTCs_ = data;
-	}
-	return (maxDTCs_ >> (link * 4)) & 0xF;
-}
-
-DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatNUMDTCs()
-{
-	auto form = CreateFormatter(CFO_Register_NUMDTCs);
-	form.description = "Number of DTCs Register";
-	form.vals.push_back("[ x = 1 (hi) ]");  // translation
-	for (auto r : CFO_Links)
-		form.vals.push_back(std::string("Link ") + std::to_string(r) + ": [" +
-							(ReadLinkDTCCount(r, false, form.value) ? "x" : " ") + "]");
-	return form;
 }
 
 // FIFO Full Error Flags Registers
