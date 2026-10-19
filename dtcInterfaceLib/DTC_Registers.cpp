@@ -7987,13 +7987,13 @@ void DTCLib::DTC_Registers::SetEVBRemoteChunkControl(uint32_t value)
 DTCLib::DTC_Registers::EVBTxHistoryEntry DTCLib::DTC_Registers::DecodeEVBTxHistoryEntry(uint32_t raw)
 {
 	EVBTxHistoryEntry entry;
-	entry.raw               = raw;
-	entry.firstOfSubevent   = (raw >> 28) & 1u;
-	entry.lastOfSubevent    = (raw >> 27) & 1u;
-	entry.hasData           = (raw >> 26) & 1u;
+	entry.raw = raw;
+	entry.firstOfSubevent = (raw >> 28) & 1u;
+	entry.lastOfSubevent = (raw >> 27) & 1u;
+	entry.hasData = (raw >> 26) & 1u;
 	entry.destinationOffset = static_cast<uint8_t>((raw >> 21) & 0x1Fu);
-	entry.sequence          = static_cast<uint8_t>((raw >> 13) & 0xFFu);
-	entry.sizeWords         = static_cast<uint16_t>(raw & 0x1FFFu);
+	entry.sequence = static_cast<uint8_t>((raw >> 13) & 0xFFu);
+	entry.sizeWords = static_cast<uint16_t>(raw & 0x1FFFu);
 	return entry;
 }  // end DecodeEVBTxHistoryEntry()
 
@@ -8005,12 +8005,12 @@ uint32_t DTCLib::DTC_Registers::ReadEVBTxHistoryStatus(std::optional<uint32_t> v
 DTCLib::DTC_Registers::EVBTxHistory DTCLib::DTC_Registers::ReadEVBTxHistory(bool readEntries)
 {
 	EVBTxHistory history;
-	history.statusRaw              = ReadEVBTxHistoryStatus();
-	history.frozen                 = (history.statusRaw >> 31) & 1u;
+	history.statusRaw = ReadEVBTxHistoryStatus();
+	history.frozen = (history.statusRaw >> 31) & 1u;
 	history.firstResendDestination = static_cast<uint8_t>((history.statusRaw >> 26) & 0x1Fu);
-	history.peerLastAckSequence    = static_cast<uint8_t>((history.statusRaw >> 18) & 0xFFu);
-	history.entriesWritten         = static_cast<uint16_t>(history.statusRaw & 0x3FFu);
-	history.ringWrapped            = history.entriesWritten >= 1023;
+	history.peerLastAckSequence = static_cast<uint8_t>((history.statusRaw >> 18) & 0xFFu);
+	history.entriesWritten = static_cast<uint16_t>(history.statusRaw & 0x3FFu);
+	history.ringWrapped = history.entriesWritten >= 1023;
 	if (!readEntries || history.entriesWritten == 0)
 		return history;
 	// first read loads the output register; the next entriesWritten reads return entries 0..count-1.
@@ -8070,8 +8070,8 @@ std::string DTCLib::DTC_Registers::FormatEVBTxHistoryText(const EVBTxHistory& hi
 		}
 	// Window: always include the final entry (in a frozen log it is the packet just before the freeze,
 	// which is the one the hw agent wants), and reach back far enough to show the acked packet when found.
-	const size_t last  = history.entries.size();
-	size_t       first = (last > windowEntries) ? last - windowEntries : 0;
+	const size_t last = history.entries.size();
+	size_t first = (last > windowEntries) ? last - windowEntries : 0;
 	if (anchor != history.entries.size() && anchor < first)
 		first = (anchor > 2) ? anchor - 2 : 0;
 	o << indent << "final " << (last - first) << " of " << history.entries.size() << " entries"

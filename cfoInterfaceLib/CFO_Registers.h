@@ -34,8 +34,8 @@ enum CFO_Register : uint16_t
 	CFO_Register_TimestampPreset1          = 0x9184,
 	CFO_Register_LinuxTimestamp            = 0x9188,
 	// 0x918C: deprecated NUMDTCs register, no longer used by firmware
-	CFO_Register_FIFOFullErrorFlag0        = 0x9190,
-	CFO_Register_ReceivePacketError        = 0x919C,
+	CFO_Register_FIFOFullErrorFlag0 = 0x9190,
+	CFO_Register_ReceivePacketError = 0x919C,
 	// CFO_Register_EventWindowEmulatorIntervalTime = 0x91A0, //register deleted in Firmware version: Nov/09/2023 11:00   raw-data: 0x23110911
 	CFO_Register_EventWindowHoldoffTime         = 0x91A4,
 	CFO_Register_EventWindowTimeoutError        = 0x91A8,
