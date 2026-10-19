@@ -33,9 +33,9 @@ enum CFO_Register : uint16_t
 	CFO_Register_TimestampPreset0          = 0x9180,
 	CFO_Register_TimestampPreset1          = 0x9184,
 	CFO_Register_LinuxTimestamp            = 0x9188,
-	CFO_Register_NUMDTCs                   = 0x918C,
-	CFO_Register_FIFOFullErrorFlag0        = 0x9190,
-	CFO_Register_ReceivePacketError        = 0x919C,
+	// 0x918C: deprecated NUMDTCs register, no longer used by firmware
+	CFO_Register_FIFOFullErrorFlag0 = 0x9190,
+	CFO_Register_ReceivePacketError = 0x919C,
 	// CFO_Register_EventWindowEmulatorIntervalTime = 0x91A0, //register deleted in Firmware version: Nov/09/2023 11:00   raw-data: 0x23110911
 	CFO_Register_EventWindowHoldoffTime         = 0x91A4,
 	CFO_Register_EventWindowTimeoutError        = 0x91A8,
@@ -301,8 +301,7 @@ class CFO_Registers : public DTCLib::CFOandDTC_Registers
 	/// </summary>
 	/// <param name="link">Link to enable</param>
 	/// <param name="mode">Link enable bits to set (Default: All)</param>
-	/// <param name="dtcCount">Number of DTCs in the Link (Default: 0)</param>
-	void EnableLink(const CFO_Link_ID& link, const DTC_LinkEnableMode& mode = DTC_LinkEnableMode(), const uint8_t& dtcCount = 0);
+	void EnableLink(const CFO_Link_ID& link, const DTC_LinkEnableMode& mode = DTC_LinkEnableMode());
 
 	/// <summary>
 	/// Disable a SERDES Link
@@ -614,26 +613,6 @@ class CFO_Registers : public DTCLib::CFOandDTC_Registers
 	/// </summary>
 	/// <returns>The timestamp value stored in the register, in seconds since the Unix epoch</returns>
 	time_t ReadLinuxTimestamp();
-
-	// NUMDTCs Register
-	/// <summary>
-	/// Set the maximum ROC ID for the given Link
-	/// </summary>
-	/// <param name="link">Link to set</param>
-	/// <param name="dtcCount">Number of DTCs on the link</param>
-	void SetMaxDTCNumber(const CFO_Link_ID& link, const uint8_t& dtcCount);
-	/// <summary>
-	/// Read the number of ROCs configured on the given Link
-	/// </summary>
-	/// <param name="link">Link to read</param>
-	/// <param name="local">Whether to use the NUMDTCs virtual register or perform a register access (Default: true, use
-	/// virtual register)</param> <returns>Number of DTCs on the link</returns>
-	uint8_t ReadLinkDTCCount(const CFO_Link_ID& link, bool local = true, std::optional<uint32_t> val = std::nullopt);
-	/// <summary>
-	/// Formats the register's current value for register dumps
-	/// </summary>
-	/// <returns>RegisterFormatter object containing register information</returns>
-	RegisterFormatter FormatNUMDTCs();
 
 	// FIFO Full Error Flags Registers
 	/// <summary>
@@ -1537,7 +1516,6 @@ class CFO_Registers : public DTCLib::CFOandDTC_Registers
 
   protected:
 	DTC_SimMode simMode_;                ///< Simulation mode
-	uint32_t    maxDTCs_;                ///< Map of active DTCs
 	bool        usingDetectorEmulator_;  ///< Whether Detector Emulation mode is enabled
 	uint16_t    dmaSize_;                ///< Size of DMAs, in bytes (default 32k)
 
@@ -1587,7 +1565,6 @@ class CFO_Registers : public DTCLib::CFOandDTC_Registers
 	    [this] { return this->FormatSERDESOscillatorParameterHigh(); },
 	    [this] { return this->FormatTimestampPreset0(); },
 	    [this] { return this->FormatTimestampPreset1(); },
-	    [this] { return this->FormatNUMDTCs(); },
 	    [this] { return this->FormatFIFOFullErrorFlag0(); },
 	    [this] { return this->FormatReceivePacketError(); },
 	    // [this] { return this->FormatEventWindowEmulatorIntervalTime(); },

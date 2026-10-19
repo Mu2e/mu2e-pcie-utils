@@ -7611,6 +7611,110 @@ DTCLib::DTC_Register DTCLib::DTC_Registers::GetTXNullHeartbeatCountLinkRegister(
 	return reg;
 }  // end GetTXNullHeartbeatCountLinkRegister()
 
+// TX Blocked (Suppressed) Heartbeat Count
+uint32_t DTCLib::DTC_Registers::ReadTXBlockedHeartbeatCount(DTC_Link_ID const& link, std::optional<uint32_t> val)
+{
+	return val.has_value() ? *val : ReadRegister_(GetTXBlockedHeartbeatCountLinkRegister(link));
+}  // end ReadTXBlockedHeartbeatCount()
+
+DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatTXBlockedHeartbeatCountLink(DTC_Link_ID const& link)
+{
+	auto form = CreateFormatter(GetTXBlockedHeartbeatCountLinkRegister(link));
+	form.description = "Tx Blocked HBPs on Link " +
+					   std::to_string((GetTXBlockedHeartbeatCountLinkRegister(link) -
+									   GetTXBlockedHeartbeatCountLinkRegister(DTC_Link_0)) /
+									  4);
+	std::stringstream o;
+	o << std::dec << ReadTXBlockedHeartbeatCount(link, form.value);
+	form.vals.push_back(o.str());
+	return form;
+}  // end FormatTXBlockedHeartbeatCountLink()
+
+DTCLib::DTC_Register DTCLib::DTC_Registers::GetTXBlockedHeartbeatCountLinkRegister(DTC_Link_ID const& link)
+{
+	DTC_Register reg;
+	switch (link)
+	{
+		case DTC_Link_0:
+			reg = DTC_Register_TXBlockedHeartbeatCount_Link0;
+			break;
+		case DTC_Link_1:
+			reg = DTC_Register_TXBlockedHeartbeatCount_Link1;
+			break;
+		case DTC_Link_2:
+			reg = DTC_Register_TXBlockedHeartbeatCount_Link2;
+			break;
+		case DTC_Link_3:
+			reg = DTC_Register_TXBlockedHeartbeatCount_Link3;
+			break;
+		case DTC_Link_4:
+			reg = DTC_Register_TXBlockedHeartbeatCount_Link4;
+			break;
+		case DTC_Link_5:
+			reg = DTC_Register_TXBlockedHeartbeatCount_Link5;
+			break;
+		default: {
+			__SS__ << "Illegal link index provided: " << link << __E__;
+			ss << "\n\nThe stack trace is as follows:\n"
+			   << otsStyleStackTrace() << __E__;
+			__SS_THROW__;
+		}
+	}
+	return reg;
+}  // end GetTXBlockedHeartbeatCountLinkRegister()
+
+// TX Non-null Heartbeat Count
+uint32_t DTCLib::DTC_Registers::ReadTXNonnullHeartbeatCount(DTC_Link_ID const& link, std::optional<uint32_t> val)
+{
+	return val.has_value() ? *val : ReadRegister_(GetTXNonnullHeartbeatCountLinkRegister(link));
+}  // end ReadTXNonnullHeartbeatCount()
+
+DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatTXNonnullHeartbeatCountLink(DTC_Link_ID const& link)
+{
+	auto form = CreateFormatter(GetTXNonnullHeartbeatCountLinkRegister(link));
+	form.description = "Tx Non-null HBPs on Link " +
+					   std::to_string((GetTXNonnullHeartbeatCountLinkRegister(link) -
+									   GetTXNonnullHeartbeatCountLinkRegister(DTC_Link_0)) /
+									  4);
+	std::stringstream o;
+	o << std::dec << ReadTXNonnullHeartbeatCount(link, form.value);
+	form.vals.push_back(o.str());
+	return form;
+}  // end FormatTXNonnullHeartbeatCountLink()
+
+DTCLib::DTC_Register DTCLib::DTC_Registers::GetTXNonnullHeartbeatCountLinkRegister(DTC_Link_ID const& link)
+{
+	DTC_Register reg;
+	switch (link)
+	{
+		case DTC_Link_0:
+			reg = DTC_Register_TXNonnullHeartbeatCount_Link0;
+			break;
+		case DTC_Link_1:
+			reg = DTC_Register_TXNonnullHeartbeatCount_Link1;
+			break;
+		case DTC_Link_2:
+			reg = DTC_Register_TXNonnullHeartbeatCount_Link2;
+			break;
+		case DTC_Link_3:
+			reg = DTC_Register_TXNonnullHeartbeatCount_Link3;
+			break;
+		case DTC_Link_4:
+			reg = DTC_Register_TXNonnullHeartbeatCount_Link4;
+			break;
+		case DTC_Link_5:
+			reg = DTC_Register_TXNonnullHeartbeatCount_Link5;
+			break;
+		default: {
+			__SS__ << "Illegal link index provided: " << link << __E__;
+			ss << "\n\nThe stack trace is as follows:\n"
+			   << otsStyleStackTrace() << __E__;
+			__SS_THROW__;
+		}
+	}
+	return reg;
+}  // end GetTXNonnullHeartbeatCountLinkRegister()
+
 // TX Data Request Packet Count
 uint32_t DTCLib::DTC_Registers::ReadTXDataRequestPacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val)
 {
@@ -7879,6 +7983,114 @@ void DTCLib::DTC_Registers::SetEVBRemoteChunkControl(uint32_t value)
 {
 	WriteRegister_(value, DTC_Register_EVBRemoteChunkControl);
 }  // end SetEVBRemoteChunkControl()
+
+DTCLib::DTC_Registers::EVBTxHistoryEntry DTCLib::DTC_Registers::DecodeEVBTxHistoryEntry(uint32_t raw)
+{
+	EVBTxHistoryEntry entry;
+	entry.raw = raw;
+	entry.firstOfSubevent = (raw >> 28) & 1u;
+	entry.lastOfSubevent = (raw >> 27) & 1u;
+	entry.hasData = (raw >> 26) & 1u;
+	entry.destinationOffset = static_cast<uint8_t>((raw >> 21) & 0x1Fu);
+	entry.sequence = static_cast<uint8_t>((raw >> 13) & 0xFFu);
+	entry.sizeWords = static_cast<uint16_t>(raw & 0x1FFFu);
+	return entry;
+}  // end DecodeEVBTxHistoryEntry()
+
+uint32_t DTCLib::DTC_Registers::ReadEVBTxHistoryStatus(std::optional<uint32_t> val)
+{
+	return val.has_value() ? *val : ReadRegister_(DTC_Register_EVBTxHistoryStatus);
+}  // end ReadEVBTxHistoryStatus()
+
+DTCLib::DTC_Registers::EVBTxHistory DTCLib::DTC_Registers::ReadEVBTxHistory(bool readEntries)
+{
+	EVBTxHistory history;
+	history.statusRaw = ReadEVBTxHistoryStatus();
+	history.frozen = (history.statusRaw >> 31) & 1u;
+	history.firstResendDestination = static_cast<uint8_t>((history.statusRaw >> 26) & 0x1Fu);
+	history.peerLastAckSequence = static_cast<uint8_t>((history.statusRaw >> 18) & 0xFFu);
+	history.entriesWritten = static_cast<uint16_t>(history.statusRaw & 0x3FFu);
+	history.ringWrapped = history.entriesWritten >= 1023;
+	if (!readEntries || history.entriesWritten == 0)
+		return history;
+	// first read loads the output register; the next entriesWritten reads return entries 0..count-1.
+	// The pointer only rewinds on SoftReset: a first read of 0xFFFFFFFF means the log was already walked.
+	if (ReadRegister_(DTC_Register_EVBTxHistoryRead) == 0xFFFFFFFFu)
+	{
+		history.alreadyWalked = true;
+		return history;
+	}
+	history.entries.reserve(history.entriesWritten);
+	for (uint16_t index = 0; index < history.entriesWritten; ++index)
+	{
+		const uint32_t raw = ReadRegister_(DTC_Register_EVBTxHistoryRead);
+		if (raw == 0xFFFFFFFFu)
+		{
+			history.endMarkerSeen = true;
+			break;
+		}
+		history.entries.push_back(DecodeEVBTxHistoryEntry(raw));
+	}
+	return history;
+}  // end ReadEVBTxHistory()
+
+std::string DTCLib::DTC_Registers::FormatEVBTxHistoryText(const EVBTxHistory& history, const std::string& indent, size_t windowEntries)
+{
+	std::ostringstream o;
+	o << indent << "0x925C = 0x" << std::hex << std::setw(8) << std::setfill('0') << history.statusRaw << std::dec << std::setfill(' ')
+	  << ": " << (history.frozen ? "FROZEN (a peer requested a retransmission; log stopped)" : "recording (no retransmission requested since SoftReset)")
+	  << ", entries written " << history.entriesWritten;
+	if (history.frozen)
+		o << ", first resend request from dest offset " << static_cast<int>(history.firstResendDestination)
+		  << ", peer last-acked seq 0x" << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(history.peerLastAckSequence)
+		  << std::dec << std::setfill(' ');
+	if (history.ringWrapped)
+		o << " (ring full: entries start at the oldest surviving packet, the last entry is the one just before the freeze)";
+	o << "\n";
+	if (history.alreadyWalked)
+	{
+		o << indent << "entries already walked this run (0x91F0 returns 0xFFFFFFFF until the next SoftReset)\n";
+		return o.str();
+	}
+	if (history.entries.empty())
+	{
+		if (history.frozen && history.entriesWritten)
+			o << indent << "(entries not read)\n";
+		return o.str();
+	}
+	// locate the last-acked packet in the log; show a window ending a few entries past it (the dropped
+	// packet is the one after the last ack toward that destination)
+	size_t anchor = history.entries.size();
+	for (size_t index = history.entries.size(); index-- > 0;)
+		if (history.entries[index].sequence == history.peerLastAckSequence &&
+			(!history.frozen || history.entries[index].destinationOffset == history.firstResendDestination))
+		{
+			anchor = index;
+			break;
+		}
+	// Window: always include the final entry (in a frozen log it is the packet just before the freeze,
+	// which is the one the hw agent wants), and reach back far enough to show the acked packet when found.
+	const size_t last = history.entries.size();
+	size_t first = (last > windowEntries) ? last - windowEntries : 0;
+	if (anchor != history.entries.size() && anchor < first)
+		first = (anchor > 2) ? anchor - 2 : 0;
+	o << indent << "final " << (last - first) << " of " << history.entries.size() << " entries"
+	  << (anchor == history.entries.size() ? " (last-acked seq not found in log)" : " (last-acked packet marked <= ack)")
+	  << (history.frozen ? "; the last row is the packet just before the freeze" : "") << "\n";
+	o << indent << "  idx   dest  seq   words  flags\n";
+	for (size_t index = first; index < last; ++index)
+	{
+		const auto& entry = history.entries[index];
+		o << indent << "  " << std::setw(4) << index << "  " << std::setw(4) << static_cast<int>(entry.destinationOffset) << "  0x" << std::hex
+		  << std::setw(2) << std::setfill('0') << static_cast<int>(entry.sequence) << std::dec << std::setfill(' ') << "  " << std::setw(5) << entry.sizeWords
+		  << "  " << (entry.hasData ? "data" : "null") << (entry.firstOfSubevent ? " first" : "") << (entry.lastOfSubevent ? " last" : "")
+		  << (index == anchor ? "  <= ack" : "") << (history.frozen && index == anchor + 1 ? "  <= next toward that dest may be the dropped one" : "")
+		  << (history.frozen && index + 1 == last ? "  <= last before freeze" : "") << "\n";
+	}
+	if (history.endMarkerSeen)
+		o << indent << "(end marker 0xFFFFFFFF reached before count entries)\n";
+	return o.str();
+}  // end FormatEVBTxHistoryText()
 
 std::vector<uint32_t> DTCLib::DTC_Registers::ReadEVBStallCounters()
 {
