@@ -23,45 +23,45 @@ enum DTC_Register : uint16_t
 	DTC_Register_ROCReplyTimeout        = 0x9148,
 	DTC_Register_ROCReplyTimeoutError   = 0x914C,
 	// 0x9150 Reserved
-	DTC_Register_EVBPartitionID            = 0x9154,
-	DTC_Register_EVBConfiguration          = 0x9158,
-	DTC_Register_EVBPacketControl          = 0x915C,
-	DTC_Register_EVBStats                  = 0x9160,
-	DTC_Register_SERDESClock_IICBusControl = 0x9164,
-	DTC_Register_EVBIdleBurst              = 0x9170,
-	DTC_Register_EVBResendCount            = 0x9174,  // [31:16] resends served by TX, [15:0] requested by RX
-	DTC_Register_EVBLocalChunkCap          = 0x9178,  // [15:0] longest self chunk in 8-byte words; reset 0x0400, 0 = whole-record chunks, 1..31 act as 32
-	DTC_Register_EVBRemoteChunkControl     = 0x917C,  // build 3 (hw agent 2026-10-07): [31:16] hold clocks, [15:0] minimum remote chunk words; reset 0x0400_0080
-	DTC_Register_EVBRxIllegalDestCount     = 0x9180,  // hw agent 2026-10-13: [15:0] 10GbE RX frames whose dest MAC was not ours (non-broadcast); switch flooding; saturates 0xFFFF, SoftReset clear
+	DTC_Register_EVBPartitionID                    = 0x9154,
+	DTC_Register_EVBConfiguration                  = 0x9158,
+	DTC_Register_EVBPacketControl                  = 0x915C,
+	DTC_Register_EVBStats                          = 0x9160,
+	DTC_Register_SERDESClock_IICBusControl         = 0x9164,
+	DTC_Register_EVBIdleBurst                      = 0x9170,
+	DTC_Register_EVBResendCount                    = 0x9174,  // [31:16] resends served by TX, [15:0] requested by RX
+	DTC_Register_EVBLocalChunkCap                  = 0x9178,  // [15:0] longest self chunk in 8-byte words; reset 0x0400, 0 = whole-record chunks, 1..31 act as 32
+	DTC_Register_EVBRemoteChunkControl             = 0x917C,  // build 3 (hw agent 2026-10-07): [31:16] hold clocks, [15:0] minimum remote chunk words; reset 0x0400_0080
+	DTC_Register_EVBRxIllegalDestCount             = 0x9180,  // hw agent 2026-10-13: [15:0] 10GbE RX frames whose dest MAC was not ours (non-broadcast); switch flooding; saturates 0xFFFF, SoftReset clear
 	DTC_Register_CFOEmulation_LoopbackDelayMeasure = 0x9184,
 	// Reserved - formerly... DTC_Register_DataPendingTimer = 0x9188,
 	// 0x918C Reserved
-	DTC_Register_FIFOFullErrorFlag0             = 0x9190,
-	DTC_Register_FIFOFullErrorFlag1             = 0x9194,
-	DTC_Register_FIFOFullErrorFlag2             = 0x9198,
-	DTC_Register_ReceivePacketError             = 0x919C,
-	DTC_Register_CFOEmulation_TimestampLow      = 0x91A0,
-	DTC_Register_CFOEmulation_TimestampHigh     = 0x91A4,
-	DTC_Register_CFOEmulation_HeartbeatInterval = 0x91A8,
-	DTC_Register_CFOEmulation_NumHeartbeats     = 0x91AC,
-	DTC_Register_ROCEmulation_NumPacketsLinks10 = 0x91B0,
-	DTC_Register_ROCEmulation_NumPacketsLinks32 = 0x91B4,
-	DTC_Register_ROCEmulation_NumPacketsLinks54 = 0x91B8,
-	DTC_Register_CFOEmulation_NumNullHeartbeats = 0x91BC,
-	DTC_Register_CFOEmulation_EventMode1        = 0x91C0,
-	DTC_Register_CFOEmulation_EventMode2        = 0x91C4,
-	DTC_Register_CFOEventModeRequiredMask       = 0x91C8,
-	DTC_Register_RXPacketCountErrorFlags        = 0x91CC,
-	DTC_Register_DetEmulation_DMACount          = 0x91D0,
-	DTC_Register_DetEmulation_DelayCount        = 0x91D4,
-	DTC_Register_DetEmulation_Control0          = 0x91D8,
-	DTC_Register_DetEmulation_Control1          = 0x91DC,
-	DTC_Register_DetEmulation_DataStartAddress  = 0x91E0,
-	DTC_Register_DetEmulation_DataEndAddress    = 0x91E4,
-	DTC_Register_EthernetFramePayloadSize       = 0x91EC,
-	DTC_Register_CFOEmulation_DataRequestDelay  = 0x91E8,
-	DTC_Register_EthernetFrameMaxPayload        = 0x91EC,
-	DTC_Register_EVBTxHistoryRead   = 0x91F0,  // hw agent 2026-10-13: TX packet history readback, one entry per read, auto-advance, 0xFFFFFFFF past the end
+	DTC_Register_FIFOFullErrorFlag0                    = 0x9190,
+	DTC_Register_FIFOFullErrorFlag1                    = 0x9194,
+	DTC_Register_FIFOFullErrorFlag2                    = 0x9198,
+	DTC_Register_ReceivePacketError                    = 0x919C,
+	DTC_Register_CFOEmulation_TimestampLow             = 0x91A0,
+	DTC_Register_CFOEmulation_TimestampHigh            = 0x91A4,
+	DTC_Register_CFOEmulation_HeartbeatInterval        = 0x91A8,
+	DTC_Register_CFOEmulation_NumHeartbeats            = 0x91AC,
+	DTC_Register_ROCEmulation_NumPacketsLinks10        = 0x91B0,
+	DTC_Register_ROCEmulation_NumPacketsLinks32        = 0x91B4,
+	DTC_Register_ROCEmulation_NumPacketsLinks54        = 0x91B8,
+	DTC_Register_CFOEmulation_NumNullHeartbeats        = 0x91BC,
+	DTC_Register_CFOEmulation_EventMode1               = 0x91C0,
+	DTC_Register_CFOEmulation_EventMode2               = 0x91C4,
+	DTC_Register_CFOEventModeRequiredMask              = 0x91C8,
+	DTC_Register_RXPacketCountErrorFlags               = 0x91CC,
+	DTC_Register_DetEmulation_DMACount                 = 0x91D0,
+	DTC_Register_DetEmulation_DelayCount               = 0x91D4,
+	DTC_Register_DetEmulation_Control0                 = 0x91D8,
+	DTC_Register_DetEmulation_Control1                 = 0x91DC,
+	DTC_Register_DetEmulation_DataStartAddress         = 0x91E0,
+	DTC_Register_DetEmulation_DataEndAddress           = 0x91E4,
+	DTC_Register_EthernetFramePayloadSize              = 0x91EC,
+	DTC_Register_CFOEmulation_DataRequestDelay         = 0x91E8,
+	DTC_Register_EthernetFrameMaxPayload               = 0x91EC,
+	DTC_Register_EVBTxHistoryRead                      = 0x91F0,  // hw agent 2026-10-13: TX packet history readback, one entry per read, auto-advance, 0xFFFFFFFF past the end
 	DTC_Register_CFOEmulation_40MHzClockMarkerInterval = 0x91F4,
 	DTC_Register_CFOMarkerEnables                      = 0x91F8,
 	DTC_Register_ROCFinishThreshold                    = 0x91FC,
@@ -1245,9 +1245,9 @@ class DTC_Registers : public CFOandDTC_Registers
 	uint32_t    ReadEVBHighLevelCounters2(std::optional<uint32_t> val = std::nullopt);  // 0x9208 raw
 	uint32_t    ReadEVBHighLevelCounters3(std::optional<uint32_t> val = std::nullopt);  // 0x920C raw
 	// EVB3 self-chunk cap (0x9178) and stall-time counters (0x9210-0x9228)
-	uint16_t              ReadEVBLocalChunkCap(std::optional<uint32_t> val = std::nullopt);
-	void                  SetEVBLocalChunkCap(uint16_t words);                                    // [15:0]; upper half kept
-	uint32_t              ReadEVBRemoteChunkControl(std::optional<uint32_t> val = std::nullopt);  // 0x917C raw
+	uint16_t ReadEVBLocalChunkCap(std::optional<uint32_t> val = std::nullopt);
+	void     SetEVBLocalChunkCap(uint16_t words);                                    // [15:0]; upper half kept
+	uint32_t ReadEVBRemoteChunkControl(std::optional<uint32_t> val = std::nullopt);  // 0x917C raw
 	// EVB3 TX packet history (0x925C status, 0x91F0 readback; hw agent 2026-10-13).  The log records every
 	// 10GbE TX packet until a peer requests a retransmission, then freezes: the entries around the peer's
 	// last-acknowledged sequence number show what was on the wire when the drop happened.
@@ -1264,26 +1264,26 @@ class DTC_Registers : public CFOandDTC_Registers
 	struct EVBTxHistory
 	{
 		uint32_t                       statusRaw{0};
-		bool                           frozen{false};             ///< [31]
+		bool                           frozen{false};              ///< [31]
 		uint8_t                        firstResendDestination{0};  ///< [30:26]
 		uint8_t                        peerLastAckSequence{0};     ///< [25:18]
 		uint16_t                       entriesWritten{0};          ///< [9:0]
-		std::vector<EVBTxHistoryEntry> entries;                     ///< entries 0..entriesWritten-1 (only read when frozen or asked)
+		std::vector<EVBTxHistoryEntry> entries;                    ///< entries 0..entriesWritten-1 (only read when frozen or asked)
 		bool                           endMarkerSeen{false};       ///< a read past the end returned 0xFFFFFFFF
 		bool                           alreadyWalked{false};       ///< the very first 0x91F0 read returned 0xFFFFFFFF: the log was walked earlier this run
 		bool                           ringWrapped{false};         ///< entries written == 1023: ring full, entries start at the oldest survivor; the last entry is the one just before the freeze
 	};
 	static EVBTxHistoryEntry DecodeEVBTxHistoryEntry(uint32_t raw);
-	uint32_t                 ReadEVBTxHistoryStatus(std::optional<uint32_t> val = std::nullopt);  // 0x925C raw
+	uint32_t                 ReadEVBTxHistoryStatus(std::optional<uint32_t> val = std::nullopt);     // 0x925C raw
 	uint16_t                 ReadEVBRxIllegalDestCount(std::optional<uint32_t> val = std::nullopt);  // 0x9180 [15:0]: frames the switch forwarded here that were for another DTC
 	/// Read 0x925C and, when readEntries is set, drain 0x91F0 (count+1 reads: the first loads the output).
 	/// The read pointer only rewinds on SoftReset, so the log can be walked ONCE per run; a second walk
 	/// returns 0xFFFFFFFF immediately (alreadyWalked).  The log is a 1024-entry ring (hw agent 2026-10-14).
-	EVBTxHistory             ReadEVBTxHistory(bool readEntries);
+	EVBTxHistory ReadEVBTxHistory(bool readEntries);
 	/// Status line plus, when frozen, the entries in a window around the peer's last-acknowledged sequence.
-	std::string              FormatEVBTxHistoryText(const EVBTxHistory& history, const std::string& indent, size_t windowEntries = 12);
-	void                  SetEVBRemoteChunkControl(uint32_t value);                               // 0x917C whole word
-	std::vector<uint32_t> ReadEVBStallCounters();                                                 // 0x9210..0x923C then 0x9240..0x9248 (15 values), read back to back
+	std::string           FormatEVBTxHistoryText(const EVBTxHistory& history, const std::string& indent, size_t windowEntries = 12);
+	void                  SetEVBRemoteChunkControl(uint32_t value);  // 0x917C whole word
+	std::vector<uint32_t> ReadEVBStallCounters();                    // 0x9210..0x923C then 0x9240..0x9248 (15 values), read back to back
 	std::string           FormatEVBStallCountersText(const std::string& indent);
 	std::string           FormatEVBStallCountersDeltaText(const std::vector<uint32_t>& startValues, const std::vector<uint32_t>& endValues, const std::string& indent);
 	std::string           FormatEVBStallCountersTotalsText(const std::vector<uint64_t>& totals, const std::string& indent);  // summed deltas (runs longer than the 17 s wrap)
