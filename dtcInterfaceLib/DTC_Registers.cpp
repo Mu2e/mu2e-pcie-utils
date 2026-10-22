@@ -8075,7 +8075,7 @@ std::string DTCLib::DTC_Registers::FormatEVBTxHistoryText(const EVBTxHistory& hi
 		}
 	// Window: always include the final entry (in a frozen log it is the packet just before the freeze,
 	// which is the one the hw agent wants), and reach back far enough to show the acked packet when found.
-	size_t last = history.entries.size();
+	const size_t last = history.entries.size();
 	size_t first = (last > windowEntries) ? last - windowEntries : 0;
 	if (anchor != history.entries.size() && anchor < first)
 		first = (anchor > 2) ? anchor - 2 : 0;
@@ -8092,8 +8092,7 @@ std::string DTCLib::DTC_Registers::FormatEVBTxHistoryText(const EVBTxHistory& hi
 				droppedCandidate = index;
 				break;
 			}
-	if (droppedCandidate != history.entries.size() && droppedCandidate >= last)
-		last = droppedCandidate + 1;
+	// droppedCandidate, when found, is always below entries.size() == last, so it is inside the window
 	o << indent << "  idx   dest  seq   words  flags\n";
 	for (size_t index = first; index < last; ++index)
 	{
