@@ -8002,6 +8002,11 @@ uint32_t DTCLib::DTC_Registers::ReadEVBTxHistoryStatus(std::optional<uint32_t> v
 	return val.has_value() ? *val : ReadRegister_(DTC_Register_EVBTxHistoryStatus);
 }  // end ReadEVBTxHistoryStatus()
 
+uint16_t DTCLib::DTC_Registers::ReadEVBRxIllegalDestCount(std::optional<uint32_t> val)
+{
+	return static_cast<uint16_t>((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBRxIllegalDestCount)) & 0xFFFFu);
+}  // end ReadEVBRxIllegalDestCount()
+
 DTCLib::DTC_Registers::EVBTxHistory DTCLib::DTC_Registers::ReadEVBTxHistory(bool readEntries)
 {
 	EVBTxHistory history;
@@ -8077,6 +8082,17 @@ std::string DTCLib::DTC_Registers::FormatEVBTxHistoryText(const EVBTxHistory& hi
 	o << indent << "final " << (last - first) << " of " << history.entries.size() << " entries"
 	  << (anchor == history.entries.size() ? " (last-acked seq not found in log)" : " (last-acked packet marked <= ack)")
 	  << (history.frozen ? "; the last row is the packet just before the freeze" : "") << "\n";
+	// The dropped candidate is the next packet toward the SAME destination as the acked one
+	// (sequence numbers are per destination, hw agent 2026-10-16), not simply the next log entry.
+	size_t droppedCandidate = history.entries.size();
+	if (history.frozen && anchor != history.entries.size())
+		for (size_t index = anchor + 1; index < history.entries.size(); ++index)
+			if (history.entries[index].destinationOffset == history.entries[anchor].destinationOffset)
+			{
+				droppedCandidate = index;
+				break;
+			}
+	// droppedCandidate, when found, is always below entries.size() == last, so it is inside the window
 	o << indent << "  idx   dest  seq   words  flags\n";
 	for (size_t index = first; index < last; ++index)
 	{
@@ -8084,7 +8100,7 @@ std::string DTCLib::DTC_Registers::FormatEVBTxHistoryText(const EVBTxHistory& hi
 		o << indent << "  " << std::setw(4) << index << "  " << std::setw(4) << static_cast<int>(entry.destinationOffset) << "  0x" << std::hex
 		  << std::setw(2) << std::setfill('0') << static_cast<int>(entry.sequence) << std::dec << std::setfill(' ') << "  " << std::setw(5) << entry.sizeWords
 		  << "  " << (entry.hasData ? "data" : "null") << (entry.firstOfSubevent ? " first" : "") << (entry.lastOfSubevent ? " last" : "")
-		  << (index == anchor ? "  <= ack" : "") << (history.frozen && index == anchor + 1 ? "  <= next toward that dest may be the dropped one" : "")
+		  << (index == anchor ? "  <= ack" : "") << (index == droppedCandidate ? "  <= next toward that dest: likely the dropped one" : "")
 		  << (history.frozen && index + 1 == last ? "  <= last before freeze" : "") << "\n";
 	}
 	if (history.endMarkerSeen)

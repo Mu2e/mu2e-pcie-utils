@@ -23,16 +23,16 @@ enum DTC_Register : uint16_t
 	DTC_Register_ROCReplyTimeout        = 0x9148,
 	DTC_Register_ROCReplyTimeoutError   = 0x914C,
 	// 0x9150 Reserved
-	DTC_Register_EVBPartitionID            = 0x9154,
-	DTC_Register_EVBConfiguration          = 0x9158,
-	DTC_Register_EVBPacketControl          = 0x915C,
-	DTC_Register_EVBStats                  = 0x9160,
-	DTC_Register_SERDESClock_IICBusControl = 0x9164,
-	DTC_Register_EVBIdleBurst              = 0x9170,
-	DTC_Register_EVBResendCount            = 0x9174,  // [31:16] resends served by TX, [15:0] requested by RX
-	DTC_Register_EVBLocalChunkCap          = 0x9178,  // [15:0] longest self chunk in 8-byte words; reset 0x0400, 0 = whole-record chunks, 1..31 act as 32
-	DTC_Register_EVBRemoteChunkControl     = 0x917C,  // build 3 (hw agent 2026-10-07): [31:16] hold clocks, [15:0] minimum remote chunk words; reset 0x0400_0080
-	// Reserved - formerly... DTC_Register_DDRWriteResponseTimer = 0x9180,
+	DTC_Register_EVBPartitionID                    = 0x9154,
+	DTC_Register_EVBConfiguration                  = 0x9158,
+	DTC_Register_EVBPacketControl                  = 0x915C,
+	DTC_Register_EVBStats                          = 0x9160,
+	DTC_Register_SERDESClock_IICBusControl         = 0x9164,
+	DTC_Register_EVBIdleBurst                      = 0x9170,
+	DTC_Register_EVBResendCount                    = 0x9174,  // [31:16] resends served by TX, [15:0] requested by RX
+	DTC_Register_EVBLocalChunkCap                  = 0x9178,  // [15:0] longest self chunk in 8-byte words; reset 0x0400, 0 = whole-record chunks, 1..31 act as 32
+	DTC_Register_EVBRemoteChunkControl             = 0x917C,  // build 3 (hw agent 2026-10-07): [31:16] hold clocks, [15:0] minimum remote chunk words; reset 0x0400_0080
+	DTC_Register_EVBRxIllegalDestCount             = 0x9180,  // hw agent 2026-10-13: [15:0] 10GbE RX frames whose dest MAC was not ours (non-broadcast); switch flooding; saturates 0xFFFF, SoftReset clear
 	DTC_Register_CFOEmulation_LoopbackDelayMeasure = 0x9184,
 	// Reserved - formerly... DTC_Register_DataPendingTimer = 0x9188,
 	// 0x918C Reserved
@@ -1274,7 +1274,8 @@ class DTC_Registers : public CFOandDTC_Registers
 		bool                           ringWrapped{false};         ///< entries written == 1023: ring full, entries start at the oldest survivor; the last entry is the one just before the freeze
 	};
 	static EVBTxHistoryEntry DecodeEVBTxHistoryEntry(uint32_t raw);
-	uint32_t                 ReadEVBTxHistoryStatus(std::optional<uint32_t> val = std::nullopt);  // 0x925C raw
+	uint32_t                 ReadEVBTxHistoryStatus(std::optional<uint32_t> val = std::nullopt);     // 0x925C raw
+	uint16_t                 ReadEVBRxIllegalDestCount(std::optional<uint32_t> val = std::nullopt);  // 0x9180 [15:0]: frames the switch forwarded here that were for another DTC
 	/// Read 0x925C and, when readEntries is set, drain 0x91F0 (count+1 reads: the first loads the output).
 	/// The read pointer only rewinds on SoftReset, so the log can be walked ONCE per run; a second walk
 	/// returns 0xFFFFFFFF immediately (alreadyWalked).  The log is a 1024-entry ring (hw agent 2026-10-14).

@@ -37,7 +37,7 @@ try
 		"staging FIFO write-while-full",
 		"staging FIFO empty inside TX payload",
 		"TX frame malformed",
-		"Rx frame size mismatch",
+		"Rx frame had fewer/more data words than its header declared",
 		"Rx FCS bad",
 		"ROC tag slip",
 		"ROC record shape",
@@ -102,8 +102,8 @@ try
 			"Bit 2 must exclude foreign frames");
 	require(bitLine(all, 7).find("bit 1 and Rx BRAM rows/rates untrustworthy") != std::string::npos,
 			"Bit 7 must qualify sequence-gap and Rx statistics");
-	require(bitLine(all, 12).find("without necessarily losing declared payload") != std::string::npos,
-			"A long frame need not lose declared payload");
+	require(bitLine(all, 12).find("receiver-side print of a peer's bit 9") != std::string::npos,
+			"Bit 12 must identify itself as the receiver-side view of a peer's staging-FIFO fault (hw agent 2026-10-16)");
 	require(bitLine(all, 13).find("shifted 0x33 frames not checked") != std::string::npos,
 			"FCS checking must not be claimed for shifted frames");
 
