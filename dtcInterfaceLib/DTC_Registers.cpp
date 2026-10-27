@@ -8007,6 +8007,44 @@ uint16_t DTCLib::DTC_Registers::ReadEVBRxIllegalDestCount(std::optional<uint32_t
 	return static_cast<uint16_t>((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBRxIllegalDestCount)) & 0xFFFFu);
 }  // end ReadEVBRxIllegalDestCount()
 
+uint32_t DTCLib::DTC_Registers::ReadEVBSlotHealthRaw(std::optional<uint32_t> val)
+{
+	return val.has_value() ? *val : ReadRegister_(DTC_Register_EVBSlotHealth);
+}  // end ReadEVBSlotHealthRaw()
+
+DTCLib::DTC_Registers::EVBSlotHealth DTCLib::DTC_Registers::ReadEVBSlotHealth()
+{
+	EVBSlotHealth health;
+	health.raw            = ReadEVBSlotHealthRaw();
+	health.staleEmptySeen = (health.raw >> 31) & 1u;
+	health.episodes       = static_cast<uint16_t>((health.raw >> 16) & 0x7FFFu);
+	health.slotClears     = static_cast<uint16_t>(health.raw & 0xFFFFu);
+	return health;
+}  // end ReadEVBSlotHealth()
+
+std::string DTCLib::DTC_Registers::FormatEVBSlotHealthText(const EVBSlotHealth& health, const std::string& indent)
+{
+	std::ostringstream o;
+	o << indent << "0x9260 = 0x" << std::hex << std::setw(8) << std::setfill('0') << health.raw << std::dec << std::setfill(' ')
+	  << ": stale-empty seen " << (health.staleEmptySeen ? "YES" : "no") << ", episodes " << health.episodes << ", staging-slot clears "
+	  << health.slotClears << "\n";
+	if (health.raw == 0xFFFFFFFFu)
+		o << indent << "  (reads 0xFFFFFFFF: register not in this bitfile)\n";
+	else if (health.staleEmptySeen && health.slotClears > 0)
+		o << indent << "  verdict: the staging-slot clear is the cause (bit 31 with clears > 0)\n";
+	else if (health.staleEmptySeen)
+		o << indent << "  verdict: gray-sync / hand-over (bit 31 with no clears)\n";
+	else if (health.slotClears == 0xFFFFu)
+		o << indent << "  verdict: good (bit 31 clear, no episodes); slot clears saturated at 65535 is EXPECTED at 8 nodes with\n"
+		  << indent << "  two staging slots (a clear nearly every window, ~55k/s; each clear re-reads words from DDR = the N=8 rate\n"
+		  << indent << "  ceiling, a throughput item, not a fault; hw agent 2026-10-26)\n";
+	else if (health.slotClears > 0)
+		o << indent << "  verdict: " << health.slotClears << " slot clears, no stale-empty episode\n";
+	else
+		o << indent << "  verdict: clean (nothing set)\n";
+	return o.str();
+}  // end FormatEVBSlotHealthText()
+
 DTCLib::DTC_Registers::EVBTxHistory DTCLib::DTC_Registers::ReadEVBTxHistory(bool readEntries)
 {
 	EVBTxHistory history;

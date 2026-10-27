@@ -99,7 +99,7 @@ enum DTC_Register : uint16_t
 	// Reserved - formerly... DTC_Register_TransmitByteCount_Link5 = 0x9254,
 	// Reserved - formerly... DTC_Register_TransmitByteCount_CFOLink = 0x9258,
 	DTC_Register_EVBTxHistoryStatus = 0x925C,  // hw agent 2026-10-13: [31] frozen, [30:26] first resend dest, [25:18] peer last ack seq, [9:0] entries written
-	// Reserved - formerly... DTC_Register_TransmitPacketCount_Link0 = 0x9260,
+	DTC_Register_EVBSlotHealth = 0x9260,  // hw agent 2026-10-26: [31] sticky TX-bookkeeping-empty vs slot-count>64 words for >1 us, [30:16] episodes, [15:0] staging-slot clears; SoftReset clear; two clock domains, a read can tear
 	// Reserved - formerly... DTC_Register_TransmitPacketCount_Link1 = 0x9264,
 	// Reserved - formerly... DTC_Register_TransmitPacketCount_Link2 = 0x9268,
 	// Reserved - formerly... DTC_Register_TransmitPacketCount_Link3 = 0x926C,
@@ -1276,6 +1276,19 @@ class DTC_Registers : public CFOandDTC_Registers
 	static EVBTxHistoryEntry DecodeEVBTxHistoryEntry(uint32_t raw);
 	uint32_t                 ReadEVBTxHistoryStatus(std::optional<uint32_t> val = std::nullopt);     // 0x925C raw
 	uint16_t                 ReadEVBRxIllegalDestCount(std::optional<uint32_t> val = std::nullopt);  // 0x9180 [15:0]: frames the switch forwarded here that were for another DTC
+	/// 0x9260 EVB slot health (hw agent 2026-10-26): the DDR->TX staging slot state seen on 8-node hardware
+	/// just before 0x9370 bit 9.  Verdict: bit 31 with clears > 0 = the slot clear is the cause; bit 31 with
+	/// clears == 0 = gray-sync / hand-over; nothing set = the fix held.
+	struct EVBSlotHealth
+	{
+		uint32_t raw{0};
+		bool     staleEmptySeen{false};  ///< [31] sticky
+		uint16_t episodes{0};            ///< [30:16]
+		uint16_t slotClears{0};          ///< [15:0]
+	};
+	uint32_t      ReadEVBSlotHealthRaw(std::optional<uint32_t> val = std::nullopt);
+	EVBSlotHealth ReadEVBSlotHealth();
+	std::string   FormatEVBSlotHealthText(const EVBSlotHealth& health, const std::string& indent);
 	/// Read 0x925C and, when readEntries is set, drain 0x91F0 (count+1 reads: the first loads the output).
 	/// The read pointer only rewinds on SoftReset, so the log can be walked ONCE per run; a second walk
 	/// returns 0xFFFFFFFF immediately (alreadyWalked).  The log is a 1024-entry ring (hw agent 2026-10-14).
