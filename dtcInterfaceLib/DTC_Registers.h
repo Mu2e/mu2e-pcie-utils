@@ -99,7 +99,7 @@ enum DTC_Register : uint16_t
 	// Reserved - formerly... DTC_Register_TransmitByteCount_Link5 = 0x9254,
 	// Reserved - formerly... DTC_Register_TransmitByteCount_CFOLink = 0x9258,
 	DTC_Register_EVBTxHistoryStatus = 0x925C,  // hw agent 2026-10-13: [31] frozen, [30:26] first resend dest, [25:18] peer last ack seq, [9:0] entries written
-	DTC_Register_EVBSlotHealth = 0x9260,  // hw agent 2026-10-26: [31] sticky TX-bookkeeping-empty vs slot-count>64 words for >1 us, [30:16] episodes, [15:0] staging-slot clears; SoftReset clear; two clock domains, a read can tear
+	DTC_Register_EVBSlotHealth      = 0x9260,  // hw agent 2026-10-26: [31] sticky TX-bookkeeping-empty vs slot-count>64 words for >1 us, [30:16] episodes, [15:0] staging-slot clears; SoftReset clear; two clock domains, a read can tear
 	// Reserved - formerly... DTC_Register_TransmitPacketCount_Link1 = 0x9264,
 	// Reserved - formerly... DTC_Register_TransmitPacketCount_Link2 = 0x9268,
 	// Reserved - formerly... DTC_Register_TransmitPacketCount_Link3 = 0x926C,

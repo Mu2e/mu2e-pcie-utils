@@ -8015,10 +8015,10 @@ uint32_t DTCLib::DTC_Registers::ReadEVBSlotHealthRaw(std::optional<uint32_t> val
 DTCLib::DTC_Registers::EVBSlotHealth DTCLib::DTC_Registers::ReadEVBSlotHealth()
 {
 	EVBSlotHealth health;
-	health.raw            = ReadEVBSlotHealthRaw();
+	health.raw = ReadEVBSlotHealthRaw();
 	health.staleEmptySeen = (health.raw >> 31) & 1u;
-	health.episodes       = static_cast<uint16_t>((health.raw >> 16) & 0x7FFFu);
-	health.slotClears     = static_cast<uint16_t>(health.raw & 0xFFFFu);
+	health.episodes = static_cast<uint16_t>((health.raw >> 16) & 0x7FFFu);
+	health.slotClears = static_cast<uint16_t>(health.raw & 0xFFFFu);
 	return health;
 }  // end ReadEVBSlotHealth()
 
