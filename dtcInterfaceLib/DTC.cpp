@@ -39,6 +39,9 @@
 #include <sstream>    // Convert uint to hex string
 #include <iomanip>    // std::setw / std::setfill for record hex dumps
 #include <algorithm>  // std::min
+#include <bitset>     // JA loss-of-signal bits in ReadDTCErrors
+#include <exception>  // std::uncaught_exceptions in the corruption loggers
+#include <functional>  // per-link counter rows in ReadDTCErrors
 
 DTCLib::DTC::DTC(DTC_SimMode mode, int dtc, unsigned rocMask, std::string expectedDesignVersion, bool skipInit, std::string simMemoryFile, const std::string& uid)
 	: DTC_Registers(mode, dtc, simMemoryFile, rocMask, expectedDesignVersion, skipInit, uid), daqDMAInfo_(), dcsDMAInfo_()
@@ -153,16 +156,19 @@ std::vector<std::unique_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetData(DTC_EventWi
 	{
 		DTC_TLOG(TLVL_WARNING) << "GetData: Bad omen: Wrong packet type at the current read position";
 		daqDMAInfo_.currentReadPtr = nullptr;
+		logDTCErrorsOnCorruption("GetData");
 	}
 	catch (DTC_IOErrorException& ex)
 	{
 		daqDMAInfo_.currentReadPtr = nullptr;
 		DTC_TLOG(TLVL_WARNING) << "GetData: IO Exception Occurred!";
+		logDTCErrorsOnCorruption("GetData");
 	}
 	catch (DTC_DataCorruptionException& ex)
 	{
 		daqDMAInfo_.currentReadPtr = nullptr;
 		DTC_TLOG(TLVL_WARNING) << "GetData: Data Corruption Exception Occurred!";
+		logDTCErrorsOnCorruption("GetData");
 	}
 
 	DTC_TLOG(TLVL_GetData) << "GetData RETURN";
@@ -224,6 +230,17 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetSubEventDataAsEv
 
 	// Release the previous buffer NOW — we are done with it.
 	ReleaseBuffers(DTC_DMA_Engine_DAQ);
+
+	// Any throw below is a corrupt stream (bad prefix, header sanity, 0xdeadbeef, overflow): log the
+	// DTC error registers alongside it, then let it propagate.
+	struct CorruptionLogger
+	{
+		DTC& dtc;
+		~CorruptionLogger()
+		{
+			if (std::uncaught_exceptions() > 0) dtc.logDTCErrorsOnCorruption("GetSubEventDataAsEvents");
+		}
+	} corruptionLogger{*this};
 
 	// ------------------------------------------------------------------
 	do  // primary loop to read buffers until target event count is reached or timeout
@@ -639,6 +656,17 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 		for (const auto& line : DecodeEVBErrorStatus(evbErr))
 			os << "  " << line << "\n";
 	};
+
+	// Every throw in this function is a corrupt EVB stream (timeout, framing, record, assembly):
+	// log the full DTC error register set alongside it, then let it propagate.
+	struct CorruptionLogger
+	{
+		DTC& dtc;
+		~CorruptionLogger()
+		{
+			if (std::uncaught_exceptions() > 0) dtc.logDTCErrorsOnCorruption("GetEVBDataAsEvents");
+		}
+	} corruptionLogger{*this};
 
 	// Step 0: event-completion timeout / overflow scan.  Runs on EVERY call, including calls
 	// where no DMA data arrives, so a tag whose remaining subevents never come is reported.
@@ -1242,6 +1270,193 @@ std::string DTCLib::DTC::FormatEVBRemoteChunkSizes() const
 	return o.str();
 }  // end FormatEVBRemoteChunkSizes()
 
+std::string DTCLib::DTC::ReadDTCErrors()
+{
+	auto hex8 = [](uint32_t value) {
+		std::ostringstream s;
+		s << "0x" << std::hex << std::setfill('0') << std::setw(8) << value;
+		return s.str();
+	};
+	auto hex2 = [](uint32_t value) {
+		std::ostringstream s;
+		s << "0x" << std::hex << std::setfill('0') << std::setw(2) << (value & 0xFF);
+		return s.str();
+	};
+	auto bin8 = [](uint8_t value) {
+		std::string s(8, '0');
+		for (int bitIndex = 7; bitIndex >= 0; --bitIndex)
+			s[7 - bitIndex] = (value & (1 << bitIndex)) ? '1' : '0';
+		return s;
+	};
+	auto readRaw = [this](uint16_t address) {
+		uint32_t value = 0;
+		device_.read_register(address, 100, &value);
+		return value;
+	};
+	// Per-link RINGERROR bit names (0x9380-0x939C), same table as the register map.
+	auto decodeRingErrorFlags = [](uint32_t flags) -> std::string {
+		struct BitName
+		{
+			uint8_t     bit;
+			const char* name;
+		};
+		static const BitName ringErrorBits[] = {
+			{0, "S2C_OVF"}, {1, "INVALID_S2C"}, {2, "DCS_PEND"}, {3, "EWM_HBP"}, {4, "PLL"}, {5, "RXCDR"},
+			{6, "RX_OVF"}, {7, "RX_INVALID"}, {8, "DCS_TMO"}, {9, "DCS_OVF"}, {10, "CFO_TAG"}, {11, "HBP_OVF"},
+			{12, "OUT_OF_BAND"}, {13, "BUF_RESIDUE"}, {14, "STRAY_EWM"}, {15, "INT_EMU"}, {20, "EXT_EMU"},
+		};
+		const uint32_t errorAndStatusMask = 0x001FFFFF;
+		if ((flags & errorAndStatusMask) == 0) return "(clean)";
+		std::string result;
+		for (const auto& entry : ringErrorBits)
+			if (flags & (1u << entry.bit))
+			{
+				if (!result.empty()) result += " ";
+				result += entry.name;
+			}
+		const uint32_t fsmState = (flags >> 16) & 0xF;
+		if (fsmState)
+		{
+			if (!result.empty()) result += "  ";
+			result += "fsm=" + std::to_string(fsmState);
+		}
+		if (result.empty()) result = "(status only)";
+		return result;
+	};
+
+	std::ostringstream output;
+
+	output << "=== Link Status ===\n";
+	{
+		output << "  CDR Lock (0x9140): 0-5:";
+		for (int linkIndex = 0; linkIndex < 6; ++linkIndex)
+			output << (ReadSERDESRXCDRLock(static_cast<DTC_Link_ID>(linkIndex)) ? "1" : "0");
+		output << "  CFO:" << (ReadSERDESRXCDRLock(DTC_Link_CFO) ? "1" : "0")
+			   << "  L7:" << ((readRaw(0x9140) & (1u << 7)) ? "1" : "0") << "\n";
+
+		bool allPllLocked = true;
+		for (int linkIndex = 0; linkIndex < 7; ++linkIndex)
+			allPllLocked &= ReadSERDESPLLLocked(static_cast<DTC_Link_ID>(linkIndex));
+		allPllLocked &= (readRaw(0x9128) & (1u << 7)) != 0;
+		output << "  PLL Lock (0x9128): " << (allPllLocked ? "all OK" : "FAULT") << "\n";
+
+		const uint32_t linkEnableRaw = ReadLinkEnabledData();
+		output << "  TX enable: " << bin8(linkEnableRaw & 0xFF) << "  RX enable: " << bin8((linkEnableRaw >> 8) & 0xFF) << "\n";
+
+		const uint32_t    jaSourceValue = ReadJitterAttenuatorSelect().to_ulong();
+		const std::string jaSourceName  = jaSourceValue == 0 ? "emulated CFO" : (jaSourceValue == 1 ? "RJ45" : "FMC/SFP+");
+		const bool        jaLocked      = ReadJitterAttenuatorLocked();
+		const uint32_t    jaCSR         = readRaw(static_cast<uint16_t>(DTC_Register_JitterAttenuatorCSR));
+		const uint32_t    jaLOS         = (jaCSR >> 8) & 0xF;
+		output << "  JA (0x9308): src=" << jaSourceName << ", LOL=" << (jaLocked ? "0" : "1") << ", LOS=" << std::bitset<4>(jaLOS) << "\n";
+	}
+
+	output << "\n=== Per-Link Flags (0x9380-0x939C, latched, cleared by link reset) ===\n";
+	{
+		static const char*    linkLabels[]    = {"ROC 0", "ROC 1", "ROC 2", "ROC 3", "ROC 4", "ROC 5", "CFO  ", "L7   "};
+		static const uint16_t linkRegisters[] = {
+			static_cast<uint16_t>(DTC_Register_Link0ErrorFlags),
+			static_cast<uint16_t>(DTC_Register_Link0ErrorFlags + 0x04),
+			static_cast<uint16_t>(DTC_Register_Link0ErrorFlags + 0x08),
+			static_cast<uint16_t>(DTC_Register_Link0ErrorFlags + 0x0C),
+			static_cast<uint16_t>(DTC_Register_Link0ErrorFlags + 0x10),
+			static_cast<uint16_t>(DTC_Register_Link0ErrorFlags + 0x14),
+			static_cast<uint16_t>(DTC_Register_CFOLinkErrorFlags),
+			static_cast<uint16_t>(DTC_Register_LinkMuxErrorFlags),
+		};
+		for (int linkIndex = 0; linkIndex < 8; ++linkIndex)
+		{
+			const uint32_t flags = readRaw(linkRegisters[linkIndex]);
+			output << "  " << linkLabels[linkIndex] << ": " << hex8(flags) << "  " << decodeRingErrorFlags(flags) << "\n";
+		}
+	}
+
+	output << "\n=== Latched Flags ===\n";
+	{
+		output << "  FIFO 0x9190:" << hex8(readRaw(static_cast<uint16_t>(DTC_Register_FIFOFullErrorFlag0)))
+			   << "  0x9194:" << hex8(readRaw(static_cast<uint16_t>(DTC_Register_FIFOFullErrorFlag1)))
+			   << "  0x9198:" << hex8(readRaw(static_cast<uint16_t>(DTC_Register_FIFOFullErrorFlag2))) << "\n";
+
+		const uint32_t rxBuf      = readRaw(static_cast<uint16_t>(DTC_Register_ReceivePacketError));
+		const uint32_t rxPktCount = readRaw(static_cast<uint16_t>(DTC_Register_RXPacketCountErrorFlags));
+		output << "  RX buf (0x919C): pkt_err=" << ((rxBuf >> 8) & 0x7F) << ", crc_err=" << (rxBuf & 0x7F)
+			   << "   pkt_count (0x91CC): " << (rxPktCount & 0x7F) << "\n";
+
+		output << "  SERDES disp (0x911C): " << hex2(readRaw(static_cast<uint16_t>(CFOandDTC_Register_SERDES_RXDisparityError)))
+			   << "  NIT (0x9120): " << hex2(readRaw(static_cast<uint16_t>(CFOandDTC_Register_SERDES_RXCharacterNotInTableError)))
+			   << "  unlock (0x9124): " << hex2(readRaw(static_cast<uint16_t>(CFOandDTC_Register_SERDES_UnlockError))) << "\n";
+
+		const uint32_t evbFlags = readRaw(static_cast<uint16_t>(DTC_Register_EventBuilderErrorFlags));
+		output << "  EVB (0x9370): " << hex8(evbFlags);
+		if (evbFlags == 0) output << "  (clean)";
+		output << "\n";
+		if (evbFlags != 0)
+			for (const auto& line : DecodeEVBErrorStatus(evbFlags))
+				output << "    " << line << "\n";
+		// Retransmission registers exist from bitfile 0xd6100291 (0x9004 bit 7 is the 6-ROC flag).
+		const uint32_t designDate = readRaw(0x9004);
+		if ((designDate & ~0x80u) >= (0xd6100291u & ~0x80u))
+		{
+			const uint32_t resendCount = readRaw(static_cast<uint16_t>(DTC_Register_EVBResendCount));
+			output << "  EVB resends (0x9174): requested " << ReadEVBResendsRequested(resendCount)
+				   << ", served " << ReadEVBResendsServed(resendCount) << "\n";
+		}
+
+		output << "  VFIFO SERDES (0x9374): " << hex8(readRaw(static_cast<uint16_t>(DTC_Register_InputBufferErrorFlags)))
+			   << "  PCI (0x9378): " << hex8(readRaw(static_cast<uint16_t>(DTC_Register_OutputBufferErrorFlags))) << "\n";
+	}
+
+	output << "\n=== Counters ===\n";
+	{
+		auto formatLinkArray = [&](const std::string& label, int linkCount, const std::function<uint32_t(int)>& readFunction) {
+			output << "  " << label << ": ";
+			for (int linkIndex = 0; linkIndex < linkCount; ++linkIndex)
+			{
+				if (linkIndex) output << " / ";
+				output << readFunction(linkIndex);
+			}
+			output << "\n";
+		};
+		formatLinkArray("Not-in-table (0x9500)  ", 7, [&](int linkIndex) { return ReadSERDESCharacterNotInTableErrorCount(static_cast<DTC_Link_ID>(linkIndex)); });
+		formatLinkArray("CDR unlock (0x93B0)    ", 7, [&](int linkIndex) { return ReadRXCDRUnlockCount(static_cast<DTC_Link_ID>(linkIndex)); });
+		formatLinkArray("Missed CFO pkt (0x9340)", 6, [&](int linkIndex) { return ReadMissedCFOPacketCount(static_cast<DTC_Link_ID>(linkIndex)); });
+		formatLinkArray("DH timeout (0xA420)    ", 6, [&](int linkIndex) { return ReadReceiveDHTimeoutCount(static_cast<DTC_Link_ID>(linkIndex)); });
+
+		output << "  Local event drop (0x9360): " << ReadLocalFragmentDropCount() << "\n";
+		output << "  10G RX pkt err (0x9590): " << ReadEVBSERDESRXPacketErrorCounter() << "\n";
+		output << "  JA lock loss (0x93CC): " << ReadJitterAttenuatorUnlockCount()
+			   << "   JA sig loss: " << ReadJitterAttenuatorRecoveredClockLOSCount() << " / " << ReadJitterAttenuatorExternalClockLOSCount() << "\n";
+		output << "  CFO evt-start err (0x93D0): " << readRaw(static_cast<uint16_t>(DTC_Register_CFOLinkEventStartErrorCount))
+			   << "   CFO 40MHz err (0x93D4): " << readRaw(static_cast<uint16_t>(DTC_Register_CFOLink40MHzErrorCount)) << "\n";
+		const uint32_t cdcDiag = ReadCFOCDCDiag();
+		output << "  CFO CDC diag (0x9688): parity=" << ((cdcDiag >> 16) & 0xFFFF) << ", batch_slip=" << (cdcDiag & 0xFFFF) << "\n";
+	}
+
+	output << "\n=== System ===\n";
+	{
+		output << "  XADC alarm (0x9020): " << hex8(readRaw(static_cast<uint16_t>(CFOandDTC_Register_FPGA_MonitorAlarm))) << "\n";
+		output << "  Slow optical (0x9410): " << hex8(readRaw(static_cast<uint16_t>(DTC_Register_SlowOpticalLinksDiag))) << "\n";
+	}
+
+	return output.str();
+}  // end ReadDTCErrors()
+
+void DTCLib::DTC::logDTCErrorsOnCorruption(const char* extractionFunctionName)
+{
+	try
+	{
+		DTC_TLOG(TLVL_ERROR) << extractionFunctionName << ": DTC error registers at corruption:\n" << ReadDTCErrors();
+	}
+	catch (const std::exception& e)
+	{
+		DTC_TLOG(TLVL_ERROR) << extractionFunctionName << ": could not read DTC error registers: " << e.what();
+	}
+	catch (...)
+	{
+		DTC_TLOG(TLVL_ERROR) << extractionFunctionName << ": could not read DTC error registers";
+	}
+}  // end logDTCErrorsOnCorruption()
+
 // ---------------------------------------------------------------------------
 // GetSubEventData v2 -- simplified, one-buffer-per-call subevent extractor
 // ---------------------------------------------------------------------------
@@ -1270,6 +1485,17 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 							 << " pendingTotal=" << pendingSubEventTotalBytes_
 							 << " pendingPrefixConsumed=" << pendingPrefixConsumed_
 							 << " daqBufs=" << daqDMAInfo_.buffer.size();
+
+	// Every throw in this function is a corrupt stream (header consistency, partial-header sanity,
+	// SetupSubEvent failure): log the DTC error registers alongside it, then let it propagate.
+	struct CorruptionLogger
+	{
+		DTC& dtc;
+		~CorruptionLogger()
+		{
+			if (std::uncaught_exceptions() > 0) dtc.logDTCErrorsOnCorruption("GetSubEventData");
+		}
+	} corruptionLogger{*this};
 
 	// Release the previous buffer NOW — we are done with it.
 	// (Pending bytes have already been copied out of it into pendingSubEventBytes_.)
