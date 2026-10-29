@@ -139,6 +139,12 @@ class DTC : public DTC_Registers
 	};
 	const EVBReadProfile&     GetEVBReadProfile() const { return evbReadProfile_; }
 	std::string               FormatEVBReadProfile() const;                                              ///< one line per step: ms, share of call time, per-call / per-record cost
+	/// Snapshot of every DTC error register in one text block: link lock / enables / JA, per-link
+	/// RINGERROR flags 0x9380-0x939C, latched FIFO / RX / SERDES / EVB (0x9370 decoded, 0x9174 resends)
+	/// / VFIFO flags, per-link error counters, XADC alarm and slow-optical diag.  Read-only; clears
+	/// nothing.  Same registers as the otsdaq "Get DTC Errors" macro; logged automatically whenever an
+	/// event / subevent extraction function gives up on a corrupt stream.
+	std::string ReadDTCErrors();
 	void                      SetEVBEventTimeout(std::chrono::milliseconds t) { evbEventTimeout_ = t; }  ///< max age of an incomplete event, first subevent arrival to now, before GetEVBDataAsEvents throws (default 2000 ms)
 	std::chrono::milliseconds GetEVBEventTimeout() const { return evbEventTimeout_; }
 	size_t                    GetEVBOpenTagCount() const { return evbPendingTags_.size(); }  ///< tags holding at least one but not yet all N subevents
@@ -351,6 +357,9 @@ class DTC : public DTC_Registers
 	void ReleaseAllBuffers(const DTC_DMA_Engine& channel);
 
   private:
+	/// Log ReadDTCErrors() at error level from a corrupt-data exit of an extraction function.
+	/// Never throws: a register read failure here must not hide the original corruption.
+	void                            logDTCErrorsOnCorruption(const char* extractionFunctionName);
 	std::unique_ptr<DTC_DataPacket> ReadNextPacket(const DTC_DMA_Engine& channel, int tmo_ms);
 	int                             ReadBuffer(const DTC_DMA_Engine& channel, int retries = 10);
 	/// <summary>
