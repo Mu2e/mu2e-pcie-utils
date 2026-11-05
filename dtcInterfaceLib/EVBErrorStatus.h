@@ -78,7 +78,7 @@ inline std::vector<std::string> DecodeEVBErrorStatus(uint32_t value)
 	    "DDR-to-TX staging FIFO write-while-full; words lost",
 	    "staging FIFO empty inside TX payload; wire repeated a word",
 	    "TX frame malformed; illegal start/terminate, idle inside frame, data outside frame, or > 200 blocks",
-	    "Rx frame had fewer/more data words than its header declared: the receiver-side print of a peer's bit 9 (same staging-FIFO fault on the sender); words lost",
+	    "Rx frame had fewer/more data words than its header declared: the receiver-side print of a peer's bit 9 (same staging-FIFO fault on the sender); words lost, and the receiver stores up to the declared count so the next frame fills the hole: records after this can be well-framed by count yet wrong inside",
 	    "Rx FCS bad on accepted 0x78 frame; corrupt data already stored; shifted 0x33 frames not checked",
 	    "ROC tag slip at EVB3 input: header EWT != first ROC fragment EWT; slip originated upstream in RingController/AXIMux",
 	    "ROC record shape at EVB3 input: accepted beats != count quadword, or header byte count < count quadword",

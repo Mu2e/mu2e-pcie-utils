@@ -99,8 +99,9 @@ enum DTC_Register : uint16_t
 	// Reserved - formerly... DTC_Register_TransmitByteCount_Link5 = 0x9254,
 	// Reserved - formerly... DTC_Register_TransmitByteCount_CFOLink = 0x9258,
 	DTC_Register_EVBTxHistoryStatus = 0x925C,  // hw agent 2026-10-13: [31] frozen, [30:26] first resend dest, [25:18] peer last ack seq, [9:0] entries written
-	// Reserved - formerly... DTC_Register_TransmitPacketCount_Link0 = 0x9260,
-	// Reserved - formerly... DTC_Register_TransmitPacketCount_Link1 = 0x9264,
+	DTC_Register_EVBSlotHealth      = 0x9260,  // hw agent 2026-10-26: [31] sticky TX-bookkeeping-empty vs slot-count>64 words for >1 us, [30:16] episodes, [15:0] staging-slot clears; SoftReset clear; two clock domains, a read can tear
+	DTC_Register_EVBRxBadEnd        = 0x9264,  // hw agent 2026-10-30: receiver bad-end verdict (sticky / count / frames dropped); 0 expected; SoftReset clear
+	DTC_Register_EVBTxRewindDiag    = 0x9268,  // hw agent 2026-11-03: [31:24] burst-table misses on a TX rewind (nonzero = continuation count word skipped); other fields raw
 	// Reserved - formerly... DTC_Register_TransmitPacketCount_Link2 = 0x9268,
 	// Reserved - formerly... DTC_Register_TransmitPacketCount_Link3 = 0x926C,
 	// Reserved - formerly... DTC_Register_TransmitPacketCount_Link4 = 0x9270,
@@ -374,6 +375,21 @@ enum DTC_Register : uint16_t
 	DTC_Register_TXNonnullHeartbeatCount_Link3 = 0xA48C,
 	DTC_Register_TXNonnullHeartbeatCount_Link4 = 0xA490,
 	DTC_Register_TXNonnullHeartbeatCount_Link5 = 0xA494,
+
+	// 2026-11-04: Data Headers dropped for a wrong Event Window Tag (RECEIVE_DROPPED_DH_COUNTn), 16-bit, SoftReset clear
+	DTC_Register_ReceiveDroppedDHCount_Link0 = 0xA4A0,
+	DTC_Register_ReceiveDroppedDHCount_Link1 = 0xA4A4,
+	DTC_Register_ReceiveDroppedDHCount_Link2 = 0xA4A8,
+	DTC_Register_ReceiveDroppedDHCount_Link3 = 0xA4AC,
+	DTC_Register_ReceiveDroppedDHCount_Link4 = 0xA4B0,
+	DTC_Register_ReceiveDroppedDHCount_Link5 = 0xA4B4,
+	// 2026-11-04: Data Payload packets dropped, wrong-tag header or no accepted header (RECEIVE_DROPPED_DP_COUNTn)
+	DTC_Register_ReceiveDroppedDPCount_Link0 = 0xA4C0,
+	DTC_Register_ReceiveDroppedDPCount_Link1 = 0xA4C4,
+	DTC_Register_ReceiveDroppedDPCount_Link2 = 0xA4C8,
+	DTC_Register_ReceiveDroppedDPCount_Link3 = 0xA4CC,
+	DTC_Register_ReceiveDroppedDPCount_Link4 = 0xA4D0,
+	DTC_Register_ReceiveDroppedDPCount_Link5 = 0xA4D4,
 
 	DTC_Register_Invalid,
 	// };
@@ -1201,6 +1217,16 @@ class DTC_Registers : public CFOandDTC_Registers
 	uint32_t     ReadReceiveDHTimeoutCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
 	DTC_Register GetReceiveDHTimeoutCountLinkRegister(DTC_Link_ID const& link);
 
+	// Receive Dropped Data Header Count (wrong Event Window Tag), 0xA4A0.. (2026-11-04)
+	uint32_t          ReadReceiveDroppedDHCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
+	RegisterFormatter FormatReceiveDroppedDHCountLink(DTC_Link_ID const& link);
+	DTC_Register      GetReceiveDroppedDHCountLinkRegister(DTC_Link_ID const& link);
+
+	// Receive Dropped Data Payload Count (wrong-tag header or no accepted header), 0xA4C0.. (2026-11-04)
+	uint32_t          ReadReceiveDroppedDPCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
+	RegisterFormatter FormatReceiveDroppedDPCountLink(DTC_Link_ID const& link);
+	DTC_Register      GetReceiveDroppedDPCountLinkRegister(DTC_Link_ID const& link);
+
 	// TX Heartbeat Packet Count
 	uint32_t          ReadTXHeartbeatPacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
 	RegisterFormatter FormatTXHeartbeatPacketCountLink(DTC_Link_ID const& link);
@@ -1276,6 +1302,19 @@ class DTC_Registers : public CFOandDTC_Registers
 	static EVBTxHistoryEntry DecodeEVBTxHistoryEntry(uint32_t raw);
 	uint32_t                 ReadEVBTxHistoryStatus(std::optional<uint32_t> val = std::nullopt);     // 0x925C raw
 	uint16_t                 ReadEVBRxIllegalDestCount(std::optional<uint32_t> val = std::nullopt);  // 0x9180 [15:0]: frames the switch forwarded here that were for another DTC
+	/// 0x9260 EVB slot health (hw agent 2026-10-26): the DDR->TX staging slot state seen on 8-node hardware
+	/// just before 0x9370 bit 9.  Verdict: bit 31 with clears > 0 = the slot clear is the cause; bit 31 with
+	/// clears == 0 = gray-sync / hand-over; nothing set = the fix held.
+	struct EVBSlotHealth
+	{
+		uint32_t raw{0};
+		bool     staleEmptySeen{false};  ///< [31] sticky
+		uint16_t episodes{0};            ///< [30:16]
+		uint16_t slotClears{0};          ///< [15:0]
+	};
+	uint32_t      ReadEVBSlotHealthRaw(std::optional<uint32_t> val = std::nullopt);
+	EVBSlotHealth ReadEVBSlotHealth();
+	std::string   FormatEVBSlotHealthText(const EVBSlotHealth& health, const std::string& indent);
 	/// Read 0x925C and, when readEntries is set, drain 0x91F0 (count+1 reads: the first loads the output).
 	/// The read pointer only rewinds on SoftReset, so the log can be walked ONCE per run; a second walk
 	/// returns 0xFFFFFFFF immediately (alreadyWalked).  The log is a 1024-entry ring (hw agent 2026-10-14).
