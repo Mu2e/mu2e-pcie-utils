@@ -3,6 +3,7 @@
 
 #include <array>
 #include <chrono>
+#include <deque>
 #include <list>
 #include <map>
 #include <memory>
@@ -154,6 +155,8 @@ class DTC : public DTC_Registers
 	void ResetEVBAssembly()
 	{
 		evbPerSourceReassembly_.clear();
+		evbPerSourceChunkEdges_.clear();
+		evbPerSourceBytesAppended_.clear();
 		evbLastGoodRecord_.clear();
 		evbPendingTags_.clear();
 		evbHaveReleasedTag_      = false;
@@ -427,6 +430,18 @@ class DTC : public DTC_Registers
 	// State for GetEVBDataAsEvents: per-source FAFA chunk reassembly
 	std::map<uint8_t /*chunk_src*/, std::vector<uint8_t>> evbPerSourceReassembly_;
 	std::map<uint8_t /*chunk_src*/, std::vector<uint8_t>> evbLastGoodRecord_;  ///< last cleanly-parsed record per source, dumped alongside a bad one for comparison
+	/// Where each FAFA chunk landed in a source's byte stream, so a fault dump can say whether a bad word
+	/// sits at a chunk edge or a DMA buffer edge.  streamByteOffset counts every byte ever appended for
+	/// the source; the offset inside the live reassembly buffer is streamByteOffset - (appended - buffer size).
+	struct EVBChunkEdge
+	{
+		uint64_t streamByteOffset;      ///< first payload byte of this chunk, in the source's cumulative byte stream
+		uint64_t dmaBufferSequence;     ///< evbDMABuffersRead_ when the chunk arrived (same value = same DMA buffer)
+		size_t   wordOffsetInDmaBuffer; ///< word index of the FAFA header inside that DMA buffer
+		uint16_t chunkWordCount;        ///< payload words in the chunk
+	};
+	std::map<uint8_t /*chunk_src*/, std::deque<EVBChunkEdge>> evbPerSourceChunkEdges_;  ///< recent chunk edges per source (pruned once consumed)
+	std::map<uint8_t /*chunk_src*/, uint64_t>                 evbPerSourceBytesAppended_;  ///< bytes ever appended to the source's reassembly buffer
 	// Per-tag event assembly: a tag is complete when all N source DTCs have delivered their subevent
 	struct EVBPendingTag
 	{

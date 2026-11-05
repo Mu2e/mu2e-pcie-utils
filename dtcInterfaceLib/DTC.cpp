@@ -808,6 +808,16 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 				auto& srcBuf = evbPerSourceReassembly_[chunk_src];
 				const uint8_t* chunkData = reinterpret_cast<const uint8_t*>(&words[ptr + 1]);
 				srcBuf.insert(srcBuf.end(), chunkData, chunkData + chunkBytes);
+
+				// Remember where this chunk landed in the source's stream (fault dumps relate a bad
+				// word to chunk and DMA buffer edges).  Edges already consumed out of the buffer are dropped.
+				uint64_t& bytesAppended = evbPerSourceBytesAppended_[chunk_src];
+				auto& chunkEdges = evbPerSourceChunkEdges_[chunk_src];
+				chunkEdges.push_back(EVBChunkEdge{bytesAppended, evbDMABuffersRead_, ptr, chunk_wc});
+				bytesAppended += chunkBytes;
+				const uint64_t bytesConsumed = bytesAppended - srcBuf.size();
+				while (!chunkEdges.empty() && chunkEdges.front().streamByteOffset + static_cast<uint64_t>(chunkEdges.front().chunkWordCount) * sizeof(uint64_t) <= bytesConsumed)
+					chunkEdges.pop_front();
 			}
 
 			++evbChunksParsed_;
@@ -865,7 +875,7 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 			{
 				const uint64_t firstCountWord = *reinterpret_cast<const uint64_t*>(srcBuf.data());
 				const size_t firstRecordBytes = static_cast<size_t>(firstCountWord & 0xFFFF);
-				if ((firstRecordBytes & 0xF) == 0x8 && firstRecordBytes > RECORD_HEADER_SIZE + sizeof(DTC_SubEventHeader) &&
+				if ((firstCountWord >> 16) == 0 && (firstRecordBytes & 0xF) == 0x8 && firstRecordBytes > RECORD_HEADER_SIZE + sizeof(DTC_SubEventHeader) &&
 					firstRecordBytes < totalRecordBytes)
 				{
 					std::vector<size_t> continuationCountWordOffsets;
@@ -883,11 +893,14 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 						const uint64_t continuationCountWord = *reinterpret_cast<const uint64_t*>(srcBuf.data() + nextRecordOffset);
 						const size_t continuationRecordBytes = static_cast<size_t>(continuationCountWord & 0xFFFF);
 						const size_t continuationPayloadBytes = continuationRecordBytes - RECORD_HEADER_SIZE;
-						if ((continuationRecordBytes & 0xF) != 0x8 || continuationRecordBytes <= RECORD_HEADER_SIZE)
+						// A real count word is 0x000000000000NNN8: bits [63:16] zero.  Emulator payload words whose
+						// low halfword happens to end in 8 (seen 2026-11-04: xxxx0038 words accepted as 56-byte
+						// records, 535 of them) must not pass.
+						if ((continuationCountWord >> 16) != 0 || (continuationRecordBytes & 0xF) != 0x8 || continuationRecordBytes <= RECORD_HEADER_SIZE)
 						{
 							std::stringstream reason;
 							reason << "continuation count word at byte " << nextRecordOffset << " = 0x" << std::hex << std::setw(16) << std::setfill('0')
-								   << continuationCountWord << std::setfill(' ') << std::dec << " is not a count quadword (low nibble must be 8)";
+								   << continuationCountWord << std::setfill(' ') << std::dec << " is not a count quadword (bits [63:16] must be 0, low nibble 8)";
 							splitError = reason.str();
 							break;
 						}
@@ -911,14 +924,71 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 
 					if (!splitError.empty())
 					{
+						// How far short is this source's stream of the header's inclusive count?  Bytes in
+						// hand for the source minus the record headers seen so far, against the count the
+						// header promised; in 8-byte words so a missing count quadword (1 word) and a lost
+						// frame (~186 words) read differently.
+						const size_t recordHeadersSeen = continuationCountWordOffsets.size() + 1;
+						const size_t streamPayloadBytesInHand = srcBuf.size() >= recordHeadersSeen * RECORD_HEADER_SIZE ? srcBuf.size() - recordHeadersSeen * RECORD_HEADER_SIZE : 0;
+						const int64_t shortfallBytes = static_cast<int64_t>(subEvtByteCount) - static_cast<int64_t>(streamPayloadBytesInHand);
 						std::stringstream ss;
 						ss << "GetEVBDataAsEvents: split subevent from src=0x" << std::hex << static_cast<int>(src) << std::dec
 						   << " cannot be reassembled: first record " << firstRecordBytes << " bytes, subevent inclusive count " << subEvtByteCount
-						   << "; " << splitError << "; tag_low=" << subHdr->event_tag_low << ".\n";
+						   << "; " << splitError << "; tag_low=" << subHdr->event_tag_low << ".\n"
+						   << "  stream in hand for src: " << srcBuf.size() << " bytes (" << srcBuf.size() / sizeof(uint64_t) << " words) = " << recordHeadersSeen
+						   << " record header(s) + " << streamPayloadBytesInHand << " payload bytes; validated payload before the bad word " << payloadBytesCollected
+						   << " bytes; header promises " << subEvtByteCount << " payload bytes; stream is " << (shortfallBytes >= 0 ? "SHORT" : "LONG") << " by "
+						   << (shortfallBytes >= 0 ? shortfallBytes : -shortfallBytes) << " bytes = " << (shortfallBytes >= 0 ? shortfallBytes : -shortfallBytes) / static_cast<int64_t>(sizeof(uint64_t))
+						   << " words (1 word = a dropped count quadword, ~186 words = a lost frame; LONG = next event's data already appended).\n";
 						dumpRecord(ss, "BAD split record (reassembly buffer head)", src, srcBuf.data(), std::min(srcBuf.size(), static_cast<size_t>(1024)));
+						// The ROC emulator payload is a running counter (+2 per 32-bit half), so the last words
+						// of the previous record against the first words of this one give the gap in words
+						// exactly: 0 = the count quadword was dropped, ~186 = a whole frame is missing.
+						// 16 words before the boundary (a 4-word shift of the count word is still visible) and 32 after.
+						if (nextRecordOffset >= 128 && nextRecordOffset <= srcBuf.size())
+							dumpRecord(ss, "tail of the record before the bad continuation (last 16 words)", src, srcBuf.data() + nextRecordOffset - 128, 128);
+						else if (nextRecordOffset <= srcBuf.size())
+							dumpRecord(ss, "tail of the record before the bad continuation (all words)", src, srcBuf.data(), nextRecordOffset);
 						if (nextRecordOffset < srcBuf.size())
 							dumpRecord(ss, "at the bad continuation", src, srcBuf.data() + nextRecordOffset,
 									   std::min(srcBuf.size() - nextRecordOffset, static_cast<size_t>(256)));
+						// Chunk and DMA-buffer edges around the boundary: is the bad word at a chunk edge, a DMA
+						// buffer edge, or in the middle of a chunk?  Offsets are bytes relative to the boundary
+						// (negative = before it); the containing chunk is marked.
+						{
+							const uint64_t bytesAppended = evbPerSourceBytesAppended_[src];
+							const uint64_t bytesConsumed = bytesAppended >= srcBuf.size() ? bytesAppended - srcBuf.size() : 0;
+							const uint64_t boundaryStreamOffset = bytesConsumed + nextRecordOffset;
+							const auto& chunkEdges = evbPerSourceChunkEdges_[src];
+							ss << "chunk edges near the boundary src=0x" << std::hex << static_cast<int>(src) << std::dec
+							   << " (boundary = stream byte " << boundaryStreamOffset << ", buffer byte " << nextRecordOffset
+							   << "; DMA buffers read this run = " << evbDMABuffersRead_ << "):\n";
+							bool anyEdgePrinted = false;
+							uint64_t previousDmaSequence = 0;
+							for (const auto& edge : chunkEdges)
+							{
+								const uint64_t chunkEndStreamOffset = edge.streamByteOffset + static_cast<uint64_t>(edge.chunkWordCount) * sizeof(uint64_t);
+								if (chunkEndStreamOffset + 2048 < boundaryStreamOffset || edge.streamByteOffset > boundaryStreamOffset + 2048)
+								{
+									previousDmaSequence = edge.dmaBufferSequence;
+									continue;
+								}
+								const int64_t relativeStart = static_cast<int64_t>(edge.streamByteOffset) - static_cast<int64_t>(boundaryStreamOffset);
+								const int64_t relativeEnd = static_cast<int64_t>(chunkEndStreamOffset) - static_cast<int64_t>(boundaryStreamOffset);
+								const bool containsBoundary = relativeStart <= 0 && relativeEnd > 0;
+								ss << "  chunk wc=" << edge.chunkWordCount << " bytes [" << relativeStart << ", " << relativeEnd << ") rel. to boundary"
+								   << ", DMA buffer #" << edge.dmaBufferSequence << " word " << edge.wordOffsetInDmaBuffer
+								   << (anyEdgePrinted && edge.dmaBufferSequence != previousDmaSequence ? " (NEW DMA buffer)" : "");
+								if (containsBoundary)
+									ss << "  <-- holds the boundary word at byte " << (-relativeStart) << " of its " << (relativeEnd - relativeStart) << " payload bytes"
+									   << (relativeStart == 0 ? " (boundary IS this chunk's first word)" : "")
+									   << (relativeEnd == static_cast<int64_t>(sizeof(uint64_t)) ? " (boundary IS this chunk's last word)" : "");
+								ss << "\n";
+								anyEdgePrinted = true;
+								previousDmaSequence = edge.dmaBufferSequence;
+							}
+							if (!anyEdgePrinted) ss << "  (no chunk edges recorded within 2048 bytes of the boundary)\n";
+						}
 						dumpEVBErrorStatus(ss);
 						DTC_TLOG(TLVL_ERROR) << ss.str();
 						++evbFramingErrors_;
@@ -1304,8 +1374,9 @@ std::string DTCLib::DTC::ReadDTCErrors()
 			{0, "S2C_OVF"}, {1, "INVALID_S2C"}, {2, "DCS_PEND"}, {3, "EWM_HBP"}, {4, "PLL"}, {5, "RXCDR"},
 			{6, "RX_OVF"}, {7, "RX_INVALID"}, {8, "DCS_TMO"}, {9, "DCS_OVF"}, {10, "CFO_TAG"}, {11, "HBP_OVF"},
 			{12, "OUT_OF_BAND"}, {13, "BUF_RESIDUE"}, {14, "STRAY_EWM"}, {15, "INT_EMU"}, {20, "EXT_EMU"},
+			{21, "WRONG_TAG_DROPPED"}, {22, "HEADERLESS_PAYLOAD"},  // 2026-11-04, see 0xA4A0.. / 0xA4C0..
 		};
-		const uint32_t errorAndStatusMask = 0x001FFFFF;
+		const uint32_t errorAndStatusMask = 0x007FFFFF;
 		if ((flags & errorAndStatusMask) == 0) return "(clean)";
 		std::string result;
 		for (const auto& entry : ringErrorBits)
@@ -1401,6 +1472,11 @@ std::string DTCLib::DTC::ReadDTCErrors()
 			output << "  EVB resends (0x9174): requested " << ReadEVBResendsRequested(resendCount)
 				   << ", served " << ReadEVBResendsServed(resendCount) << "\n";
 		}
+		const uint32_t rxBadEndVerdict = readRaw(static_cast<uint16_t>(DTC_Register_EVBRxBadEnd));
+		const uint32_t txRewindDiag = readRaw(static_cast<uint16_t>(DTC_Register_EVBTxRewindDiag));
+		output << "  EVB RX bad-end verdict (0x9264): " << hex8(rxBadEndVerdict) << (rxBadEndVerdict == 0 ? "  (none)" : "")
+			   << "   0x9370 bit 12 (RX frame size): " << (((evbFlags >> 12) & 1) ? "SET" : "clear") << "\n";
+		output << "  EVB TX rewind diag (0x9268): " << hex8(txRewindDiag) << "  burst-table misses on rewind [31:24] = " << ((txRewindDiag >> 24) & 0xFF) << "\n";
 
 		output << "  VFIFO SERDES (0x9374): " << hex8(readRaw(static_cast<uint16_t>(DTC_Register_InputBufferErrorFlags)))
 			   << "  PCI (0x9378): " << hex8(readRaw(static_cast<uint16_t>(DTC_Register_OutputBufferErrorFlags))) << "\n";
@@ -1421,6 +1497,9 @@ std::string DTCLib::DTC::ReadDTCErrors()
 		formatLinkArray("CDR unlock (0x93B0)    ", 7, [&](int linkIndex) { return ReadRXCDRUnlockCount(static_cast<DTC_Link_ID>(linkIndex)); });
 		formatLinkArray("Missed CFO pkt (0x9340)", 6, [&](int linkIndex) { return ReadMissedCFOPacketCount(static_cast<DTC_Link_ID>(linkIndex)); });
 		formatLinkArray("DH timeout (0xA420)    ", 6, [&](int linkIndex) { return ReadReceiveDHTimeoutCount(static_cast<DTC_Link_ID>(linkIndex)); });
+		// 2026-11-04: wrong-tag Data Headers and their payload (or headerless payload) dropped, SoftReset clear
+		formatLinkArray("DH wrong-tag drop (0xA4A0)", 6, [&](int linkIndex) { return ReadReceiveDroppedDHCount(static_cast<DTC_Link_ID>(linkIndex)); });
+		formatLinkArray("DP dropped (0xA4C0)    ", 6, [&](int linkIndex) { return ReadReceiveDroppedDPCount(static_cast<DTC_Link_ID>(linkIndex)); });
 
 		output << "  Local event drop (0x9360): " << ReadLocalFragmentDropCount() << "\n";
 		output << "  10G RX pkt err (0x9590): " << ReadEVBSERDESRXPacketErrorCounter() << "\n";

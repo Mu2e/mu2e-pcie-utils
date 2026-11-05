@@ -7560,6 +7560,106 @@ DTCLib::DTC_Register DTCLib::DTC_Registers::GetReceiveDHTimeoutCountLinkRegister
 	return reg;
 }  // end GetReceiveDHTimeoutCountLinkRegister()
 
+// RX Wrong-Tag DH Dropped Count (2026-11-04)
+uint32_t DTCLib::DTC_Registers::ReadReceiveDroppedDHCount(DTC_Link_ID const& link, std::optional<uint32_t> val)
+{
+	return val.has_value() ? *val : ReadRegister_(GetReceiveDroppedDHCountLinkRegister(link));
+}  // end ReadReceiveDroppedDHCount()
+
+DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatReceiveDroppedDHCountLink(DTC_Link_ID const& link)
+{
+	auto form        = CreateFormatter(GetReceiveDroppedDHCountLinkRegister(link));
+	form.description = "RX Wrong-Tag DH Dropped Count on Link " +
+					   std::to_string((GetReceiveDroppedDHCountLinkRegister(link) -
+									   GetReceiveDroppedDHCountLinkRegister(DTC_Link_0)) /
+									  4);
+	std::stringstream o;
+	o << std::dec << ReadReceiveDroppedDHCount(link, form.value);
+	form.vals.push_back(o.str());
+	return form;
+}  // end FormatReceiveDroppedDHCountLink()
+
+DTCLib::DTC_Register DTCLib::DTC_Registers::GetReceiveDroppedDHCountLinkRegister(DTC_Link_ID const& link)
+{
+	DTC_Register reg;
+	switch (link)
+	{
+		case DTC_Link_0:
+			reg = DTC_Register_ReceiveDroppedDHCount_Link0;
+			break;
+		case DTC_Link_1:
+			reg = DTC_Register_ReceiveDroppedDHCount_Link1;
+			break;
+		case DTC_Link_2:
+			reg = DTC_Register_ReceiveDroppedDHCount_Link2;
+			break;
+		case DTC_Link_3:
+			reg = DTC_Register_ReceiveDroppedDHCount_Link3;
+			break;
+		case DTC_Link_4:
+			reg = DTC_Register_ReceiveDroppedDHCount_Link4;
+			break;
+		case DTC_Link_5:
+			reg = DTC_Register_ReceiveDroppedDHCount_Link5;
+			break;
+		default: {
+			__SS__ << "Illegal link index provided: " << link << __E__;
+			__SS_THROW__;
+		}
+	}
+	return reg;
+}  // end GetReceiveDroppedDHCountLinkRegister()
+
+// RX DP Dropped Count (2026-11-04)
+uint32_t DTCLib::DTC_Registers::ReadReceiveDroppedDPCount(DTC_Link_ID const& link, std::optional<uint32_t> val)
+{
+	return val.has_value() ? *val : ReadRegister_(GetReceiveDroppedDPCountLinkRegister(link));
+}  // end ReadReceiveDroppedDPCount()
+
+DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatReceiveDroppedDPCountLink(DTC_Link_ID const& link)
+{
+	auto form        = CreateFormatter(GetReceiveDroppedDPCountLinkRegister(link));
+	form.description = "RX DP Dropped Count on Link " +
+					   std::to_string((GetReceiveDroppedDPCountLinkRegister(link) -
+									   GetReceiveDroppedDPCountLinkRegister(DTC_Link_0)) /
+									  4);
+	std::stringstream o;
+	o << std::dec << ReadReceiveDroppedDPCount(link, form.value);
+	form.vals.push_back(o.str());
+	return form;
+}  // end FormatReceiveDroppedDPCountLink()
+
+DTCLib::DTC_Register DTCLib::DTC_Registers::GetReceiveDroppedDPCountLinkRegister(DTC_Link_ID const& link)
+{
+	DTC_Register reg;
+	switch (link)
+	{
+		case DTC_Link_0:
+			reg = DTC_Register_ReceiveDroppedDPCount_Link0;
+			break;
+		case DTC_Link_1:
+			reg = DTC_Register_ReceiveDroppedDPCount_Link1;
+			break;
+		case DTC_Link_2:
+			reg = DTC_Register_ReceiveDroppedDPCount_Link2;
+			break;
+		case DTC_Link_3:
+			reg = DTC_Register_ReceiveDroppedDPCount_Link3;
+			break;
+		case DTC_Link_4:
+			reg = DTC_Register_ReceiveDroppedDPCount_Link4;
+			break;
+		case DTC_Link_5:
+			reg = DTC_Register_ReceiveDroppedDPCount_Link5;
+			break;
+		default: {
+			__SS__ << "Illegal link index provided: " << link << __E__;
+			__SS_THROW__;
+		}
+	}
+	return reg;
+}  // end GetReceiveDroppedDPCountLinkRegister()
+
 uint32_t DTCLib::DTC_Registers::ReadTXNullHeartbeatCount(DTC_Link_ID const& link, std::optional<uint32_t> val)
 {
 	return val.has_value() ? *val : ReadRegister_(GetTXNullHeartbeatCountLinkRegister(link));
