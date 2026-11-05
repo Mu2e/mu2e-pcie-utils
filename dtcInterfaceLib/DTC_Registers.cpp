@@ -7568,7 +7568,7 @@ uint32_t DTCLib::DTC_Registers::ReadReceiveDroppedDHCount(DTC_Link_ID const& lin
 
 DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatReceiveDroppedDHCountLink(DTC_Link_ID const& link)
 {
-	auto form        = CreateFormatter(GetReceiveDroppedDHCountLinkRegister(link));
+	auto form = CreateFormatter(GetReceiveDroppedDHCountLinkRegister(link));
 	form.description = "RX Wrong-Tag DH Dropped Count on Link " +
 					   std::to_string((GetReceiveDroppedDHCountLinkRegister(link) -
 									   GetReceiveDroppedDHCountLinkRegister(DTC_Link_0)) /
@@ -7618,7 +7618,7 @@ uint32_t DTCLib::DTC_Registers::ReadReceiveDroppedDPCount(DTC_Link_ID const& lin
 
 DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatReceiveDroppedDPCountLink(DTC_Link_ID const& link)
 {
-	auto form        = CreateFormatter(GetReceiveDroppedDPCountLinkRegister(link));
+	auto form = CreateFormatter(GetReceiveDroppedDPCountLinkRegister(link));
 	form.description = "RX DP Dropped Count on Link " +
 					   std::to_string((GetReceiveDroppedDPCountLinkRegister(link) -
 									   GetReceiveDroppedDPCountLinkRegister(DTC_Link_0)) /

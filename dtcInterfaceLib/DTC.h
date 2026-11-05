@@ -138,14 +138,14 @@ class DTC : public DTC_Registers
 		uint64_t releaseBufferNs{0};   ///< read_release of the DMA buffer (RAII on return)
 		uint64_t totalNs{0};           ///< whole call, entry to return
 	};
-	const EVBReadProfile&     GetEVBReadProfile() const { return evbReadProfile_; }
-	std::string               FormatEVBReadProfile() const;                                              ///< one line per step: ms, share of call time, per-call / per-record cost
+	const EVBReadProfile& GetEVBReadProfile() const { return evbReadProfile_; }
+	std::string           FormatEVBReadProfile() const;  ///< one line per step: ms, share of call time, per-call / per-record cost
 	/// Snapshot of every DTC error register in one text block: link lock / enables / JA, per-link
 	/// RINGERROR flags 0x9380-0x939C, latched FIFO / RX / SERDES / EVB (0x9370 decoded, 0x9174 resends)
 	/// / VFIFO flags, per-link error counters, XADC alarm and slow-optical diag.  Read-only; clears
 	/// nothing.  Same registers as the otsdaq "Get DTC Errors" macro; logged automatically whenever an
 	/// event / subevent extraction function gives up on a corrupt stream.
-	std::string ReadDTCErrors();
+	std::string               ReadDTCErrors();
 	void                      SetEVBEventTimeout(std::chrono::milliseconds t) { evbEventTimeout_ = t; }  ///< max age of an incomplete event, first subevent arrival to now, before GetEVBDataAsEvents throws (default 2000 ms)
 	std::chrono::milliseconds GetEVBEventTimeout() const { return evbEventTimeout_; }
 	size_t                    GetEVBOpenTagCount() const { return evbPendingTags_.size(); }  ///< tags holding at least one but not yet all N subevents
@@ -435,12 +435,12 @@ class DTC : public DTC_Registers
 	/// the source; the offset inside the live reassembly buffer is streamByteOffset - (appended - buffer size).
 	struct EVBChunkEdge
 	{
-		uint64_t streamByteOffset;      ///< first payload byte of this chunk, in the source's cumulative byte stream
-		uint64_t dmaBufferSequence;     ///< evbDMABuffersRead_ when the chunk arrived (same value = same DMA buffer)
-		size_t   wordOffsetInDmaBuffer; ///< word index of the FAFA header inside that DMA buffer
-		uint16_t chunkWordCount;        ///< payload words in the chunk
+		uint64_t streamByteOffset;       ///< first payload byte of this chunk, in the source's cumulative byte stream
+		uint64_t dmaBufferSequence;      ///< evbDMABuffersRead_ when the chunk arrived (same value = same DMA buffer)
+		size_t   wordOffsetInDmaBuffer;  ///< word index of the FAFA header inside that DMA buffer
+		uint16_t chunkWordCount;         ///< payload words in the chunk
 	};
-	std::map<uint8_t /*chunk_src*/, std::deque<EVBChunkEdge>> evbPerSourceChunkEdges_;  ///< recent chunk edges per source (pruned once consumed)
+	std::map<uint8_t /*chunk_src*/, std::deque<EVBChunkEdge>> evbPerSourceChunkEdges_;     ///< recent chunk edges per source (pruned once consumed)
 	std::map<uint8_t /*chunk_src*/, uint64_t>                 evbPerSourceBytesAppended_;  ///< bytes ever appended to the source's reassembly buffer
 	// Per-tag event assembly: a tag is complete when all N source DTCs have delivered their subevent
 	struct EVBPendingTag
