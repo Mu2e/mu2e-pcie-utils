@@ -104,6 +104,8 @@ try
 			"Bit 7 must qualify sequence-gap and Rx statistics");
 	require(bitLine(all, 12).find("receiver-side print of a peer's bit 9") != std::string::npos,
 			"Bit 12 must identify itself as the receiver-side view of a peer's staging-FIFO fault (hw agent 2026-10-16)");
+	require(bitLine(all, 12).find("From bitfile 0xd6110998: the frame is dropped at its end and the sender re-sends it") != std::string::npos,
+			"Bit 12 must say that a cut frame is dropped and re-sent from 0xd6110998 (hw agent 2026-11-10)");
 	require(bitLine(all, 13).find("shifted 0x33 frames not checked") != std::string::npos,
 			"FCS checking must not be claimed for shifted frames");
 
@@ -140,6 +142,19 @@ try
 			"Wrong protocol/config group");
 	require(report.find("SoftReset all DTCs together") != std::string::npos,
 			"Report must require coordinated reset");
+	// run17 end value on six of eight DTCs: bits 1 and 12 with complete data
+	constexpr uint32_t recoveredLossMask = DTCLib::EVBRxSequenceGapBit | DTCLib::EVBRxFrameSizeBit;
+	const auto recovered = DTCLib::FormatEVBStatusCheck(0x07001002u, "DTC_0", true, true, true, recoveredLossMask);
+	require(recovered.find("ERROR:") == std::string::npos,
+			"Bits 1 and 12 in the ignore mask must not invalidate a run");
+	require(recovered.find("Informational (excluded from run validity): 0x1002") != std::string::npos,
+			"Ignored bits must still be listed");
+	require(recovered.find("Bit 12 RX_FRAME_SIZE: a frame arrived cut, was dropped at its end and the link re-sent it") != std::string::npos,
+			"Ignored bit 12 must be explained");
+	const auto notRecovered = DTCLib::FormatEVBStatusCheck(0x07001002u, "DTC_0", true, true, true, DTCLib::EVBRxSequenceGapBit);
+	require(notRecovered.find("ERROR: run INVALID") != std::string::npos &&
+				notRecovered.find("Data lost: Bit 12 RX_FRAME_SIZE;") != std::string::npos,
+			"Bit 12 outside the ignore mask must still invalidate a run");
 	const auto informational = DTCLib::FormatEVBStatusCheck(0x07FF0000u, "DTC_0", true);
 	require(informational.find("ERROR:") == std::string::npos,
 			"Back-pressure and foreign frames must never invalidate a run");

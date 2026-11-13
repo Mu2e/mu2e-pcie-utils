@@ -8145,6 +8145,53 @@ std::string DTCLib::DTC_Registers::FormatEVBSlotHealthText(const EVBSlotHealth& 
 	return o.str();
 }  // end FormatEVBSlotHealthText()
 
+bool DTCLib::DTC_Registers::EVBRxBadEndHasRefusedWholeFrames(uint32_t designDate)
+{
+	// hw agent 2026-11-09: compare the low 28 bits of 0x9004 (the top nibble is the flavor, d or e).
+	// Bit 7 is the 6-ROC flag, so compare without it too, as the retransmission check does.
+	constexpr uint32_t comparableBits     = 0x0FFFFF7Fu;
+	constexpr uint32_t lastOldLayoutBuild = 0xd6110995u;
+	return (designDate & comparableBits) > (lastOldLayoutBuild & comparableBits);
+}  // end EVBRxBadEndHasRefusedWholeFrames()
+
+DTCLib::DTC_Registers::EVBRxBadEnd DTCLib::DTC_Registers::DecodeEVBRxBadEnd(uint32_t raw, uint32_t designDate)
+{
+	EVBRxBadEnd rxBadEnd;
+	rxBadEnd.raw = raw;
+	rxBadEnd.hasRefusedWholeFrames = EVBRxBadEndHasRefusedWholeFrames(designDate);
+	rxBadEnd.sticky = (raw >> 31) & 1u;
+	if (rxBadEnd.hasRefusedWholeFrames)
+	{
+		rxBadEnd.badEndWord = static_cast<uint16_t>((raw >> 24) & 0x7Fu);
+		rxBadEnd.refusedWholeFrames = static_cast<uint8_t>((raw >> 16) & 0xFFu);
+	}
+	else
+		rxBadEnd.badEndWord = static_cast<uint16_t>((raw >> 16) & 0x7FFFu);
+	rxBadEnd.droppedAtEnd = static_cast<uint16_t>(raw & 0xFFFFu);
+	return rxBadEnd;
+}  // end DecodeEVBRxBadEnd()
+
+std::string DTCLib::DTC_Registers::FormatEVBRxBadEndText(const EVBRxBadEnd& rxBadEnd)
+{
+	std::ostringstream o;
+	o << "sticky " << (rxBadEnd.sticky ? 1 : 0) << ", bad_end_word " << rxBadEnd.badEndWord;
+	if (rxBadEnd.hasRefusedWholeFrames)
+	{
+		if (rxBadEnd.badEndWord == 0x7Fu) o << " (saturated)";
+		o << ", refused_whole_frames " << static_cast<unsigned>(rxBadEnd.refusedWholeFrames);
+		if (rxBadEnd.refusedWholeFrames == 0xFFu) o << " (saturated)";
+	}
+	o << ", dropped_at_end " << rxBadEnd.droppedAtEnd;
+	if (!rxBadEnd.hasRefusedWholeFrames)
+		o << "; layout of bitfiles up to 0xd6110995, no refused_whole_frames count";
+	return o.str();
+}  // end FormatEVBRxBadEndText()
+
+DTCLib::DTC_Registers::EVBRxBadEnd DTCLib::DTC_Registers::ReadEVBRxBadEnd()
+{
+	return DecodeEVBRxBadEnd(ReadRegister_(DTC_Register_EVBRxBadEnd), ReadRegister_(CFOandDTC_Register_DesignDate));
+}  // end ReadEVBRxBadEnd()
+
 DTCLib::DTC_Registers::EVBTxHistory DTCLib::DTC_Registers::ReadEVBTxHistory(bool readEntries)
 {
 	EVBTxHistory history;

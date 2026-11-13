@@ -1471,9 +1471,45 @@ std::string DTCLib::DTC::ReadDTCErrors()
 		}
 		const uint32_t rxBadEndVerdict = readRaw(static_cast<uint16_t>(DTC_Register_EVBRxBadEnd));
 		const uint32_t txRewindDiag = readRaw(static_cast<uint16_t>(DTC_Register_EVBTxRewindDiag));
+		// hw agent 2026-11-09: the layout of 0x9264 depends on the bitfile of this DTC; refused_whole_frames is normal recovery
 		output << "  EVB RX bad-end verdict (0x9264): " << hex8(rxBadEndVerdict) << (rxBadEndVerdict == 0 ? "  (none)" : "")
+			   << "  " << FormatEVBRxBadEndText(DecodeEVBRxBadEnd(rxBadEndVerdict, designDate))
 			   << "   0x9370 bit 12 (RX frame size): " << (((evbFlags >> 12) & 1) ? "SET" : "clear") << "\n";
-		output << "  EVB TX rewind diag (0x9268): " << hex8(txRewindDiag) << "  burst-table misses on rewind [31:24] = " << ((txRewindDiag >> 24) & 0xFF) << "\n";
+		{
+			// 0x9268 (hw agent 2026-11-06): [31:16] = 15-bit two's complement staging head minus expected
+			// position at the last mismatch (negative = words behind / repeated, positive = ahead / skipped),
+			// bit 15 = last-word check (clear = header check); [15:8] mismatches, [7:0] acks/rewinds refused.
+			const uint32_t driftField = (txRewindDiag >> 16) & 0xFFFF;
+			int            driftWords = static_cast<int>(driftField & 0x7FFF);
+			if (driftWords & 0x4000) driftWords -= 0x8000;
+			output << "  EVB TX rewind diag (0x9268): " << hex8(txRewindDiag) << "  mismatches [15:8] = " << ((txRewindDiag >> 8) & 0xFF)
+				   << ", acks/rewinds refused [7:0] = " << (txRewindDiag & 0xFF);
+			if (((txRewindDiag >> 8) & 0xFF) != 0)
+				output << ", drift at last mismatch = " << driftWords << " words (" << (driftWords < 0 ? "behind" : "ahead") << ") at "
+					   << ((driftField & 0x8000) ? "last-word" : "header") << " check";
+			output << "\n";
+		}
+		{
+			const uint32_t slotHealth = readRaw(static_cast<uint16_t>(DTC_Register_EVBSlotHealth));
+			// hw agent 2026-11-08: [31] sticky, [30:16] stale-inventory events, [15:8] slot evictions by the DDR side, [7:0] slot clears
+			output << "  EVB slot health (0x9260): " << hex8(slotHealth) << "  sticky [31] = " << ((slotHealth >> 31) & 1)
+				   << ", stale-inventory events [30:16] = " << ((slotHealth >> 16) & 0x7FFF)
+				   << ", slot turn-overs that re-read [15:8] = " << ((slotHealth >> 8) & 0xFF)
+				   << ", slot clears [7:0] = " << (slotHealth & 0xFF) << "\n";
+		}
+		{
+			const uint32_t patternWatch = readRaw(static_cast<uint16_t>(DTC_Register_EVBPatternWatch));
+			output << "  EVB pattern watch (0x926C): " << hex8(patternWatch) << "  non-consecutive words: write " << ((patternWatch >> 24) & 0xFF)
+				   << " / read " << ((patternWatch >> 16) & 0xFF) << " / wire " << ((patternWatch >> 8) & 0xFF)
+				   << " / dest " << ((patternWatch >> 3) & 0x1F) << "; sticky write " << ((patternWatch >> 2) & 1)
+				   << " read " << ((patternWatch >> 1) & 1) << " wire " << (patternWatch & 1) << "\n";
+			const uint32_t rxPosGap = readRaw(static_cast<uint16_t>(DTC_Register_EVBRxPosGap));
+			output << "  EVB RX position gap (0x9270): " << hex8(rxPosGap) << "  data frames refused ahead of position [31:16] = " << ((rxPosGap >> 16) & 0xFFFF)
+				   << ", idle frames ahead asking resend [15:0] = " << (rxPosGap & 0xFFFF) << "\n";
+			const uint32_t rxRepeatRefusal = readRaw(static_cast<uint16_t>(DTC_Register_EVBRxRepeatRefusal));
+			output << "  EVB RX repeat refusal (0x9274): " << hex8(rxRepeatRefusal) << "  data frames refused as repeats [31:16] = " << ((rxRepeatRefusal >> 16) & 0xFFFF)
+				   << ", sequence gaps in order [15:8] = " << ((rxRepeatRefusal >> 8) & 0xFF) << ", sender restarts [7:0] = " << (rxRepeatRefusal & 0xFF) << "\n";
+		}
 
 		output << "  VFIFO SERDES (0x9374): " << hex8(readRaw(static_cast<uint16_t>(DTC_Register_InputBufferErrorFlags)))
 			   << "  PCI (0x9378): " << hex8(readRaw(static_cast<uint16_t>(DTC_Register_OutputBufferErrorFlags))) << "\n";

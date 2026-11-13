@@ -100,8 +100,11 @@ enum DTC_Register : uint16_t
 	// Reserved - formerly... DTC_Register_TransmitByteCount_CFOLink = 0x9258,
 	DTC_Register_EVBTxHistoryStatus = 0x925C,  // hw agent 2026-10-13: [31] frozen, [30:26] first resend dest, [25:18] peer last ack seq, [9:0] entries written
 	DTC_Register_EVBSlotHealth      = 0x9260,  // hw agent 2026-10-26: [31] sticky TX-bookkeeping-empty vs slot-count>64 words for >1 us, [30:16] episodes, [15:0] staging-slot clears; SoftReset clear; two clock domains, a read can tear
-	DTC_Register_EVBRxBadEnd        = 0x9264,  // hw agent 2026-10-30: receiver bad-end verdict (sticky / count / frames dropped); 0 expected; SoftReset clear
-	DTC_Register_EVBTxRewindDiag    = 0x9268,  // hw agent 2026-11-03: [31:24] burst-table misses on a TX rewind (nonzero = continuation count word skipped); other fields raw
+	DTC_Register_EVBRxBadEnd        = 0x9264,  // hw agent 2026-10-30: receiver bad-end verdict (sticky / count / frames dropped); SoftReset clear; layout depends on the bitfile, see EVBRxBadEnd
+	DTC_Register_EVBTxRewindDiag    = 0x9268,  // hw agent 2026-11-05 layout: [31:16] drift at last TX position mismatch (bit 15 = last-word check; [14:0] two's complement words, + skipped / - repeated), [15:8] mismatch count, [7:0] ring refusals; SoftReset clear
+	DTC_Register_EVBPatternWatch    = 0x926C,  // hw agent 2026-11-05: non-consecutive emulator payload words [31:24] at DDR write, [23:16] at ring read, [15:8] on the wire (saturating), [7:3] dest index of last wire hit, [2] write / [1] read / [0] wire sticky; SoftReset clear
+	DTC_Register_EVBRxPosGap        = 0x9270,  // hw agent 2026-11-05: [31:16] data frames refused because ahead of the next needed position (resend asked), [15:0] idle frames ahead that asked for a resend; SoftReset clear
+	DTC_Register_EVBRxRepeatRefusal = 0x9274,  // hw agent 2026-11-06 (0xd61105a3): [31:16] data frames refused as repeats (position behind what is stored), [15:8] sequence gaps in order by position, [7:0] sender restarts; SoftReset clear
 	// Reserved - formerly... DTC_Register_TransmitPacketCount_Link2 = 0x9268,
 	// Reserved - formerly... DTC_Register_TransmitPacketCount_Link3 = 0x926C,
 	// Reserved - formerly... DTC_Register_TransmitPacketCount_Link4 = 0x9270,
@@ -1315,6 +1318,25 @@ class DTC_Registers : public CFOandDTC_Registers
 	uint32_t      ReadEVBSlotHealthRaw(std::optional<uint32_t> val = std::nullopt);
 	EVBSlotHealth ReadEVBSlotHealth();
 	std::string   FormatEVBSlotHealthText(const EVBSlotHealth& health, const std::string& indent);
+	/// 0x9264 EVB_RX_BAD_END (read-only, SoftReset clear): received frames that ended badly.  The layout depends
+	/// on the bitfile (hw agent 2026-11-09): after 0xd6110995 the old bad-end count [30:16] is split into the
+	/// bad end word count [30:24] and the count of whole, correct frames refused because they were not the next
+	/// words needed from that sender [23:16].  A non-zero refused count is normal recovery, not an error.
+	struct EVBRxBadEnd
+	{
+		uint32_t raw{0};
+		bool     hasRefusedWholeFrames{false};  ///< layout of bitfiles after 0xd6110995
+		bool     sticky{false};                 ///< [31] a frame closed on a wrong end-of-frame word
+		uint16_t badEndWord{0};                 ///< [30:24] (stops at 0x7f); [30:16] on bitfiles up to 0xd6110995
+		uint8_t  refusedWholeFrames{0};         ///< [23:16] (stops at 0xff); not in bitfiles up to 0xd6110995
+		uint16_t droppedAtEnd{0};               ///< [15:0] frames dropped at their end
+	};
+	/// designDate is the raw 0x9004 value of the same DTC
+	static bool        EVBRxBadEndHasRefusedWholeFrames(uint32_t designDate);
+	static EVBRxBadEnd DecodeEVBRxBadEnd(uint32_t raw, uint32_t designDate);
+	/// The counts on one line, e.g. "sticky 1, bad_end_word 2, refused_whole_frames 3, dropped_at_end 11"
+	static std::string FormatEVBRxBadEndText(const EVBRxBadEnd& rxBadEnd);
+	EVBRxBadEnd        ReadEVBRxBadEnd();
 	/// Read 0x925C and, when readEntries is set, drain 0x91F0 (count+1 reads: the first loads the output).
 	/// The read pointer only rewinds on SoftReset, so the log can be walked ONCE per run; a second walk
 	/// returns 0xFFFFFFFF immediately (alreadyWalked).  The log is a 1024-entry ring (hw agent 2026-10-14).

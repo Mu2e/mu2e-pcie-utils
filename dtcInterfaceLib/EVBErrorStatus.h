@@ -22,6 +22,12 @@ constexpr uint32_t EVBDefinedErrorMask = 0xFFFFu;
 constexpr uint32_t EVBRxSequenceGapBit = 1u << 1;
 constexpr uint32_t EVBResendActiveBit  = 1u << 27;
 
+// Bit 12 (hw agent 2026-11-10): from bitfile 0xd6110998 a frame that arrives cut is dropped
+// at its end and the sender re-sends it (0x9264 counts them), so bit 12 with complete data
+// is a recovered loss like bit 1.  On older bitfiles it came with split records.  The caller
+// decides per bitfile and passes the bit in the ignore mask.
+constexpr uint32_t EVBRxFrameSizeBit = 1u << 12;
+
 // RX FCS-bad event count, [31:28] since bit 27 was taken (was [31:27]); saturates at 15
 inline uint32_t EVBFCSBadCount(uint32_t value) { return value >> 28; }
 
@@ -63,7 +69,7 @@ inline std::vector<std::string> DecodeEVBErrorStatus(uint32_t value)
 		return output.str();
 	};
 	std::vector<std::string> lines;
-	lines.push_back("Sticky errors [15:0] (any set invalidates run; SoftReset-only clear): " +
+	lines.push_back("Sticky errors [15:0] (SoftReset-only clear; any set invalidates run, except bit 1 on bitfiles that re-send lost frames and bit 12 from bitfile 0xd6110998): " +
 	                hexField(value & 0xFFFFu));
 	static const char* const errorNames[] = {
 	    "Rx source buffer write-while-full; words lost",
@@ -78,7 +84,7 @@ inline std::vector<std::string> DecodeEVBErrorStatus(uint32_t value)
 	    "DDR-to-TX staging FIFO write-while-full; words lost",
 	    "staging FIFO empty inside TX payload; wire repeated a word",
 	    "TX frame malformed; illegal start/terminate, idle inside frame, data outside frame, or > 200 blocks",
-	    "Rx frame had fewer/more data words than its header declared: the receiver-side print of a peer's bit 9 (same staging-FIFO fault on the sender); words lost, and the receiver stores up to the declared count so the next frame fills the hole: records after this can be well-framed by count yet wrong inside",
+	    "Rx frame had fewer/more data words than its header declared (the frame arrived cut). From bitfile 0xd6110998: the frame is dropped at its end and the sender re-sends it (0x9264 counts them), no words lost, normal when the subevent and event counts are complete. Older bitfiles: the receiver-side print of a peer's bit 9 (same staging-FIFO fault on the sender); words lost, and the receiver stores up to the declared count so the next frame fills the hole: records after this can be well-framed by count yet wrong inside",
 	    "Rx FCS bad on accepted 0x78 frame; corrupt data already stored; shifted 0x33 frames not checked",
 	    "ROC tag slip at EVB3 input: header EWT != first ROC fragment EWT; slip originated upstream in RingController/AXIMux",
 	    "ROC record shape at EVB3 input: accepted beats != count quadword, or header byte count < count quadword",
@@ -170,6 +176,8 @@ inline std::string FormatEVBStatusCheck(uint32_t value, const std::string& dtc, 
 		output << "Informational (excluded from run validity): 0x" << std::hex << ignored << std::dec << "\n";
 	if(ignored & EVBRxSequenceGapBit)
 		output << "  Bit 1 RX_SEQ_GAP: a frame was lost and the link re-sent it (0x9174 counts the resends); not a bad run unless bit 27 is still set after traffic stops.\n";
+	if(ignored & EVBRxFrameSizeBit)
+		output << "  Bit 12 RX_FRAME_SIZE: a frame arrived cut, was dropped at its end and the link re-sent it (0x9264 counts them); not a bad run when the subevent and event counts are complete and bit 27 is clear after traffic stops.\n";
 	if(check.resendActive)
 		output << "Bit 27 RESEND_ACTIVE: a resend is in progress; normal right after a loss, but still set after traffic stops means a resend never landed.\n";
 	if(!check.ddrCalibrated)
