@@ -662,7 +662,10 @@ void mu2esim::dcsPacketSimulator_(DTCLib::DTC_DCSRequestPacket in, DTCLib::DTC_L
 							  ((packetCount & 0x2) << 6));
 	dataPacket.SetByte(5, (packetCount & 0x3FC) >> 2);
 
+	bool isReadOperation = in.GetType() == DTCLib::DTC_DCSOperationType_Read;
+
 	auto request1 = in.GetRequest(false);
+	if (isReadOperation && request1.first == fakeTemperatureRocAddress_) updateFakeTemperature_(rocLink);
 	dataPacket.SetByte(6, request1.first & 0xFF);
 	dataPacket.SetByte(7, (request1.first & 0xFF00) >> 8);
 	dataPacket.SetByte(8, rocRegisters_[rocLink][request1.first] & 0xFF);
@@ -671,6 +674,7 @@ void mu2esim::dcsPacketSimulator_(DTCLib::DTC_DCSRequestPacket in, DTCLib::DTC_L
 	if (in.GetType() != DTCLib::DTC_DCSOperationType_BlockRead)
 	{
 		auto request2 = in.GetRequest(true);
+		if (isReadOperation && in.IsDoubleOp() && request2.first == fakeTemperatureRocAddress_) updateFakeTemperature_(rocLink);
 		dataPacket.SetByte(10, request2.first & 0xFF);
 		dataPacket.SetByte(11, (request2.first & 0xFF00) >> 8);
 		dataPacket.SetByte(12, rocRegisters_[rocLink][request2.first] & 0xFF);
@@ -695,6 +699,23 @@ void mu2esim::dcsPacketSimulator_(DTCLib::DTC_DCSRequestPacket in, DTCLib::DTC_L
 	hwIdx_[1] = (hwIdx_[1] + 1) % SIM_BUFFCOUNT;
 
 	TLOG(TLVL_DCSPacketSimulator) << "After... hw=" << hwIdx_[1] << " sw=" << swIdx_[1];
+}
+
+void mu2esim::updateFakeTemperature_(DTCLib::DTC_Link_ID rocLink)
+{
+	uint16_t& temperatureValue = rocRegisters_[rocLink][fakeTemperatureRocAddress_];
+	if (temperatureValue == 0)  // never read or written yet
+	{
+		temperatureValue = fakeTemperatureStartValue_;
+		return;
+	}
+
+	std::uniform_int_distribution<int> stepDistribution(-fakeTemperatureMaximumStep_, fakeTemperatureMaximumStep_);
+	int nextValue = static_cast<int>(temperatureValue) + stepDistribution(fakeTemperatureRandomGenerator_);
+	if (nextValue < fakeTemperatureMinimumValue_) nextValue = fakeTemperatureMinimumValue_;
+	if (nextValue > fakeTemperatureMaximumValue_) nextValue = fakeTemperatureMaximumValue_;
+	temperatureValue = static_cast<uint16_t>(nextValue);
+	TLOG(TLVL_DCSPacketSimulator) << "mu2esim::updateFakeTemperature_: link " << rocLink << " value " << temperatureValue;
 }
 
 void mu2esim::eventSimulator_(DTCLib::DTC_EventWindowTag ts)

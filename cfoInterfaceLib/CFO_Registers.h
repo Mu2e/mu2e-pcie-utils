@@ -42,6 +42,8 @@ enum CFO_Register : uint16_t
 	CFO_Register_EventWindowTimeoutValue        = 0x91AC,
 	CFO_Register_ReceiveRF0MarkerCount          = 0x9200,
 	CFO_Register_TransmitHeartbeatPacketCount   = 0x9240,
+	CFO_Register_TransmitOnSpillHeartbeatPacketCount  = 0x9244,
+	CFO_Register_TransmitOffSpillHeartbeatPacketCount = 0x9248,
 	CFO_Register_TransmitEventWindowMarkerCount = 0x9260,
 	// CFO_Register_ReceiveByteCountDataLink0     = 0x9200,
 	// CFO_Register_ReceiveByteCountDataLink1     = 0x9204,
@@ -754,9 +756,21 @@ class CFO_Registers : public DTCLib::CFOandDTC_Registers
 
 	uint32_t          ReadReceiveRF0MarkerCount(std::optional<uint32_t> val = std::nullopt);
 	uint32_t          ReadTransmitHeartbeatPacketCount(std::optional<uint32_t> val = std::nullopt);
+	/// <summary>
+	/// Read the count of Heartbeat Packets sent while the firmware on-spill flag was set.
+	/// The counter is 24 bits (it wraps) and is cleared by a Soft Reset.
+	/// </summary>
+	uint32_t          ReadTransmitOnSpillHeartbeatPacketCount(std::optional<uint32_t> val = std::nullopt);
+	/// <summary>
+	/// Read the count of Heartbeat Packets sent while the firmware on-spill flag was clear.
+	/// The counter is 24 bits (it wraps) and is cleared by a Soft Reset.
+	/// </summary>
+	uint32_t          ReadTransmitOffSpillHeartbeatPacketCount(std::optional<uint32_t> val = std::nullopt);
 	uint32_t          ReadTransmitEventWindowMarkerCount(std::optional<uint32_t> val = std::nullopt);
 	RegisterFormatter FormatReceiveRF0MarkerCount();
 	RegisterFormatter FormatTransmitHeartbeatPacketCount();
+	RegisterFormatter FormatTransmitOnSpillHeartbeatPacketCount();
+	RegisterFormatter FormatTransmitOffSpillHeartbeatPacketCount();
 	RegisterFormatter FormatTransmitEventWindowMarkerCount();
 
 	/// <summary>
@@ -1604,6 +1618,8 @@ class CFO_Registers : public DTCLib::CFOandDTC_Registers
 	/// </summary>
 	const std::vector<std::function<RegisterFormatter()>> formattedCounterFunctions_{
 	    [this] { return this->FormatTransmitHeartbeatPacketCount(); },
+	    [this] { return this->FormatTransmitOnSpillHeartbeatPacketCount(); },
+	    [this] { return this->FormatTransmitOffSpillHeartbeatPacketCount(); },
 	    [this] { return this->FormatTransmitEventWindowMarkerCount(); },
 	    [this] { return this->FormatReceiveRF0MarkerCount(); }
 	    // [this] { return this->FormatReceiveByteCountLink0(); },

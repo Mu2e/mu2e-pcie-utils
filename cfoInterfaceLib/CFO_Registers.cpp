@@ -1470,6 +1470,16 @@ uint32_t CFOLib::CFO_Registers::ReadTransmitHeartbeatPacketCount(std::optional<u
 	std::bitset<32> data = val.has_value() ? *val : ReadRegister_(CFO_Register_TransmitHeartbeatPacketCount);
 	return static_cast<uint32_t>(data.to_ulong());
 }
+uint32_t CFOLib::CFO_Registers::ReadTransmitOnSpillHeartbeatPacketCount(std::optional<uint32_t> val)
+{
+	std::bitset<32> data = val.has_value() ? *val : ReadRegister_(CFO_Register_TransmitOnSpillHeartbeatPacketCount);
+	return static_cast<uint32_t>(data.to_ulong()) & 0xFFFFFF;  // counter is bits 23:0
+}
+uint32_t CFOLib::CFO_Registers::ReadTransmitOffSpillHeartbeatPacketCount(std::optional<uint32_t> val)
+{
+	std::bitset<32> data = val.has_value() ? *val : ReadRegister_(CFO_Register_TransmitOffSpillHeartbeatPacketCount);
+	return static_cast<uint32_t>(data.to_ulong()) & 0xFFFFFF;  // counter is bits 23:0
+}
 uint32_t CFOLib::CFO_Registers::ReadTransmitEventWindowMarkerCount(std::optional<uint32_t> val)
 {
 	std::bitset<32> data = val.has_value() ? *val : ReadRegister_(CFO_Register_TransmitEventWindowMarkerCount);
@@ -1492,6 +1502,26 @@ DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTransmitHeartbeatPacketCo
 	form.description = "Transmit Heartbeat Packet Count";
 	std::stringstream o;
 	o << "0x" << std::hex << ReadTransmitHeartbeatPacketCount(form.value);
+	form.vals.push_back(o.str());
+	return form;
+}
+
+DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTransmitOnSpillHeartbeatPacketCount()
+{
+	auto form = CreateFormatter(CFO_Register_TransmitOnSpillHeartbeatPacketCount);
+	form.description = "Transmit On-Spill Heartbeat Packet Count";
+	std::stringstream o;
+	o << "0x" << std::hex << ReadTransmitOnSpillHeartbeatPacketCount(form.value);
+	form.vals.push_back(o.str());
+	return form;
+}
+
+DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatTransmitOffSpillHeartbeatPacketCount()
+{
+	auto form = CreateFormatter(CFO_Register_TransmitOffSpillHeartbeatPacketCount);
+	form.description = "Transmit Off-Spill Heartbeat Packet Count";
+	std::stringstream o;
+	o << "0x" << std::hex << ReadTransmitOffSpillHeartbeatPacketCount(form.value);
 	form.vals.push_back(o.str());
 	return form;
 }

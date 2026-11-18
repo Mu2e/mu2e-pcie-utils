@@ -157,6 +157,30 @@ try
 			resultSs << binaryLine << "     // " << translateOpCode(instr);
 			if (instr == CFO_INSTR::MARKER)
 				resultSs << " -----> #" << ++markerCnt;
+			else if (instr == CFO_INSTR::WAIT)
+			{
+				// rebuild the 6-byte parameter (least-significant byte first) to show the wait in human units
+				uint64_t waitClockCount = 0;
+				for (int i = 0; i < 6; ++i)
+					waitClockCount |= ((uint64_t)(output_[cnt - 7 + i] & 0x0FF)) << (8 * i);
+
+				if (waitClockCount == 0xFFFFFFFFFFFF)
+					resultSs << " NEXT RF0";
+				else
+				{
+					double waitNanoseconds = (double)waitClockCount * FPGAClock_;
+					std::stringstream waitTimeSs;
+					if (waitNanoseconds >= 1e9)
+						waitTimeSs << waitNanoseconds / 1e9 << " s";
+					else if (waitNanoseconds >= 1e6)
+						waitTimeSs << waitNanoseconds / 1e6 << " ms";
+					else if (waitNanoseconds >= 1e3)
+						waitTimeSs << waitNanoseconds / 1e3 << " us";
+					else
+						waitTimeSs << waitNanoseconds << " ns";
+					resultSs << " " << waitTimeSs.str() << " (" << waitClockCount << " clocks)";
+				}
+			}
 			__COUTT__ << "binaryLine #" << ++binaryLineNumber << " = " << binaryLine << __E__;
 			if (instr == CFO_INSTR::LOOP)
 				tabStr += '\t';
