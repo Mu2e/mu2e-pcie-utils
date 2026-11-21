@@ -129,12 +129,23 @@ class DTC : public DTC_Registers
 		uint64_t recordsExtracted{0};  ///< subevent records validated and staged (Step 4)
 		uint64_t timeoutScanNs{0};     ///< Step 0: open-tag timeout / overflow scan
 		uint64_t readDataNs{0};        ///< Step 1: device read_data (includes waiting up to 1 ms when idle)
+		uint64_t readDataWithDataNs{0};  ///< Step 1: the part of readDataNs spent in calls that returned a buffer (rest = calls that timed out empty)
 		uint64_t chunkWalkNs{0};       ///< Step 3: FAFA chunk walk incl. copy into per-source reassembly
 		uint64_t registerReadNs{0};    ///< Step 2b: dest-node count and local MAC reads, once per run
 		uint64_t recordScanNs{0};      ///< Step 4b: record framing, split join, header consistency, pre-parse checks
 		uint64_t subeventSetupNs{0};   ///< Step 4c: per-record DTC_Event alloc + memcpy + SetupEvent + IsCorrupt
 		uint64_t stagingNs{0};         ///< Step 4d: last-good copy, per-tag staging copy, reassembly erase
 		uint64_t eventReleaseNs{0};    ///< Step 5: assemble N-subevent event, SetupEvent, release
+		// the parts of Step 4d (they add up to stagingNs)
+		uint64_t stagingTagLookupNs{0};       ///< find or create the open tag entry, first arrival time, duplicate check
+		uint64_t stagingSubeventCopyNs{0};    ///< append the subevent to the tag's event buffer (first subevent of a tag also allocates the buffer)
+		uint64_t stagingReassemblyEraseNs{0}; ///< erase the record from the front of the per-source reassembly buffer
+		// the parts of Step 5 (they add up to eventReleaseNs)
+		uint64_t releaseCheckAndSizeNs{0};    ///< oldest tag complete?, ordering check
+		uint64_t releaseEventAllocateNs{0};   ///< make_shared<DTC_Event>(event buffer): the event object takes over the buffer, no copy
+		uint64_t releaseEventCopyNs{0};       ///< fill the event header at the front of the event buffer
+		uint64_t releaseSetupEventNs{0};      ///< DTC_Event::SetupEvent (parse of all subevents and ROC headers) and IsCorrupt
+		uint64_t releaseOutputAndFreeNs{0};   ///< push to the output and erase the tag entry
 		uint64_t releaseBufferNs{0};   ///< read_release of the DMA buffer (RAII on return)
 		uint64_t totalNs{0};           ///< whole call, entry to return
 	};
@@ -445,8 +456,13 @@ class DTC : public DTC_Registers
 	// Per-tag event assembly: a tag is complete when all N source DTCs have delivered their subevent
 	struct EVBPendingTag
 	{
-		std::chrono::steady_clock::time_point                     firstArrival;  ///< when the first subevent for this tag was staged
-		std::map<uint8_t /*source_dtc_id*/, std::vector<uint8_t>> subevents;     ///< raw subevent bytes (record header stripped), keyed by source
+		std::chrono::steady_clock::time_point firstArrival;  ///< when the first subevent for this tag arrived
+		/// The event being built: room for the event header (filled when the event is complete), then
+		/// each subevent (record header stripped) appended as it arrives, so in arrival order, not in
+		/// source order.  When complete, the DTC_Event takes over this buffer without a copy.
+		std::shared_ptr<std::vector<uint8_t>> eventBytes;
+		std::array<uint64_t, 4>               sourcesPresentBits{};    ///< one bit per source_dtc_id (0..255) that has delivered this tag
+		uint16_t                              sourcesPresentCount{0};  ///< number of subevents appended so far
 	};
 	std::map<uint64_t /*event window tag*/, EVBPendingTag> evbPendingTags_;
 	std::chrono::milliseconds                              evbEventTimeout_{2000};

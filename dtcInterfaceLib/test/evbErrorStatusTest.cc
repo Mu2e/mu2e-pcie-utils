@@ -151,6 +151,10 @@ try
 			"Ignored bits must still be listed");
 	require(recovered.find("Bit 12 RX_FRAME_SIZE: a frame arrived cut, was dropped at its end and the link re-sent it") != std::string::npos,
 			"Ignored bit 12 must be explained");
+	const auto damagedFrameResent = DTCLib::FormatEVBStatusCheck(0x17002000u, "DTC_0", true, true, true, recoveredLossMask | DTCLib::EVBRxFCSBadBit);
+	require(damagedFrameResent.find("ERROR:") == std::string::npos &&
+				damagedFrameResent.find("Bit 13 RX_FCS_BAD: frame arrived damaged and was re-sent") != std::string::npos,
+			"Bit 13 in the ignore mask must not invalidate a run and must be explained");
 	const auto notRecovered = DTCLib::FormatEVBStatusCheck(0x07001002u, "DTC_0", true, true, true, DTCLib::EVBRxSequenceGapBit);
 	require(notRecovered.find("ERROR: run INVALID") != std::string::npos &&
 				notRecovered.find("Data lost: Bit 12 RX_FRAME_SIZE;") != std::string::npos,

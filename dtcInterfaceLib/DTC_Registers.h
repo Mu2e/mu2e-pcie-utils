@@ -110,7 +110,7 @@ enum DTC_Register : uint16_t
 	// Reserved - formerly... DTC_Register_TransmitPacketCount_Link4 = 0x9270,
 	// Reserved - formerly... DTC_Register_TransmitPacketCount_Link5 = 0x9274,
 	// Reserved - formerly... DTC_Register_TransmitPacketCount_CFOLink = 0x9278,
-	// 0x927C Reserved
+	DTC_Register_EVBLatestRewindRefusal = 0x927C,  // hw agent 2026-11-19: [31:24] rewinds refused by this sender's DDR ring since SoftReset (must be 0, stops at 0xff), [19:0] ring acknowledged index at the latest refusal
 	// 0x9280 Reserved
 	// 0x9290 Reserved
 	// 0x92A0 Reserved
@@ -657,6 +657,8 @@ class DTC_Registers : public CFOandDTC_Registers
 	uint16_t          ReadEVBIdlePacketWordCount(std::optional<uint32_t> val = std::nullopt);
 	uint8_t           ReadEVBInterpacketGap(std::optional<uint32_t> val = std::nullopt);
 	uint8_t           ReadEVBLoopbackCalibratedOffset(std::optional<uint32_t> val = std::nullopt);
+	uint32_t          SetEVBLoopbackCalibratedOffset(uint8_t loopbackCalibratedOffset);
+	uint32_t          ReadEVBPacketControlRaw();
 	RegisterFormatter FormatEVBPacketControlInfo();
 
 	// EVB Idle Burst (0x9170)
@@ -1276,6 +1278,12 @@ class DTC_Registers : public CFOandDTC_Registers
 	// EVB3 self-chunk cap (0x9178) and stall-time counters (0x9210-0x9228)
 	uint16_t ReadEVBLocalChunkCap(std::optional<uint32_t> val = std::nullopt);
 	void     SetEVBLocalChunkCap(uint16_t words);                                    // [15:0]; upper half kept
+	bool     ReadEVBSecondCreditRead(std::optional<uint32_t> val = std::nullopt);    // 0x9178 bit 16 (hw agent 2026-11-19): sender reads its send credit again inside its window when it has run out
+	void     SetEVBSecondCreditRead(bool enable);                                    // 0x9178 bit 16; all other bits kept
+	uint32_t ReadEVBLocalChunkCapRegister();                                         // 0x9178 raw
+	bool     ReadEVBShortLastFrame(std::optional<uint32_t> val = std::nullopt);      // 0x9178 bit 17 (hw agent 2026-11-20, bitfile 0xd6112095): a data frame that no longer fits the end of the sender's window is cut to what fits and sent
+	bool     ReadEVBMeasuredWindow(std::optional<uint32_t> val = std::nullopt);      // 0x9178 bit 18 (hw agent 2026-11-20, bitfile 0xd6112095): sender times its window from the measured clock marker spacing, not a fixed 254 clocks
+	uint32_t SetEVBLocalChunkCapRegister(uint32_t value);                            // 0x9178 whole word; returns the value read back
 	uint32_t ReadEVBRemoteChunkControl(std::optional<uint32_t> val = std::nullopt);  // 0x917C raw
 	// EVB3 TX packet history (0x925C status, 0x91F0 readback; hw agent 2026-10-13).  The log records every
 	// 10GbE TX packet until a peer requests a retransmission, then freezes: the entries around the peer's
@@ -1316,6 +1324,10 @@ class DTC_Registers : public CFOandDTC_Registers
 		uint16_t slotClears{0};          ///< [15:0]
 	};
 	uint32_t      ReadEVBSlotHealthRaw(std::optional<uint32_t> val = std::nullopt);
+	/// 0x927C (read-only, SoftReset clear): [31:24] rewinds refused by this sender's DDR ring (must be 0,
+	/// stops at 0xff), [19:0] ring acknowledged index at the latest refusal
+	uint32_t      ReadEVBLatestRewindRefusalRaw();
+	static uint8_t EVBRewindsRefusedCount(uint32_t raw) { return static_cast<uint8_t>(raw >> 24); }
 	EVBSlotHealth ReadEVBSlotHealth();
 	std::string   FormatEVBSlotHealthText(const EVBSlotHealth& health, const std::string& indent);
 	/// 0x9264 EVB_RX_BAD_END (read-only, SoftReset clear): received frames that ended badly.  The layout depends

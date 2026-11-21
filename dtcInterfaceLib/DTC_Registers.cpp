@@ -2422,6 +2422,20 @@ uint8_t DTCLib::DTC_Registers::ReadEVBLoopbackCalibratedOffset(std::optional<uin
 {
 	return static_cast<uint8_t>((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBPacketControl)) >> 0);
 }
+/// Set only the DTC's EVB delay offset (0x915C [7:0], 200MHz clocks = 5 ns steps); idle words and gap in [31:8] are kept.
+/// Returns the register value read back after the write
+uint32_t DTCLib::DTC_Registers::SetEVBLoopbackCalibratedOffset(uint8_t loopbackCalibratedOffset)
+{
+	uint32_t regVal = ReadRegister_(DTC_Register_EVBPacketControl);
+	regVal          = (regVal & 0xFFFFFF00u) | loopbackCalibratedOffset;
+	WriteRegister_(regVal, DTC_Register_EVBPacketControl);
+	return ReadRegister_(DTC_Register_EVBPacketControl);
+}
+/// Read the whole Hardware Event Building Packet Control Info Register (0x915C)
+uint32_t DTCLib::DTC_Registers::ReadEVBPacketControlRaw()
+{
+	return ReadRegister_(DTC_Register_EVBPacketControl);
+}
 
 /// Formats the Hardware Event Building Packet Control Info Register's current value for register dumps
 DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBPacketControlInfo()
@@ -8074,6 +8088,38 @@ void DTCLib::DTC_Registers::SetEVBLocalChunkCap(uint16_t words)
 	WriteRegister_(upperHalf | words, DTC_Register_EVBLocalChunkCap);
 }  // end SetEVBLocalChunkCap()
 
+bool DTCLib::DTC_Registers::ReadEVBSecondCreditRead(std::optional<uint32_t> val)
+{
+	return ((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBLocalChunkCap)) & 0x00010000u) != 0;
+}  // end ReadEVBSecondCreditRead()
+
+void DTCLib::DTC_Registers::SetEVBSecondCreditRead(bool enable)
+{
+	const uint32_t otherBits = ReadRegister_(DTC_Register_EVBLocalChunkCap) & ~0x00010000u;
+	WriteRegister_(otherBits | (enable ? 0x00010000u : 0u), DTC_Register_EVBLocalChunkCap);
+}  // end SetEVBSecondCreditRead()
+
+uint32_t DTCLib::DTC_Registers::ReadEVBLocalChunkCapRegister()
+{
+	return ReadRegister_(DTC_Register_EVBLocalChunkCap);
+}  // end ReadEVBLocalChunkCapRegister()
+
+bool DTCLib::DTC_Registers::ReadEVBShortLastFrame(std::optional<uint32_t> val)
+{
+	return ((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBLocalChunkCap)) & 0x00020000u) != 0;
+}  // end ReadEVBShortLastFrame()
+
+bool DTCLib::DTC_Registers::ReadEVBMeasuredWindow(std::optional<uint32_t> val)
+{
+	return ((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBLocalChunkCap)) & 0x00040000u) != 0;
+}  // end ReadEVBMeasuredWindow()
+
+uint32_t DTCLib::DTC_Registers::SetEVBLocalChunkCapRegister(uint32_t value)
+{
+	WriteRegister_(value, DTC_Register_EVBLocalChunkCap);
+	return ReadRegister_(DTC_Register_EVBLocalChunkCap);
+}  // end SetEVBLocalChunkCapRegister()
+
 uint32_t DTCLib::DTC_Registers::ReadEVBRemoteChunkControl(std::optional<uint32_t> val)
 {
 	return val.has_value() ? *val : ReadRegister_(DTC_Register_EVBRemoteChunkControl);
@@ -8186,6 +8232,11 @@ std::string DTCLib::DTC_Registers::FormatEVBRxBadEndText(const EVBRxBadEnd& rxBa
 		o << "; layout of bitfiles up to 0xd6110995, no refused_whole_frames count";
 	return o.str();
 }  // end FormatEVBRxBadEndText()
+
+uint32_t DTCLib::DTC_Registers::ReadEVBLatestRewindRefusalRaw()
+{
+	return ReadRegister_(DTC_Register_EVBLatestRewindRefusal);
+}  // end ReadEVBLatestRewindRefusalRaw()
 
 DTCLib::DTC_Registers::EVBRxBadEnd DTCLib::DTC_Registers::ReadEVBRxBadEnd()
 {
