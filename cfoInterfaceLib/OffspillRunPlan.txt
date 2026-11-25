@@ -1,0 +1,15 @@
+// Default Off-Spill run plan
+//	One event window every 100 us, free running (does not use RF0).
+//	Based on "Default plans" in otsdaq-mu2e/doc/CFO_RunPlan_Loading.md
+//
+//	Compile with FE Macro 'Compile Runplan' using keyword Offspill,
+//	then load with FE Macro 'Set Runplan' using address keyword Offspill (instruction 0).
+//
+//	NOTE: event_mode 0xB0 is the test bench placeholder value from the doc;
+//	put the real Off-Spill event mode value in the HEARTBEAT line.
+
+WAIT 100 us						// length of each event window (4000 clocks of 25 ns)
+HEARTBEAT event_mode= 0xB0
+MARKER
+INC_TAG							// increment event window tag
+REPEAT							// start again from the first line

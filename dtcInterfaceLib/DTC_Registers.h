@@ -4,6 +4,7 @@
 #include <bitset>  // std::bitset
 // #include <cstdint> // uint8_t, uint16_t
 #include <functional>  // std::bind, std::function
+#include <mutex>       // std::mutex
 #include <vector>      // std::vector
 
 #include "CFOandDTC_Registers.h"
@@ -99,23 +100,28 @@ enum DTC_Register : uint16_t
 	// Reserved - formerly... DTC_Register_TransmitByteCount_Link5 = 0x9254,
 	// Reserved - formerly... DTC_Register_TransmitByteCount_CFOLink = 0x9258,
 	DTC_Register_EVBTxHistoryStatus = 0x925C,  // hw agent 2026-10-13: [31] frozen, [30:26] first resend dest, [25:18] peer last ack seq, [9:0] entries written
-	// Reserved - formerly... DTC_Register_TransmitPacketCount_Link0 = 0x9260,
-	// Reserved - formerly... DTC_Register_TransmitPacketCount_Link1 = 0x9264,
+	DTC_Register_EVBSlotHealth      = 0x9260,  // hw agent 2026-10-26: [31] sticky TX-bookkeeping-empty vs slot-count>64 words for >1 us, [30:16] episodes, [15:0] staging-slot clears; SoftReset clear; two clock domains, a read can tear
+	DTC_Register_EVBRxBadEnd        = 0x9264,  // hw agent 2026-10-30: receiver bad-end verdict (sticky / count / frames dropped); SoftReset clear; layout depends on the bitfile, see EVBRxBadEnd
+	DTC_Register_EVBTxRewindDiag    = 0x9268,  // hw agent 2026-11-05 layout: [31:16] drift at last TX position mismatch (bit 15 = last-word check; [14:0] two's complement words, + skipped / - repeated), [15:8] mismatch count, [7:0] ring refusals; SoftReset clear
+	DTC_Register_EVBPatternWatch    = 0x926C,  // hw agent 2026-11-05: non-consecutive emulator payload words [31:24] at DDR write, [23:16] at ring read, [15:8] on the wire (saturating), [7:3] dest index of last wire hit, [2] write / [1] read / [0] wire sticky; SoftReset clear
+	DTC_Register_EVBRxPosGap        = 0x9270,  // hw agent 2026-11-05: [31:16] data frames refused because ahead of the next needed position (resend asked), [15:0] idle frames ahead that asked for a resend; SoftReset clear
+	DTC_Register_EVBRxRepeatRefusal = 0x9274,  // hw agent 2026-11-06 (0xd61105a3): [31:16] data frames refused as repeats (position behind what is stored), [15:8] sequence gaps in order by position, [7:0] sender restarts; SoftReset clear
 	// Reserved - formerly... DTC_Register_TransmitPacketCount_Link2 = 0x9268,
 	// Reserved - formerly... DTC_Register_TransmitPacketCount_Link3 = 0x926C,
 	// Reserved - formerly... DTC_Register_TransmitPacketCount_Link4 = 0x9270,
 	// Reserved - formerly... DTC_Register_TransmitPacketCount_Link5 = 0x9274,
 	// Reserved - formerly... DTC_Register_TransmitPacketCount_CFOLink = 0x9278,
-	// 0x927C Reserved
+	DTC_Register_EVBLatestRewindRefusal = 0x927C,  // hw agent 2026-11-19: [31:24] rewinds refused by this sender's DDR ring since SoftReset (must be 0, stops at 0xff), [19:0] ring acknowledged index at the latest refusal
 	// 0x9280 Reserved
 	// 0x9290 Reserved
 	// 0x92A0 Reserved
 	DTC_Register_TXPRBSControl = 0x92B0,
 	DTC_Register_RXPRBSControl = 0x92B4,
-	// 0x92B8 Reserved
-	// 0x92BC Reserved
+	DTC_Register_EVBMarkerDelay = 0x92B8,  // [8:0] clock marker delay in 5 ns steps, 0 to 300 (larger is stored as 300); moved here from 0x915C [7:0] (hw agent 2026-11-24)
+	DTC_Register_EVBMissingClockMarkerCount = 0x92BC,  // [31:0] read-only: clock markers this DTC found missing since SoftReset (hw agent 2026-11-23, bitfile 0xd6112399)
 	DTC_Register_EventModeLookupTableControl = 0x92C0,
-	// 0x92C4-0x92EC Reserved
+	DTC_Register_EVBPlanningGap = 0x92C4,  // [9:0] gap between clock markers that the EVB sender plans its send window with, in 10GbE transmit clocks (6.206 ns), reset 254; kept through SoftReset, takes effect at the next SoftReset (hw agent 2026-11-24)
+	// 0x92C8-0x92EC Reserved
 	DTC_Register_DD3TestRegister = 0x92F0,
 	// 0x92F4 Reserved
 	// 0x92F8 Reserved
@@ -374,6 +380,21 @@ enum DTC_Register : uint16_t
 	DTC_Register_TXNonnullHeartbeatCount_Link3 = 0xA48C,
 	DTC_Register_TXNonnullHeartbeatCount_Link4 = 0xA490,
 	DTC_Register_TXNonnullHeartbeatCount_Link5 = 0xA494,
+
+	// 2026-11-04: Data Headers dropped for a wrong Event Window Tag (RECEIVE_DROPPED_DH_COUNTn), 16-bit, SoftReset clear
+	DTC_Register_ReceiveDroppedDHCount_Link0 = 0xA4A0,
+	DTC_Register_ReceiveDroppedDHCount_Link1 = 0xA4A4,
+	DTC_Register_ReceiveDroppedDHCount_Link2 = 0xA4A8,
+	DTC_Register_ReceiveDroppedDHCount_Link3 = 0xA4AC,
+	DTC_Register_ReceiveDroppedDHCount_Link4 = 0xA4B0,
+	DTC_Register_ReceiveDroppedDHCount_Link5 = 0xA4B4,
+	// 2026-11-04: Data Payload packets dropped, wrong-tag header or no accepted header (RECEIVE_DROPPED_DP_COUNTn)
+	DTC_Register_ReceiveDroppedDPCount_Link0 = 0xA4C0,
+	DTC_Register_ReceiveDroppedDPCount_Link1 = 0xA4C4,
+	DTC_Register_ReceiveDroppedDPCount_Link2 = 0xA4C8,
+	DTC_Register_ReceiveDroppedDPCount_Link3 = 0xA4CC,
+	DTC_Register_ReceiveDroppedDPCount_Link4 = 0xA4D0,
+	DTC_Register_ReceiveDroppedDPCount_Link5 = 0xA4D4,
 
 	DTC_Register_Invalid,
 	// };
@@ -638,6 +659,8 @@ class DTC_Registers : public CFOandDTC_Registers
 	uint16_t          ReadEVBIdlePacketWordCount(std::optional<uint32_t> val = std::nullopt);
 	uint8_t           ReadEVBInterpacketGap(std::optional<uint32_t> val = std::nullopt);
 	uint8_t           ReadEVBLoopbackCalibratedOffset(std::optional<uint32_t> val = std::nullopt);
+	uint32_t          SetEVBLoopbackCalibratedOffset(uint8_t loopbackCalibratedOffset);
+	uint32_t          ReadEVBPacketControlRaw();
 	RegisterFormatter FormatEVBPacketControlInfo();
 
 	// EVB Idle Burst (0x9170)
@@ -653,6 +676,8 @@ class DTC_Registers : public CFOandDTC_Registers
 	// EVB Stats
 	uint32_t                                           ReadEVBStats(DTC_EVBStatsType type, uint8_t dtc_mac, std::optional<uint32_t> val = std::nullopt);
 	RegisterFormatter                                  FormatEVBStats(DTC_EVBStatsType type = DTC_EVBStatsType::DTC_EVBStatsType_All);
+	std::vector<int32_t>                               ReadEVBStatsRow(DTC_EVBStatsType type);
+	std::mutex                                         evbStatsReadMutex_;  ///< 0x9160 takes an address write and then the reads; keeps two threads from mixing their addresses
 	std::chrono::time_point<std::chrono::steady_clock> EVB_startDataTime, EVB_endDataTime;
 
 	//----------------- end Hardware Event Building configuration -----------------------
@@ -1201,6 +1226,16 @@ class DTC_Registers : public CFOandDTC_Registers
 	uint32_t     ReadReceiveDHTimeoutCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
 	DTC_Register GetReceiveDHTimeoutCountLinkRegister(DTC_Link_ID const& link);
 
+	// Receive Dropped Data Header Count (wrong Event Window Tag), 0xA4A0.. (2026-11-04)
+	uint32_t          ReadReceiveDroppedDHCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
+	RegisterFormatter FormatReceiveDroppedDHCountLink(DTC_Link_ID const& link);
+	DTC_Register      GetReceiveDroppedDHCountLinkRegister(DTC_Link_ID const& link);
+
+	// Receive Dropped Data Payload Count (wrong-tag header or no accepted header), 0xA4C0.. (2026-11-04)
+	uint32_t          ReadReceiveDroppedDPCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
+	RegisterFormatter FormatReceiveDroppedDPCountLink(DTC_Link_ID const& link);
+	DTC_Register      GetReceiveDroppedDPCountLinkRegister(DTC_Link_ID const& link);
+
 	// TX Heartbeat Packet Count
 	uint32_t          ReadTXHeartbeatPacketCount(DTC_Link_ID const& link, std::optional<uint32_t> val = std::nullopt);
 	RegisterFormatter FormatTXHeartbeatPacketCountLink(DTC_Link_ID const& link);
@@ -1247,6 +1282,22 @@ class DTC_Registers : public CFOandDTC_Registers
 	// EVB3 self-chunk cap (0x9178) and stall-time counters (0x9210-0x9228)
 	uint16_t ReadEVBLocalChunkCap(std::optional<uint32_t> val = std::nullopt);
 	void     SetEVBLocalChunkCap(uint16_t words);                                    // [15:0]; upper half kept
+	bool     ReadEVBSecondCreditRead(std::optional<uint32_t> val = std::nullopt);    // 0x9178 bit 16 (hw agent 2026-11-19): sender reads its send credit again inside its window when it has run out
+	void     SetEVBSecondCreditRead(bool enable);                                    // 0x9178 bit 16; all other bits kept
+	uint32_t ReadEVBLocalChunkCapRegister();                                         // 0x9178 raw
+	bool     ReadEVBShortLastFrame(std::optional<uint32_t> val = std::nullopt);      // 0x9178 bit 17 (hw agent 2026-11-20, bitfile 0xd6112095): a data frame that no longer fits the end of the sender's window is cut to what fits and sent
+	bool     ReadEVBMeasuredWindow(std::optional<uint32_t> val = std::nullopt);      // 0x9178 bit 18 (hw agent 2026-11-20, bitfile 0xd6112095): sender times its window from the measured clock marker spacing, not a fixed 254 clocks
+	bool     ReadEVBAlignedStart(std::optional<uint32_t> val = std::nullopt);        // 0x9178 bit 19 (hw agent 2026-11-21, bitfile 0xd6112193): sender starts its send rotation aligned to the clock marker
+	bool     ReadEVBMarkerFill(std::optional<uint32_t> val = std::nullopt);          // 0x9178 bit 20 (hw agent 2026-11-22, bitfile 0xd6112289): if a clock marker does not arrive, the DTC supplies it to its send-window count
+	uint8_t  ReadEVBMissingClockMarkerCount(std::optional<uint32_t> val = std::nullopt);  // 0x9178 [31:24], read-only (hw agent 2026-11-22, bitfile 0xd6112289): clock markers found missing since SoftReset, saturates at 255
+	bool     ReadEVBDeepPrefetch(std::optional<uint32_t> val = std::nullopt);        // 0x9178 bit 21 (hw agent 2026-11-23, bitfile 0xd6112399): sender stages the next window's words ahead (up to 832 instead of 352)
+	uint32_t ReadEVBMissingClockMarkerCountFull(std::optional<uint32_t> val = std::nullopt);  // 0x92BC [31:0], read-only (hw agent 2026-11-23, bitfile 0xd6112399): clock markers found missing since SoftReset, does not saturate in a run
+	uint16_t ReadEVBMarkerDelay(std::optional<uint32_t> val = std::nullopt);         // 0x92B8 [8:0] (hw agent 2026-11-24): clock marker delay in 5 ns steps, 0 to 300; replaces 0x915C [7:0], which now reads 0
+	uint16_t ReadEVBPlanningGap(std::optional<uint32_t> val = std::nullopt);         // 0x92C4 [9:0] (hw agent 2026-11-24): clock marker gap the EVB sender plans with, in 10GbE transmit clocks, reset 254
+	uint16_t SetEVBPlanningGap(uint16_t planningGap);                                // 0x92C4 [9:0]; returns the gap read back; takes effect at the next SoftReset
+	uint16_t SetEVBMarkerDelay(uint16_t markerDelay);                                // 0x92B8 [8:0]; returns the delay read back (a value above 300 is stored as 300)
+	uint8_t  ReadEVBMarkersPerSendWindow(std::optional<uint32_t> val = std::nullopt);  // 0x9178 [23:22] (hw agent 2026-11-24): returns the number of clock markers per send window: field 0 = 4, 1 = 3, 2 = 2, 3 = 1
+	uint32_t SetEVBLocalChunkCapRegister(uint32_t value);                          // 0x9178 whole word; returns the value read back
 	uint32_t ReadEVBRemoteChunkControl(std::optional<uint32_t> val = std::nullopt);  // 0x917C raw
 	// EVB3 TX packet history (0x925C status, 0x91F0 readback; hw agent 2026-10-13).  The log records every
 	// 10GbE TX packet until a peer requests a retransmission, then freezes: the entries around the peer's
@@ -1276,6 +1327,42 @@ class DTC_Registers : public CFOandDTC_Registers
 	static EVBTxHistoryEntry DecodeEVBTxHistoryEntry(uint32_t raw);
 	uint32_t                 ReadEVBTxHistoryStatus(std::optional<uint32_t> val = std::nullopt);     // 0x925C raw
 	uint16_t                 ReadEVBRxIllegalDestCount(std::optional<uint32_t> val = std::nullopt);  // 0x9180 [15:0]: frames the switch forwarded here that were for another DTC
+	/// 0x9260 EVB slot health (hw agent 2026-10-26): the DDR->TX staging slot state seen on 8-node hardware
+	/// just before 0x9370 bit 9.  Verdict: bit 31 with clears > 0 = the slot clear is the cause; bit 31 with
+	/// clears == 0 = gray-sync / hand-over; nothing set = the fix held.
+	struct EVBSlotHealth
+	{
+		uint32_t raw{0};
+		bool     staleEmptySeen{false};  ///< [31] sticky
+		uint16_t episodes{0};            ///< [30:16]
+		uint16_t slotClears{0};          ///< [15:0]
+	};
+	uint32_t      ReadEVBSlotHealthRaw(std::optional<uint32_t> val = std::nullopt);
+	/// 0x927C (read-only, SoftReset clear): [31:24] rewinds refused by this sender's DDR ring (must be 0,
+	/// stops at 0xff), [19:0] ring acknowledged index at the latest refusal
+	uint32_t      ReadEVBLatestRewindRefusalRaw();
+	static uint8_t EVBRewindsRefusedCount(uint32_t raw) { return static_cast<uint8_t>(raw >> 24); }
+	EVBSlotHealth ReadEVBSlotHealth();
+	std::string   FormatEVBSlotHealthText(const EVBSlotHealth& health, const std::string& indent);
+	/// 0x9264 EVB_RX_BAD_END (read-only, SoftReset clear): received frames that ended badly.  The layout depends
+	/// on the bitfile (hw agent 2026-11-09): after 0xd6110995 the old bad-end count [30:16] is split into the
+	/// bad end word count [30:24] and the count of whole, correct frames refused because they were not the next
+	/// words needed from that sender [23:16].  A non-zero refused count is normal recovery, not an error.
+	struct EVBRxBadEnd
+	{
+		uint32_t raw{0};
+		bool     hasRefusedWholeFrames{false};  ///< layout of bitfiles after 0xd6110995
+		bool     sticky{false};                 ///< [31] a frame closed on a wrong end-of-frame word
+		uint16_t badEndWord{0};                 ///< [30:24] (stops at 0x7f); [30:16] on bitfiles up to 0xd6110995
+		uint8_t  refusedWholeFrames{0};         ///< [23:16] (stops at 0xff); not in bitfiles up to 0xd6110995
+		uint16_t droppedAtEnd{0};               ///< [15:0] frames dropped at their end
+	};
+	/// designDate is the raw 0x9004 value of the same DTC
+	static bool        EVBRxBadEndHasRefusedWholeFrames(uint32_t designDate);
+	static EVBRxBadEnd DecodeEVBRxBadEnd(uint32_t raw, uint32_t designDate);
+	/// The counts on one line, e.g. "sticky 1, bad_end_word 2, refused_whole_frames 3, dropped_at_end 11"
+	static std::string FormatEVBRxBadEndText(const EVBRxBadEnd& rxBadEnd);
+	EVBRxBadEnd        ReadEVBRxBadEnd();
 	/// Read 0x925C and, when readEntries is set, drain 0x91F0 (count+1 reads: the first loads the output).
 	/// The read pointer only rewinds on SoftReset, so the log can be walked ONCE per run; a second walk
 	/// returns 0xFFFFFFFF immediately (alreadyWalked).  The log is a 1024-entry ring (hw agent 2026-10-14).

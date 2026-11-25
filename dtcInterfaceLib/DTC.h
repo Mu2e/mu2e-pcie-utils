@@ -3,6 +3,7 @@
 
 #include <array>
 #include <chrono>
+#include <deque>
 #include <list>
 #include <map>
 #include <memory>
@@ -118,6 +119,10 @@ class DTC : public DTC_Registers
 	bool     GetEVBDrainOnly() const { return evbDrainOnly_; }
 	uint64_t GetEVBDrainedBytes() const { return evbDrainedBytes_; }  ///< chunk payload bytes seen (both modes)
 	uint64_t GetEVBDMABuffersRead() const { return evbDMABuffersRead_; }
+	/// Event tags of the subevent headers seen in the FAFA chunk stream (both modes, also drain-only):
+	/// first and last tag in arrival order, lowest and highest tag, number of subevent headers, and
+	/// the sources whose stream could not be followed (a header cut by a chunk edge or a bad count).
+	std::string FormatEVBEventTagsSeen() const;
 	/// Step profile of GetEVBDataAsEvents: wall time (steady_clock ns) accumulated per step over all
 	/// calls since ResetEVBAssembly, plus call/record counts.  Always on; one clock read per step
 	/// boundary (about 25 ns each, ~0.1 us per call), negligible against the ~60 us a DMA buffer takes.
@@ -128,17 +133,34 @@ class DTC : public DTC_Registers
 		uint64_t recordsExtracted{0};  ///< subevent records validated and staged (Step 4)
 		uint64_t timeoutScanNs{0};     ///< Step 0: open-tag timeout / overflow scan
 		uint64_t readDataNs{0};        ///< Step 1: device read_data (includes waiting up to 1 ms when idle)
+		uint64_t readDataWithDataNs{0};  ///< Step 1: the part of readDataNs spent in calls that returned a buffer (rest = calls that timed out empty)
 		uint64_t chunkWalkNs{0};       ///< Step 3: FAFA chunk walk incl. copy into per-source reassembly
 		uint64_t registerReadNs{0};    ///< Step 2b: dest-node count and local MAC reads, once per run
 		uint64_t recordScanNs{0};      ///< Step 4b: record framing, split join, header consistency, pre-parse checks
 		uint64_t subeventSetupNs{0};   ///< Step 4c: per-record DTC_Event alloc + memcpy + SetupEvent + IsCorrupt
 		uint64_t stagingNs{0};         ///< Step 4d: last-good copy, per-tag staging copy, reassembly erase
 		uint64_t eventReleaseNs{0};    ///< Step 5: assemble N-subevent event, SetupEvent, release
+		// the parts of Step 4d (they add up to stagingNs)
+		uint64_t stagingTagLookupNs{0};       ///< find or create the open tag entry, first arrival time, duplicate check
+		uint64_t stagingSubeventCopyNs{0};    ///< append the subevent to the tag's event buffer (first subevent of a tag also allocates the buffer)
+		uint64_t stagingReassemblyEraseNs{0}; ///< erase the record from the front of the per-source reassembly buffer
+		// the parts of Step 5 (they add up to eventReleaseNs)
+		uint64_t releaseCheckAndSizeNs{0};    ///< oldest tag complete?, ordering check
+		uint64_t releaseEventAllocateNs{0};   ///< make_shared<DTC_Event>(event buffer): the event object takes over the buffer, no copy
+		uint64_t releaseEventCopyNs{0};       ///< fill the event header at the front of the event buffer
+		uint64_t releaseSetupEventNs{0};      ///< DTC_Event::SetupEvent (parse of all subevents and ROC headers) and IsCorrupt
+		uint64_t releaseOutputAndFreeNs{0};   ///< push to the output and erase the tag entry
 		uint64_t releaseBufferNs{0};   ///< read_release of the DMA buffer (RAII on return)
 		uint64_t totalNs{0};           ///< whole call, entry to return
 	};
-	const EVBReadProfile&     GetEVBReadProfile() const { return evbReadProfile_; }
-	std::string               FormatEVBReadProfile() const;                                              ///< one line per step: ms, share of call time, per-call / per-record cost
+	const EVBReadProfile& GetEVBReadProfile() const { return evbReadProfile_; }
+	std::string           FormatEVBReadProfile() const;  ///< one line per step: ms, share of call time, per-call / per-record cost
+	/// Snapshot of every DTC error register in one text block: link lock / enables / JA, per-link
+	/// RINGERROR flags 0x9380-0x939C, latched FIFO / RX / SERDES / EVB (0x9370 decoded, 0x9174 resends)
+	/// / VFIFO flags, per-link error counters, XADC alarm and slow-optical diag.  Read-only; clears
+	/// nothing.  Same registers as the otsdaq "Get DTC Errors" macro; logged automatically whenever an
+	/// event / subevent extraction function gives up on a corrupt stream.
+	std::string               ReadDTCErrors();
 	void                      SetEVBEventTimeout(std::chrono::milliseconds t) { evbEventTimeout_ = t; }  ///< max age of an incomplete event, first subevent arrival to now, before GetEVBDataAsEvents throws (default 2000 ms)
 	std::chrono::milliseconds GetEVBEventTimeout() const { return evbEventTimeout_; }
 	size_t                    GetEVBOpenTagCount() const { return evbPendingTags_.size(); }  ///< tags holding at least one but not yet all N subevents
@@ -148,6 +170,8 @@ class DTC : public DTC_Registers
 	void ResetEVBAssembly()
 	{
 		evbPerSourceReassembly_.clear();
+		evbPerSourceChunkEdges_.clear();
+		evbPerSourceBytesAppended_.clear();
 		evbLastGoodRecord_.clear();
 		evbPendingTags_.clear();
 		evbHaveReleasedTag_      = false;
@@ -159,6 +183,12 @@ class DTC : public DTC_Registers
 		evbRemoteChunkSizeHistogram_.assign(8192, 0);
 		evbDrainedBytes_   = 0;
 		evbDMABuffersRead_ = 0;
+		evbTagTrackOfSource_.assign(256, EVBTagTrackOfSource{});
+		evbSubeventHeadersSeen_ = 0;
+		evbFirstTagSeen_        = 0;
+		evbLastTagSeen_         = 0;
+		evbLowestTagSeen_       = 0;
+		evbHighestTagSeen_      = 0;
 		evbReadProfile_    = EVBReadProfile{};
 		evbSourcesKnown_   = false;
 	}
@@ -351,6 +381,9 @@ class DTC : public DTC_Registers
 	void ReleaseAllBuffers(const DTC_DMA_Engine& channel);
 
   private:
+	/// Log ReadDTCErrors() at error level from a corrupt-data exit of an extraction function.
+	/// Never throws: a register read failure here must not hide the original corruption.
+	void                            logDTCErrorsOnCorruption(const char* extractionFunctionName);
 	std::unique_ptr<DTC_DataPacket> ReadNextPacket(const DTC_DMA_Engine& channel, int tmo_ms);
 	int                             ReadBuffer(const DTC_DMA_Engine& channel, int retries = 10);
 	/// <summary>
@@ -418,11 +451,28 @@ class DTC : public DTC_Registers
 	// State for GetEVBDataAsEvents: per-source FAFA chunk reassembly
 	std::map<uint8_t /*chunk_src*/, std::vector<uint8_t>> evbPerSourceReassembly_;
 	std::map<uint8_t /*chunk_src*/, std::vector<uint8_t>> evbLastGoodRecord_;  ///< last cleanly-parsed record per source, dumped alongside a bad one for comparison
+	/// Where each FAFA chunk landed in a source's byte stream, so a fault dump can say whether a bad word
+	/// sits at a chunk edge or a DMA buffer edge.  streamByteOffset counts every byte ever appended for
+	/// the source; the offset inside the live reassembly buffer is streamByteOffset - (appended - buffer size).
+	struct EVBChunkEdge
+	{
+		uint64_t streamByteOffset;       ///< first payload byte of this chunk, in the source's cumulative byte stream
+		uint64_t dmaBufferSequence;      ///< evbDMABuffersRead_ when the chunk arrived (same value = same DMA buffer)
+		size_t   wordOffsetInDmaBuffer;  ///< word index of the FAFA header inside that DMA buffer
+		uint16_t chunkWordCount;         ///< payload words in the chunk
+	};
+	std::map<uint8_t /*chunk_src*/, std::deque<EVBChunkEdge>> evbPerSourceChunkEdges_;     ///< recent chunk edges per source (pruned once consumed)
+	std::map<uint8_t /*chunk_src*/, uint64_t>                 evbPerSourceBytesAppended_;  ///< bytes ever appended to the source's reassembly buffer
 	// Per-tag event assembly: a tag is complete when all N source DTCs have delivered their subevent
 	struct EVBPendingTag
 	{
-		std::chrono::steady_clock::time_point                     firstArrival;  ///< when the first subevent for this tag was staged
-		std::map<uint8_t /*source_dtc_id*/, std::vector<uint8_t>> subevents;     ///< raw subevent bytes (record header stripped), keyed by source
+		std::chrono::steady_clock::time_point firstArrival;  ///< when the first subevent for this tag arrived
+		/// The event being built: room for the event header (filled when the event is complete), then
+		/// each subevent (record header stripped) appended as it arrives, so in arrival order, not in
+		/// source order.  When complete, the DTC_Event takes over this buffer without a copy.
+		std::shared_ptr<std::vector<uint8_t>> eventBytes;
+		std::array<uint64_t, 4>               sourcesPresentBits{};    ///< one bit per source_dtc_id (0..255) that has delivered this tag
+		uint16_t                              sourcesPresentCount{0};  ///< number of subevents appended so far
 	};
 	std::map<uint64_t /*event window tag*/, EVBPendingTag> evbPendingTags_;
 	std::chrono::milliseconds                              evbEventTimeout_{2000};
@@ -430,6 +480,19 @@ class DTC : public DTC_Registers
 	bool                                                   evbDrainOnly_{false};
 	uint64_t                                               evbDrainedBytes_{0};
 	uint64_t                                               evbDMABuffersRead_{0};
+	/// Where one source's record stream stands, to find the subevent headers without reassembly
+	struct EVBTagTrackOfSource
+	{
+		uint64_t recordBytesRemaining{0};    ///< bytes of the current record still to come
+		uint64_t subeventBytesRemaining{0};  ///< subevent bytes still to come in later records (split subevents)
+		bool     streamLost{false};          ///< a header was cut by a chunk edge or a count was bad: no longer followed
+	};
+	std::vector<EVBTagTrackOfSource>                       evbTagTrackOfSource_ = std::vector<EVBTagTrackOfSource>(256);
+	uint64_t                                               evbSubeventHeadersSeen_{0};
+	uint64_t                                               evbFirstTagSeen_{0};
+	uint64_t                                               evbLastTagSeen_{0};
+	uint64_t                                               evbLowestTagSeen_{0};
+	uint64_t                                               evbHighestTagSeen_{0};
 	EVBReadProfile                                         evbReadProfile_;
 	uint8_t                                                evbNumSources_{1};
 	bool                                                   evbSourcesKnown_{false};

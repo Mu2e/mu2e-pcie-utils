@@ -36,9 +36,12 @@
 #include <unistd.h>
 #include <fstream>
 #include <iostream>
-#include <sstream>    // Convert uint to hex string
-#include <iomanip>    // std::setw / std::setfill for record hex dumps
-#include <algorithm>  // std::min
+#include <sstream>     // Convert uint to hex string
+#include <iomanip>     // std::setw / std::setfill for record hex dumps
+#include <algorithm>   // std::min
+#include <bitset>      // JA loss-of-signal bits in ReadDTCErrors
+#include <exception>   // std::uncaught_exceptions in the corruption loggers
+#include <functional>  // per-link counter rows in ReadDTCErrors
 
 DTCLib::DTC::DTC(DTC_SimMode mode, int dtc, unsigned rocMask, std::string expectedDesignVersion, bool skipInit, std::string simMemoryFile, const std::string& uid)
 	: DTC_Registers(mode, dtc, simMemoryFile, rocMask, expectedDesignVersion, skipInit, uid), daqDMAInfo_(), dcsDMAInfo_()
@@ -153,16 +156,19 @@ std::vector<std::unique_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetData(DTC_EventWi
 	{
 		DTC_TLOG(TLVL_WARNING) << "GetData: Bad omen: Wrong packet type at the current read position";
 		daqDMAInfo_.currentReadPtr = nullptr;
+		logDTCErrorsOnCorruption("GetData");
 	}
 	catch (DTC_IOErrorException& ex)
 	{
 		daqDMAInfo_.currentReadPtr = nullptr;
 		DTC_TLOG(TLVL_WARNING) << "GetData: IO Exception Occurred!";
+		logDTCErrorsOnCorruption("GetData");
 	}
 	catch (DTC_DataCorruptionException& ex)
 	{
 		daqDMAInfo_.currentReadPtr = nullptr;
 		DTC_TLOG(TLVL_WARNING) << "GetData: Data Corruption Exception Occurred!";
+		logDTCErrorsOnCorruption("GetData");
 	}
 
 	DTC_TLOG(TLVL_GetData) << "GetData RETURN";
@@ -224,6 +230,17 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetSubEventDataAsEv
 
 	// Release the previous buffer NOW — we are done with it.
 	ReleaseBuffers(DTC_DMA_Engine_DAQ);
+
+	// Any throw below is a corrupt stream (bad prefix, header sanity, 0xdeadbeef, overflow): log the
+	// DTC error registers alongside it, then let it propagate.
+	struct CorruptionLogger
+	{
+		DTC& dtc;
+		~CorruptionLogger()
+		{
+			if (std::uncaught_exceptions() > 0) dtc.logDTCErrorsOnCorruption("GetSubEventDataAsEvents");
+		}
+	} corruptionLogger{*this};
 
 	// ------------------------------------------------------------------
 	do  // primary loop to read buffers until target event count is reached or timeout
@@ -595,6 +612,14 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 		accumulator += static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(now - lapStart).count());
 		lapStart = now;
 	};
+	// same as lap, for one part of a step: the time goes to the part and to the step total
+	auto lapPart = [&lapStart](uint64_t& partAccumulator, uint64_t& stepAccumulator) {
+		const ProfileClock::time_point now = ProfileClock::now();
+		const uint64_t elapsedNs = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(now - lapStart).count());
+		partAccumulator += elapsedNs;
+		stepAccumulator += elapsedNs;
+		lapStart = now;
+	};
 	++evbReadProfile_.calls;
 	struct ProfileTotal
 	{
@@ -620,17 +645,35 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 		os << std::dec;
 	};
 
-	// Describe a pending (incomplete) tag: which sources are present, dump each staged subevent
+	// Describe a pending (incomplete) tag: which sources are present, dump each staged subevent.
+	// The subevents sit one after another in the tag's event buffer (after the room for the event
+	// header), in arrival order; each one's header gives its source and its length.
 	auto describePending = [&](std::ostream& os, uint64_t tag, const EVBPendingTag& pend) {
-		os << "  EWT=" << tag << ": " << pend.subevents.size() << " of " << static_cast<int>(evbNumSources_)
+		os << "  EWT=" << tag << ": " << pend.sourcesPresentCount << " of " << static_cast<int>(evbNumSources_)
 		   << " sources present, age " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - pend.firstArrival).count()
-		   << " ms. Present source_dtc_id:";
-		for (auto& [sid, bytes] : pend.subevents) os << " 0x" << std::hex << static_cast<int>(sid) << std::dec;
+		   << " ms. Present source_dtc_id (in arrival order):";
+		std::vector<std::pair<size_t /*offset*/, size_t /*bytes*/>> stagedSubevents;
+		if (pend.eventBytes)
+		{
+			size_t stagedOffset = sizeof(DTC_EventHeader);
+			while (stagedOffset + sizeof(DTC_SubEventHeader) <= pend.eventBytes->size())
+			{
+				const auto*  stagedHeader    = reinterpret_cast<const DTC_SubEventHeader*>(pend.eventBytes->data() + stagedOffset);
+				const size_t stagedByteCount = stagedHeader->inclusive_subevent_byte_count;
+				if (stagedByteCount < sizeof(DTC_SubEventHeader) || stagedOffset + stagedByteCount > pend.eventBytes->size()) break;
+				os << " 0x" << std::hex << static_cast<int>(stagedHeader->source_dtc_id) << std::dec;
+				stagedSubevents.emplace_back(stagedOffset, stagedByteCount);
+				stagedOffset += stagedByteCount;
+			}
+		}
 		os << ". Sources seen this run (any tag):";
 		for (auto& [sid, buf] : evbPerSourceReassembly_) os << " 0x" << std::hex << static_cast<int>(sid) << std::dec;
 		os << "\n";
-		for (auto& [sid, bytes] : pend.subevents)
-			dumpRecord(os, "  staged subevent (no record header)", sid, bytes.data(), bytes.size());
+		for (auto& [stagedOffset, stagedByteCount] : stagedSubevents)
+		{
+			const auto* stagedHeader = reinterpret_cast<const DTC_SubEventHeader*>(pend.eventBytes->data() + stagedOffset);
+			dumpRecord(os, "  staged subevent (no record header)", static_cast<uint8_t>(stagedHeader->source_dtc_id), pend.eventBytes->data() + stagedOffset, stagedByteCount);
+		}
 	};
 
 	auto dumpEVBErrorStatus = [&](std::ostream& os) {
@@ -639,6 +682,17 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 		for (const auto& line : DecodeEVBErrorStatus(evbErr))
 			os << "  " << line << "\n";
 	};
+
+	// Every throw in this function is a corrupt EVB stream (timeout, framing, record, assembly):
+	// log the full DTC error register set alongside it, then let it propagate.
+	struct CorruptionLogger
+	{
+		DTC& dtc;
+		~CorruptionLogger()
+		{
+			if (std::uncaught_exceptions() > 0) dtc.logDTCErrorsOnCorruption("GetEVBDataAsEvents");
+		}
+	} corruptionLogger{*this};
 
 	// Step 0: event-completion timeout / overflow scan.  Runs on EVERY call, including calls
 	// where no DMA data arrives, so a tag whose remaining subevents never come is reported.
@@ -654,7 +708,7 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 			ss << "GetEVBDataAsEvents: event assembly " << (timedOut ? "TIMEOUT" : "OVERFLOW")
 			   << " -- EWT=" << tag << " has waited " << std::chrono::duration_cast<std::chrono::milliseconds>(now - pend.firstArrival).count()
 			   << " ms since its first subevent (limit " << evbEventTimeout_.count() << " ms), "
-			   << pend.subevents.size() << " of " << static_cast<int>(evbNumSources_) << " sources present; open tags=" << evbPendingTags_.size()
+			   << pend.sourcesPresentCount << " of " << static_cast<int>(evbNumSources_) << " sources present; open tags=" << evbPendingTags_.size()
 			   << " (max " << evbMaxOpenTags_ << "). Stopping EVB DMA parsing.\n";
 			describePending(ss, tag, pend);
 			dumpEVBErrorStatus(ss);
@@ -669,6 +723,7 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 	// Step 1: read one DMA buffer directly from hardware
 	void* buffer = nullptr;
 	int dmaBytes = device_.read_data(DTC_DMA_Engine_DAQ, &buffer, 1 /*tmo_ms*/);
+	const uint64_t readDataNsBeforeThisCall = evbReadProfile_.readDataNs;
 	lap(evbReadProfile_.readDataNs);
 
 	if (dmaBytes <= 0 || buffer == nullptr)
@@ -678,6 +733,7 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 		return output;
 	}
 	++evbReadProfile_.callsWithData;
+	evbReadProfile_.readDataWithDataNs += evbReadProfile_.readDataNs - readDataNsBeforeThisCall;
 
 	// DMA buffer lifetime: this one buffer is released when the function exits by ANY path
 	// (normal return or a throw from any check below).  Step 3 copies every chunk payload out
@@ -775,11 +831,79 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 
 			size_t chunkBytes = static_cast<size_t>(chunk_wc) * sizeof(uint64_t);
 			evbDrainedBytes_ += chunkBytes;
+
+			// Follow this source's record stream just far enough to read the event tag of every subevent
+			// header (also in drain-only mode).  A record is its 8-byte count word followed by the subevent;
+			// a subevent larger than one DMA transfer continues in records that are a count word plus raw words.
+			{
+				EVBTagTrackOfSource& tagTrack = evbTagTrackOfSource_[chunk_src];
+				const uint8_t* chunkBytesPointer = reinterpret_cast<const uint8_t*>(&words[ptr + 1]);
+				size_t chunkOffset = 0;
+				while (!tagTrack.streamLost && chunkOffset < chunkBytes)
+				{
+					if (tagTrack.recordBytesRemaining == 0)
+					{
+						const size_t bytesNeeded = RECORD_HEADER_SIZE + (tagTrack.subeventBytesRemaining == 0 ? sizeof(DTC_SubEventHeader) : 0);
+						if (chunkBytes - chunkOffset < bytesNeeded)
+						{
+							tagTrack.streamLost = true;  // header cut by the chunk edge
+							break;
+						}
+						const uint64_t countWord = *reinterpret_cast<const uint64_t*>(chunkBytesPointer + chunkOffset);
+						const bool countWordValid = (countWord >> 16) == 0 && (countWord & 0xF) == 0x8 && (countWord & 0xFFFF) > RECORD_HEADER_SIZE;
+						uint64_t recordBytes = countWord & 0xFFFF;
+						if (tagTrack.subeventBytesRemaining == 0)
+						{
+							const auto* subeventHeader = reinterpret_cast<const DTC_SubEventHeader*>(chunkBytesPointer + chunkOffset + RECORD_HEADER_SIZE);
+							const uint64_t subeventBytes = subeventHeader->inclusive_subevent_byte_count;
+							if (subeventBytes < sizeof(DTC_SubEventHeader))
+							{
+								tagTrack.streamLost = true;
+								break;
+							}
+							// one record holds the whole subevent unless the count word says it is a shorter first piece
+							if (!countWordValid || recordBytes >= RECORD_HEADER_SIZE + subeventBytes || recordBytes <= RECORD_HEADER_SIZE + sizeof(DTC_SubEventHeader))
+								recordBytes = RECORD_HEADER_SIZE + subeventBytes;
+							tagTrack.subeventBytesRemaining = subeventBytes - (recordBytes - RECORD_HEADER_SIZE);
+							const uint64_t eventTag = static_cast<uint64_t>(subeventHeader->event_tag_low) | (static_cast<uint64_t>(subeventHeader->event_tag_high) << 32);
+							if (evbSubeventHeadersSeen_ == 0)
+								evbFirstTagSeen_ = evbLowestTagSeen_ = evbHighestTagSeen_ = eventTag;
+							evbLastTagSeen_ = eventTag;
+							if (eventTag < evbLowestTagSeen_) evbLowestTagSeen_ = eventTag;
+							if (eventTag > evbHighestTagSeen_) evbHighestTagSeen_ = eventTag;
+							++evbSubeventHeadersSeen_;
+						}
+						else
+						{
+							if (!countWordValid || recordBytes - RECORD_HEADER_SIZE > tagTrack.subeventBytesRemaining)
+							{
+								tagTrack.streamLost = true;
+								break;
+							}
+							tagTrack.subeventBytesRemaining -= recordBytes - RECORD_HEADER_SIZE;
+						}
+						tagTrack.recordBytesRemaining = recordBytes;
+					}
+					const size_t bytesTaken = std::min(static_cast<size_t>(tagTrack.recordBytesRemaining), chunkBytes - chunkOffset);
+					tagTrack.recordBytesRemaining -= bytesTaken;
+					chunkOffset += bytesTaken;
+				}
+			}
 			if (!evbDrainOnly_)
 			{
 				auto& srcBuf = evbPerSourceReassembly_[chunk_src];
 				const uint8_t* chunkData = reinterpret_cast<const uint8_t*>(&words[ptr + 1]);
 				srcBuf.insert(srcBuf.end(), chunkData, chunkData + chunkBytes);
+
+				// Remember where this chunk landed in the source's stream (fault dumps relate a bad
+				// word to chunk and DMA buffer edges).  Edges already consumed out of the buffer are dropped.
+				uint64_t& bytesAppended = evbPerSourceBytesAppended_[chunk_src];
+				auto& chunkEdges = evbPerSourceChunkEdges_[chunk_src];
+				chunkEdges.push_back(EVBChunkEdge{bytesAppended, evbDMABuffersRead_, ptr, chunk_wc});
+				bytesAppended += chunkBytes;
+				const uint64_t bytesConsumed = bytesAppended - srcBuf.size();
+				while (!chunkEdges.empty() && chunkEdges.front().streamByteOffset + static_cast<uint64_t>(chunkEdges.front().chunkWordCount) * sizeof(uint64_t) <= bytesConsumed)
+					chunkEdges.pop_front();
 			}
 
 			++evbChunksParsed_;
@@ -837,7 +961,7 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 			{
 				const uint64_t firstCountWord = *reinterpret_cast<const uint64_t*>(srcBuf.data());
 				const size_t firstRecordBytes = static_cast<size_t>(firstCountWord & 0xFFFF);
-				if ((firstRecordBytes & 0xF) == 0x8 && firstRecordBytes > RECORD_HEADER_SIZE + sizeof(DTC_SubEventHeader) &&
+				if ((firstCountWord >> 16) == 0 && (firstRecordBytes & 0xF) == 0x8 && firstRecordBytes > RECORD_HEADER_SIZE + sizeof(DTC_SubEventHeader) &&
 					firstRecordBytes < totalRecordBytes)
 				{
 					std::vector<size_t> continuationCountWordOffsets;
@@ -855,11 +979,14 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 						const uint64_t continuationCountWord = *reinterpret_cast<const uint64_t*>(srcBuf.data() + nextRecordOffset);
 						const size_t continuationRecordBytes = static_cast<size_t>(continuationCountWord & 0xFFFF);
 						const size_t continuationPayloadBytes = continuationRecordBytes - RECORD_HEADER_SIZE;
-						if ((continuationRecordBytes & 0xF) != 0x8 || continuationRecordBytes <= RECORD_HEADER_SIZE)
+						// A real count word is 0x000000000000NNN8: bits [63:16] zero.  Emulator payload words whose
+						// low halfword happens to end in 8 (seen 2026-11-04: xxxx0038 words accepted as 56-byte
+						// records, 535 of them) must not pass.
+						if ((continuationCountWord >> 16) != 0 || (continuationRecordBytes & 0xF) != 0x8 || continuationRecordBytes <= RECORD_HEADER_SIZE)
 						{
 							std::stringstream reason;
 							reason << "continuation count word at byte " << nextRecordOffset << " = 0x" << std::hex << std::setw(16) << std::setfill('0')
-								   << continuationCountWord << std::setfill(' ') << std::dec << " is not a count quadword (low nibble must be 8)";
+								   << continuationCountWord << std::setfill(' ') << std::dec << " is not a count quadword (bits [63:16] must be 0, low nibble 8)";
 							splitError = reason.str();
 							break;
 						}
@@ -883,14 +1010,71 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 
 					if (!splitError.empty())
 					{
+						// How far short is this source's stream of the header's inclusive count?  Bytes in
+						// hand for the source minus the record headers seen so far, against the count the
+						// header promised; in 8-byte words so a missing count quadword (1 word) and a lost
+						// frame (~186 words) read differently.
+						const size_t recordHeadersSeen = continuationCountWordOffsets.size() + 1;
+						const size_t streamPayloadBytesInHand = srcBuf.size() >= recordHeadersSeen * RECORD_HEADER_SIZE ? srcBuf.size() - recordHeadersSeen * RECORD_HEADER_SIZE : 0;
+						const int64_t shortfallBytes = static_cast<int64_t>(subEvtByteCount) - static_cast<int64_t>(streamPayloadBytesInHand);
 						std::stringstream ss;
 						ss << "GetEVBDataAsEvents: split subevent from src=0x" << std::hex << static_cast<int>(src) << std::dec
 						   << " cannot be reassembled: first record " << firstRecordBytes << " bytes, subevent inclusive count " << subEvtByteCount
-						   << "; " << splitError << "; tag_low=" << subHdr->event_tag_low << ".\n";
+						   << "; " << splitError << "; tag_low=" << subHdr->event_tag_low << ".\n"
+						   << "  stream in hand for src: " << srcBuf.size() << " bytes (" << srcBuf.size() / sizeof(uint64_t) << " words) = " << recordHeadersSeen
+						   << " record header(s) + " << streamPayloadBytesInHand << " payload bytes; validated payload before the bad word " << payloadBytesCollected
+						   << " bytes; header promises " << subEvtByteCount << " payload bytes; stream is " << (shortfallBytes >= 0 ? "SHORT" : "LONG") << " by "
+						   << (shortfallBytes >= 0 ? shortfallBytes : -shortfallBytes) << " bytes = " << (shortfallBytes >= 0 ? shortfallBytes : -shortfallBytes) / static_cast<int64_t>(sizeof(uint64_t))
+						   << " words (1 word = a dropped count quadword, ~186 words = a lost frame; LONG = next event's data already appended).\n";
 						dumpRecord(ss, "BAD split record (reassembly buffer head)", src, srcBuf.data(), std::min(srcBuf.size(), static_cast<size_t>(1024)));
+						// The ROC emulator payload is a running counter (+2 per 32-bit half), so the last words
+						// of the previous record against the first words of this one give the gap in words
+						// exactly: 0 = the count quadword was dropped, ~186 = a whole frame is missing.
+						// 16 words before the boundary (a 4-word shift of the count word is still visible) and 32 after.
+						if (nextRecordOffset >= 128 && nextRecordOffset <= srcBuf.size())
+							dumpRecord(ss, "tail of the record before the bad continuation (last 16 words)", src, srcBuf.data() + nextRecordOffset - 128, 128);
+						else if (nextRecordOffset <= srcBuf.size())
+							dumpRecord(ss, "tail of the record before the bad continuation (all words)", src, srcBuf.data(), nextRecordOffset);
 						if (nextRecordOffset < srcBuf.size())
 							dumpRecord(ss, "at the bad continuation", src, srcBuf.data() + nextRecordOffset,
 									   std::min(srcBuf.size() - nextRecordOffset, static_cast<size_t>(256)));
+						// Chunk and DMA-buffer edges around the boundary: is the bad word at a chunk edge, a DMA
+						// buffer edge, or in the middle of a chunk?  Offsets are bytes relative to the boundary
+						// (negative = before it); the containing chunk is marked.
+						{
+							const uint64_t bytesAppended = evbPerSourceBytesAppended_[src];
+							const uint64_t bytesConsumed = bytesAppended >= srcBuf.size() ? bytesAppended - srcBuf.size() : 0;
+							const uint64_t boundaryStreamOffset = bytesConsumed + nextRecordOffset;
+							const auto& chunkEdges = evbPerSourceChunkEdges_[src];
+							ss << "chunk edges near the boundary src=0x" << std::hex << static_cast<int>(src) << std::dec
+							   << " (boundary = stream byte " << boundaryStreamOffset << ", buffer byte " << nextRecordOffset
+							   << "; DMA buffers read this run = " << evbDMABuffersRead_ << "):\n";
+							bool anyEdgePrinted = false;
+							uint64_t previousDmaSequence = 0;
+							for (const auto& edge : chunkEdges)
+							{
+								const uint64_t chunkEndStreamOffset = edge.streamByteOffset + static_cast<uint64_t>(edge.chunkWordCount) * sizeof(uint64_t);
+								if (chunkEndStreamOffset + 2048 < boundaryStreamOffset || edge.streamByteOffset > boundaryStreamOffset + 2048)
+								{
+									previousDmaSequence = edge.dmaBufferSequence;
+									continue;
+								}
+								const int64_t relativeStart = static_cast<int64_t>(edge.streamByteOffset) - static_cast<int64_t>(boundaryStreamOffset);
+								const int64_t relativeEnd = static_cast<int64_t>(chunkEndStreamOffset) - static_cast<int64_t>(boundaryStreamOffset);
+								const bool containsBoundary = relativeStart <= 0 && relativeEnd > 0;
+								ss << "  chunk wc=" << edge.chunkWordCount << " bytes [" << relativeStart << ", " << relativeEnd << ") rel. to boundary"
+								   << ", DMA buffer #" << edge.dmaBufferSequence << " word " << edge.wordOffsetInDmaBuffer
+								   << (anyEdgePrinted && edge.dmaBufferSequence != previousDmaSequence ? " (NEW DMA buffer)" : "");
+								if (containsBoundary)
+									ss << "  <-- holds the boundary word at byte " << (-relativeStart) << " of its " << (relativeEnd - relativeStart) << " payload bytes"
+									   << (relativeStart == 0 ? " (boundary IS this chunk's first word)" : "")
+									   << (relativeEnd == static_cast<int64_t>(sizeof(uint64_t)) ? " (boundary IS this chunk's last word)" : "");
+								ss << "\n";
+								anyEdgePrinted = true;
+								previousDmaSequence = edge.dmaBufferSequence;
+							}
+							if (!anyEdgePrinted) ss << "  (no chunk edges recorded within 2048 bytes of the boundary)\n";
+						}
 						dumpEVBErrorStatus(ss);
 						DTC_TLOG(TLVL_ERROR) << ss.str();
 						++evbFramingErrors_;
@@ -958,15 +1142,6 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 			}
 			lap(evbReadProfile_.recordScanNs);
 
-			size_t eventSize = sizeof(DTC_EventHeader) + subEvtByteCount;
-			auto event = std::make_shared<DTC_Event>(eventSize);
-
-			DTC_EventHeader evtHdr{};
-			evtHdr.inclusive_event_byte_count = eventSize;
-			evtHdr.num_dtcs = 1;
-			evtHdr.event_tag_low = subHdr->event_tag_low;
-			evtHdr.event_tag_high = subHdr->event_tag_high;
-
 			if (subHdr->subevent_format_version != CURRENT_SUBEVENT_FORMAT_VERSION)
 			{
 				std::stringstream ss;
@@ -1026,48 +1201,69 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 									 << " dtc_mac=0x" << std::hex << subHdr->dtc_mac
 									 << " fmt=0x" << subHdr->subevent_format_version << std::dec;
 
-			uint8_t* eventBuf = static_cast<uint8_t*>(const_cast<void*>(event->GetRawBufferPointer()));
-			memcpy(eventBuf, &evtHdr, sizeof(DTC_EventHeader));
-			*event->GetHeader() = evtHdr;
-
-			memcpy(eventBuf + sizeof(DTC_EventHeader), srcBuf.data() + RECORD_HEADER_SIZE, subEvtByteCount);
-
-			event->SetupEvent();
-
-			if (event->IsCorrupt())
+			// Extra debugging only (TRACE level 9, i.e. TTEST(1)): parse each subevent on its own as
+			// soon as it arrives, so a bad one is reported with its chunk source and a dump next to
+			// the last good record from that source.  Not in the normal path: it costs one extra
+			// allocation, two extra copies and one extra parse per subevent.  Without it, the full
+			// parse happens once, on the assembled event in Step 5.
+			if (TTEST(1))
 			{
-				std::stringstream ss;
-				ss << "GetEVBDataAsEvents: event corruption detected at EWT="
-				   << event->GetEventWindowTag().GetEventWindowTag(true)
-				   << " from src=0x" << std::hex << static_cast<int>(src) << std::dec << "\n";
-				dumpRecord(ss, "BAD record", src, srcBuf.data(), totalRecordBytes);
-				auto lg = evbLastGoodRecord_.find(src);
-				if (lg != evbLastGoodRecord_.end())
-					dumpRecord(ss, "Last GOOD record (same src, for comparison)", src, lg->second.data(), lg->second.size());
-				else
-					ss << "(no previous good record from src=0x" << std::hex << static_cast<int>(src) << std::dec << ")\n";
-				dumpEVBErrorStatus(ss);
-				device_.resetSpyHasOccurred();
-				device_.spy(DTC_DMA_Engine_DAQ, 3 | 8 | 16, ss);
-				DTC_TLOG(TLVL_ERROR) << ss.str();
-				srcBuf.erase(srcBuf.begin(), srcBuf.begin() + totalRecordBytes);
-				throw std::runtime_error(ss.str());
+				size_t subeventCheckEventSize = sizeof(DTC_EventHeader) + subEvtByteCount;
+				auto subeventCheckEvent = std::make_shared<DTC_Event>(subeventCheckEventSize);
+
+				DTC_EventHeader subeventCheckEventHeader{};
+				subeventCheckEventHeader.inclusive_event_byte_count = subeventCheckEventSize;
+				subeventCheckEventHeader.num_dtcs = 1;
+				subeventCheckEventHeader.event_tag_low = subHdr->event_tag_low;
+				subeventCheckEventHeader.event_tag_high = subHdr->event_tag_high;
+
+				uint8_t* subeventCheckEventBuffer = static_cast<uint8_t*>(const_cast<void*>(subeventCheckEvent->GetRawBufferPointer()));
+				memcpy(subeventCheckEventBuffer, &subeventCheckEventHeader, sizeof(DTC_EventHeader));
+				*subeventCheckEvent->GetHeader() = subeventCheckEventHeader;
+
+				memcpy(subeventCheckEventBuffer + sizeof(DTC_EventHeader), srcBuf.data() + RECORD_HEADER_SIZE, subEvtByteCount);
+
+				subeventCheckEvent->SetupEvent();
+
+				if (subeventCheckEvent->IsCorrupt())
+				{
+					std::stringstream ss;
+					ss << "GetEVBDataAsEvents: event corruption detected at EWT="
+					   << subeventCheckEvent->GetEventWindowTag().GetEventWindowTag(true)
+					   << " from src=0x" << std::hex << static_cast<int>(src) << std::dec << "\n";
+					dumpRecord(ss, "BAD record", src, srcBuf.data(), totalRecordBytes);
+					auto lg = evbLastGoodRecord_.find(src);
+					if (lg != evbLastGoodRecord_.end())
+						dumpRecord(ss, "Last GOOD record (same src, for comparison)", src, lg->second.data(), lg->second.size());
+					else
+						ss << "(no previous good record from src=0x" << std::hex << static_cast<int>(src) << std::dec << ")\n";
+					dumpEVBErrorStatus(ss);
+					device_.resetSpyHasOccurred();
+					device_.spy(DTC_DMA_Engine_DAQ, 3 | 8 | 16, ss);
+					DTC_TLOG(TLVL_ERROR) << ss.str();
+					srcBuf.erase(srcBuf.begin(), srcBuf.begin() + totalRecordBytes);
+					throw std::runtime_error(ss.str());
+				}
+
+				evbLastGoodRecord_[src].assign(srcBuf.begin(), srcBuf.begin() + totalRecordBytes);
 			}
-
 			lap(evbReadProfile_.subeventSetupNs);
-			evbLastGoodRecord_[src].assign(srcBuf.begin(), srcBuf.begin() + totalRecordBytes);
 
-			// Stage the validated subevent (record header stripped) into the per-tag assembly
-			// table.  Subevents for one tag arrive once from each of the N source DTCs, in no
+			// Append the validated subevent (record header stripped) to the event buffer of its
+			// tag.  Subevents for one tag arrive once from each of the N source DTCs, in no
 			// fixed order and intermixed with other tags; the event is released only when all
 			// N are present (Step 5).  A second delivery from the same source is an error.
+			// The subevents are stored in arrival order, so this is the only copy of the data
+			// between the per-source buffer and the finished event.
 			{
 				uint64_t tag = (static_cast<uint64_t>(subHdr->event_tag_high) << 32) | subHdr->event_tag_low;
 				uint8_t srcId = static_cast<uint8_t>(subHdr->source_dtc_id);
 				auto& pend = evbPendingTags_[tag];
-				if (pend.subevents.empty())
+				if (pend.sourcesPresentCount == 0)
 					pend.firstArrival = std::chrono::steady_clock::now();
-				if (pend.subevents.count(srcId))
+				uint64_t&      sourcePresentWord = pend.sourcesPresentBits[srcId >> 6];
+				const uint64_t sourcePresentBit  = 1ull << (srcId & 63);
+				if (sourcePresentWord & sourcePresentBit)
 				{
 					std::stringstream ss;
 					ss << "GetEVBDataAsEvents: DUPLICATE subevent for EWT=" << tag << " from source_dtc_id=0x" << std::hex << static_cast<int>(srcId)
@@ -1080,14 +1276,27 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 					srcBuf.erase(srcBuf.begin(), srcBuf.begin() + totalRecordBytes);
 					throw std::runtime_error(ss.str());
 				}
-				pend.subevents[srcId].assign(srcBuf.begin() + RECORD_HEADER_SIZE, srcBuf.begin() + totalRecordBytes);
+				lapPart(evbReadProfile_.stagingTagLookupNs, evbReadProfile_.stagingNs);
+				if (!pend.eventBytes)
+				{
+					// First subevent of this tag: one allocation sized for the event header plus N
+					// subevents of this size (reserve does not zero the memory; if the others turn
+					// out larger the vector grows on its own).  The header is filled in Step 5.
+					pend.eventBytes = std::make_shared<std::vector<uint8_t>>();
+					pend.eventBytes->reserve(sizeof(DTC_EventHeader) + static_cast<size_t>(evbNumSources_) * subEvtByteCount);
+					pend.eventBytes->resize(sizeof(DTC_EventHeader));
+				}
+				pend.eventBytes->insert(pend.eventBytes->end(), srcBuf.begin() + RECORD_HEADER_SIZE, srcBuf.begin() + totalRecordBytes);
+				sourcePresentWord |= sourcePresentBit;
+				++pend.sourcesPresentCount;
 				DTC_TLOG(TLVL_DEBUG + 1) << "GetEVBDataAsEvents: staged EWT=" << tag << " source_dtc_id=0x" << std::hex << static_cast<int>(srcId) << std::dec
-										 << " (" << pend.subevents.size() << "/" << static_cast<int>(evbNumSources_) << " sources); open tags=" << evbPendingTags_.size();
+										 << " (" << pend.sourcesPresentCount << "/" << static_cast<int>(evbNumSources_) << " sources); open tags=" << evbPendingTags_.size();
+				lapPart(evbReadProfile_.stagingSubeventCopyNs, evbReadProfile_.stagingNs);
 			}
 
 			srcBuf.erase(srcBuf.begin(), srcBuf.begin() + totalRecordBytes);
 			++evbReadProfile_.recordsExtracted;
-			lap(evbReadProfile_.stagingNs);
+			lapPart(evbReadProfile_.stagingReassemblyEraseNs, evbReadProfile_.stagingNs);
 		}
 	}
 	lap(evbReadProfile_.recordScanNs);  // loop exits (incomplete record / empty source) land here
@@ -1100,7 +1309,7 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 	{
 		auto it = evbPendingTags_.begin();
 		auto& pend = it->second;
-		if (pend.subevents.size() < evbNumSources_)
+		if (pend.sourcesPresentCount < evbNumSources_)
 			break;  // oldest tag still incomplete: wait (Step 0 guards against waiting forever)
 
 		uint64_t tag = it->first;
@@ -1115,15 +1324,17 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 			throw std::runtime_error(ss.str());
 		}
 
-		size_t total = 0;
-		for (auto& [sid, bytes] : pend.subevents) total += bytes.size();
-		size_t eventSize = sizeof(DTC_EventHeader) + total;
-		auto event = std::make_shared<DTC_Event>(eventSize);
+		// The event buffer already holds every subevent (appended in Step 4d, in arrival order):
+		// the event object takes it over as it is, and only the event header is still to be filled.
+		size_t eventSize = pend.eventBytes->size();
+		lapPart(evbReadProfile_.releaseCheckAndSizeNs, evbReadProfile_.eventReleaseNs);
+		auto event = std::make_shared<DTC_Event>(pend.eventBytes);
+		lapPart(evbReadProfile_.releaseEventAllocateNs, evbReadProfile_.eventReleaseNs);
 
-		const auto* firstSub = reinterpret_cast<const DTC_SubEventHeader*>(pend.subevents.begin()->second.data());
+		const auto* firstSub = reinterpret_cast<const DTC_SubEventHeader*>(pend.eventBytes->data() + sizeof(DTC_EventHeader));  // first to arrive
 		DTC_EventHeader evtHdr{};
 		evtHdr.inclusive_event_byte_count = eventSize;
-		evtHdr.num_dtcs = pend.subevents.size();
+		evtHdr.num_dtcs = pend.sourcesPresentCount;
 		evtHdr.event_tag_low = static_cast<uint32_t>(tag & 0xFFFFFFFF);
 		evtHdr.event_tag_high = static_cast<uint16_t>(tag >> 32);
 		evtHdr.event_mode = firstSub->event_mode;
@@ -1134,19 +1345,16 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 		uint8_t* buf = static_cast<uint8_t*>(const_cast<void*>(event->GetRawBufferPointer()));
 		memcpy(buf, &evtHdr, sizeof(DTC_EventHeader));
 		*event->GetHeader() = evtHdr;
-		size_t off = sizeof(DTC_EventHeader);
-		for (auto& [sid, bytes] : pend.subevents)  // std::map: ascending source_dtc_id
-		{
-			memcpy(buf + off, bytes.data(), bytes.size());
-			off += bytes.size();
-		}
+		lapPart(evbReadProfile_.releaseEventCopyNs, evbReadProfile_.eventReleaseNs);
 
 		event->SetupEvent();
+		lapPart(evbReadProfile_.releaseSetupEventNs, evbReadProfile_.eventReleaseNs);
 		if (event->IsCorrupt())
 		{
 			std::stringstream ss;
-			ss << "GetEVBDataAsEvents: assembled event EWT=" << tag << " (" << pend.subevents.size() << " subevents, " << eventSize
-			   << " bytes) failed SetupEvent although each subevent validated individually.\n";
+			ss << "GetEVBDataAsEvents: assembled event EWT=" << tag << " (" << pend.sourcesPresentCount << " subevents, " << eventSize
+			   << " bytes) failed SetupEvent. To find the bad subevent at arrival, with a dump of the record and of the last good record"
+			   << " from the same source, turn on TRACE level 9 (debug+1) for this name and run again.\n";
 			describePending(ss, tag, pend);
 			dumpEVBErrorStatus(ss);
 			DTC_TLOG(TLVL_ERROR) << ss.str();
@@ -1157,12 +1365,13 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 		evbLastReleasedTag_ = tag;
 		evbHaveReleasedTag_ = true;
 		++evbEventsReleased_;
-		DTC_TLOG(TLVL_DEBUG + 1) << "GetEVBDataAsEvents: released complete event EWT=" << tag << " with " << pend.subevents.size()
+		DTC_TLOG(TLVL_DEBUG + 1) << "GetEVBDataAsEvents: released complete event EWT=" << tag << " with " << pend.sourcesPresentCount
 								 << " subevents, " << eventSize << " bytes; open tags=" << (evbPendingTags_.size() - 1);
 		output.push_back(std::move(event));
 		evbPendingTags_.erase(it);
+		lapPart(evbReadProfile_.releaseOutputAndFreeNs, evbReadProfile_.eventReleaseNs);
 	}
-	lap(evbReadProfile_.eventReleaseNs);
+	lapPart(evbReadProfile_.releaseCheckAndSizeNs, evbReadProfile_.eventReleaseNs);  // the check that ends the loop (no tag, or oldest tag incomplete)
 
 	// Step 6: the DMA buffer is released by dmaRelease (RAII, declared after read_data) on return.
 	return output;
@@ -1191,18 +1400,44 @@ std::string DTCLib::DTC::FormatEVBReadProfile() const
 	const uint64_t dataCalls = profile.callsWithData ? profile.callsWithData : 1;
 	row("Step 0 open-tag timeout scan", profile.timeoutScanNs, profile.calls, "call");
 	row("Step 1 read_data (incl. idle wait)", profile.readDataNs, profile.calls, "call");
+	row("  of which calls that got a buffer", profile.readDataWithDataNs, dataCalls, "buffer");
+	row("  of which calls that timed out empty", profile.readDataNs - profile.readDataWithDataNs,
+	    profile.calls > profile.callsWithData ? profile.calls - profile.callsWithData : 0, "call");
 	row("Step 3 FAFA chunk walk + copy", profile.chunkWalkNs, dataCalls, "buffer");
 	row("Step 2b register reads (N, MAC, once)", profile.registerReadNs, dataCalls, "buffer");
 	row("Step 4b record scan + checks", profile.recordScanNs, dataCalls, "buffer");
 	row("Step 4c DTC_Event alloc+copy+Setup", profile.subeventSetupNs, profile.recordsExtracted, "record");
 	row("Step 4d staging copies + erase", profile.stagingNs, profile.recordsExtracted, "record");
+	row("  4d open tag lookup + duplicate check", profile.stagingTagLookupNs, profile.recordsExtracted, "record");
+	row("  4d append subevent to event buffer", profile.stagingSubeventCopyNs, profile.recordsExtracted, "record");
+	row("  4d erase record from source buffer", profile.stagingReassemblyEraseNs, profile.recordsExtracted, "record");
 	row("Step 5 event assembly + release", profile.eventReleaseNs, evbEventsReleased_, "event");
+	row("  5 complete check + ordering check", profile.releaseCheckAndSizeNs, evbEventsReleased_, "event");
+	row("  5 event object takes buffer (no copy)", profile.releaseEventAllocateNs, evbEventsReleased_, "event");
+	row("  5 fill event header", profile.releaseEventCopyNs, evbEventsReleased_, "event");
+	row("  5 SetupEvent parse", profile.releaseSetupEventNs, evbEventsReleased_, "event");
+	row("  5 output push + erase of open tag", profile.releaseOutputAndFreeNs, evbEventsReleased_, "event");
 	row("DMA read_release", profile.releaseBufferNs, dataCalls, "buffer");
 	const uint64_t accounted = profile.timeoutScanNs + profile.readDataNs + profile.chunkWalkNs + profile.registerReadNs + profile.recordScanNs +
 							   profile.subeventSetupNs + profile.stagingNs + profile.eventReleaseNs + profile.releaseBufferNs;
 	row("(unaccounted: clock reads, returns)", profile.totalNs > accounted ? profile.totalNs - accounted : 0, 0, "");
 	return o.str();
 }  // end FormatEVBReadProfile()
+
+std::string DTCLib::DTC::FormatEVBEventTagsSeen() const
+{
+	std::stringstream ss;
+	if (evbSubeventHeadersSeen_ == 0)
+		ss << "no subevent header seen";
+	else
+		ss << "first " << evbFirstTagSeen_ << ", last " << evbLastTagSeen_ << ", lowest " << evbLowestTagSeen_ << ", highest " << evbHighestTagSeen_
+		   << ", subevent headers " << evbSubeventHeadersSeen_;
+	size_t sourcesLost = 0;
+	for (const auto& tagTrack : evbTagTrackOfSource_)
+		if (tagTrack.streamLost) ++sourcesLost;
+	ss << ", sources no longer followed " << sourcesLost;
+	return ss.str();
+}  // end FormatEVBEventTagsSeen()
 
 std::string DTCLib::DTC::FormatEVBRemoteChunkSizes() const
 {
@@ -1242,6 +1477,236 @@ std::string DTCLib::DTC::FormatEVBRemoteChunkSizes() const
 	return o.str();
 }  // end FormatEVBRemoteChunkSizes()
 
+std::string DTCLib::DTC::ReadDTCErrors()
+{
+	auto hex8 = [](uint32_t value) {
+		std::ostringstream s;
+		s << "0x" << std::hex << std::setfill('0') << std::setw(8) << value;
+		return s.str();
+	};
+	auto hex2 = [](uint32_t value) {
+		std::ostringstream s;
+		s << "0x" << std::hex << std::setfill('0') << std::setw(2) << (value & 0xFF);
+		return s.str();
+	};
+	auto bin8 = [](uint8_t value) {
+		std::string s(8, '0');
+		for (int bitIndex = 7; bitIndex >= 0; --bitIndex)
+			s[7 - bitIndex] = (value & (1 << bitIndex)) ? '1' : '0';
+		return s;
+	};
+	auto readRaw = [this](uint16_t address) {
+		uint32_t value = 0;
+		device_.read_register(address, 100, &value);
+		return value;
+	};
+	// Per-link RINGERROR bit names (0x9380-0x939C), same table as the register map.
+	auto decodeRingErrorFlags = [](uint32_t flags) -> std::string {
+		struct BitName
+		{
+			uint8_t bit;
+			const char* name;
+		};
+		static const BitName ringErrorBits[] = {
+			{0, "S2C_OVF"}, {1, "INVALID_S2C"}, {2, "DCS_PEND"}, {3, "EWM_HBP"}, {4, "PLL"}, {5, "RXCDR"}, {6, "RX_OVF"}, {7, "RX_INVALID"}, {8, "DCS_TMO"}, {9, "DCS_OVF"}, {10, "CFO_TAG"}, {11, "HBP_OVF"}, {12, "OUT_OF_BAND"}, {13, "BUF_RESIDUE"}, {14, "STRAY_EWM"}, {15, "INT_EMU"}, {20, "EXT_EMU"}, {21, "WRONG_TAG_DROPPED"}, {22, "HEADERLESS_PAYLOAD"},  // 2026-11-04, see 0xA4A0.. / 0xA4C0..
+		};
+		const uint32_t errorAndStatusMask = 0x007FFFFF;
+		if ((flags & errorAndStatusMask) == 0) return "(clean)";
+		std::string result;
+		for (const auto& entry : ringErrorBits)
+			if (flags & (1u << entry.bit))
+			{
+				if (!result.empty()) result += " ";
+				result += entry.name;
+			}
+		const uint32_t fsmState = (flags >> 16) & 0xF;
+		if (fsmState)
+		{
+			if (!result.empty()) result += "  ";
+			result += "fsm=" + std::to_string(fsmState);
+		}
+		if (result.empty()) result = "(status only)";
+		return result;
+	};
+
+	std::ostringstream output;
+
+	output << "=== Link Status ===\n";
+	{
+		output << "  CDR Lock (0x9140): 0-5:";
+		for (int linkIndex = 0; linkIndex < 6; ++linkIndex)
+			output << (ReadSERDESRXCDRLock(static_cast<DTC_Link_ID>(linkIndex)) ? "1" : "0");
+		output << "  CFO:" << (ReadSERDESRXCDRLock(DTC_Link_CFO) ? "1" : "0")
+			   << "  L7:" << ((readRaw(0x9140) & (1u << 7)) ? "1" : "0") << "\n";
+
+		bool allPllLocked = true;
+		for (int linkIndex = 0; linkIndex < 7; ++linkIndex)
+			allPllLocked &= ReadSERDESPLLLocked(static_cast<DTC_Link_ID>(linkIndex));
+		allPllLocked &= (readRaw(0x9128) & (1u << 7)) != 0;
+		output << "  PLL Lock (0x9128): " << (allPllLocked ? "all OK" : "FAULT") << "\n";
+
+		const uint32_t linkEnableRaw = ReadLinkEnabledData();
+		output << "  TX enable: " << bin8(linkEnableRaw & 0xFF) << "  RX enable: " << bin8((linkEnableRaw >> 8) & 0xFF) << "\n";
+
+		const uint32_t jaSourceValue = ReadJitterAttenuatorSelect().to_ulong();
+		const std::string jaSourceName = jaSourceValue == 0 ? "emulated CFO" : (jaSourceValue == 1 ? "RJ45" : "FMC/SFP+");
+		const bool jaLocked = ReadJitterAttenuatorLocked();
+		const uint32_t jaCSR = readRaw(static_cast<uint16_t>(DTC_Register_JitterAttenuatorCSR));
+		const uint32_t jaLOS = (jaCSR >> 8) & 0xF;
+		output << "  JA (0x9308): src=" << jaSourceName << ", LOL=" << (jaLocked ? "0" : "1") << ", LOS=" << std::bitset<4>(jaLOS) << "\n";
+	}
+
+	output << "\n=== Per-Link Flags (0x9380-0x939C, latched, cleared by link reset) ===\n";
+	{
+		static const char* linkLabels[] = {"ROC 0", "ROC 1", "ROC 2", "ROC 3", "ROC 4", "ROC 5", "CFO  ", "L7   "};
+		static const uint16_t linkRegisters[] = {
+			static_cast<uint16_t>(DTC_Register_Link0ErrorFlags),
+			static_cast<uint16_t>(DTC_Register_Link0ErrorFlags + 0x04),
+			static_cast<uint16_t>(DTC_Register_Link0ErrorFlags + 0x08),
+			static_cast<uint16_t>(DTC_Register_Link0ErrorFlags + 0x0C),
+			static_cast<uint16_t>(DTC_Register_Link0ErrorFlags + 0x10),
+			static_cast<uint16_t>(DTC_Register_Link0ErrorFlags + 0x14),
+			static_cast<uint16_t>(DTC_Register_CFOLinkErrorFlags),
+			static_cast<uint16_t>(DTC_Register_LinkMuxErrorFlags),
+		};
+		for (int linkIndex = 0; linkIndex < 8; ++linkIndex)
+		{
+			const uint32_t flags = readRaw(linkRegisters[linkIndex]);
+			output << "  " << linkLabels[linkIndex] << ": " << hex8(flags) << "  " << decodeRingErrorFlags(flags) << "\n";
+		}
+	}
+
+	output << "\n=== Latched Flags ===\n";
+	{
+		output << "  FIFO 0x9190:" << hex8(readRaw(static_cast<uint16_t>(DTC_Register_FIFOFullErrorFlag0)))
+			   << "  0x9194:" << hex8(readRaw(static_cast<uint16_t>(DTC_Register_FIFOFullErrorFlag1)))
+			   << "  0x9198:" << hex8(readRaw(static_cast<uint16_t>(DTC_Register_FIFOFullErrorFlag2))) << "\n";
+
+		const uint32_t rxBuf = readRaw(static_cast<uint16_t>(DTC_Register_ReceivePacketError));
+		const uint32_t rxPktCount = readRaw(static_cast<uint16_t>(DTC_Register_RXPacketCountErrorFlags));
+		output << "  RX buf (0x919C): pkt_err=" << ((rxBuf >> 8) & 0x7F) << ", crc_err=" << (rxBuf & 0x7F)
+			   << "   pkt_count (0x91CC): " << (rxPktCount & 0x7F) << "\n";
+
+		output << "  SERDES disp (0x911C): " << hex2(readRaw(static_cast<uint16_t>(CFOandDTC_Register_SERDES_RXDisparityError)))
+			   << "  NIT (0x9120): " << hex2(readRaw(static_cast<uint16_t>(CFOandDTC_Register_SERDES_RXCharacterNotInTableError)))
+			   << "  unlock (0x9124): " << hex2(readRaw(static_cast<uint16_t>(CFOandDTC_Register_SERDES_UnlockError))) << "\n";
+
+		const uint32_t evbFlags = readRaw(static_cast<uint16_t>(DTC_Register_EventBuilderErrorFlags));
+		output << "  EVB (0x9370): " << hex8(evbFlags);
+		if (evbFlags == 0) output << "  (clean)";
+		output << "\n";
+		if (evbFlags != 0)
+			for (const auto& line : DecodeEVBErrorStatus(evbFlags))
+				output << "    " << line << "\n";
+		// Retransmission registers exist from bitfile 0xd6100291 (0x9004 bit 7 is the 6-ROC flag).
+		const uint32_t designDate = readRaw(0x9004);
+		if ((designDate & ~0x80u) >= (0xd6100291u & ~0x80u))
+		{
+			const uint32_t resendCount = readRaw(static_cast<uint16_t>(DTC_Register_EVBResendCount));
+			output << "  EVB resends (0x9174): requested " << ReadEVBResendsRequested(resendCount)
+				   << ", served " << ReadEVBResendsServed(resendCount) << "\n";
+		}
+		const uint32_t rxBadEndVerdict = readRaw(static_cast<uint16_t>(DTC_Register_EVBRxBadEnd));
+		const uint32_t txRewindDiag = readRaw(static_cast<uint16_t>(DTC_Register_EVBTxRewindDiag));
+		// hw agent 2026-11-09: the layout of 0x9264 depends on the bitfile of this DTC; refused_whole_frames is normal recovery
+		output << "  EVB RX bad-end verdict (0x9264): " << hex8(rxBadEndVerdict) << (rxBadEndVerdict == 0 ? "  (none)" : "")
+			   << "  " << FormatEVBRxBadEndText(DecodeEVBRxBadEnd(rxBadEndVerdict, designDate))
+			   << "   0x9370 bit 12 (RX frame size): " << (((evbFlags >> 12) & 1) ? "SET" : "clear") << "\n";
+		{
+			// 0x9268 (hw agent 2026-11-06): [31:16] = 15-bit two's complement staging head minus expected
+			// position at the last mismatch (negative = words behind / repeated, positive = ahead / skipped),
+			// bit 15 = last-word check (clear = header check); [15:8] mismatches, [7:0] acks/rewinds refused.
+			const uint32_t driftField = (txRewindDiag >> 16) & 0xFFFF;
+			int            driftWords = static_cast<int>(driftField & 0x7FFF);
+			if (driftWords & 0x4000) driftWords -= 0x8000;
+			output << "  EVB TX rewind diag (0x9268): " << hex8(txRewindDiag) << "  mismatches [15:8] = " << ((txRewindDiag >> 8) & 0xFF)
+				   << ", acks/rewinds refused [7:0] = " << (txRewindDiag & 0xFF);
+			if (((txRewindDiag >> 8) & 0xFF) != 0)
+				output << ", drift at last mismatch = " << driftWords << " words (" << (driftWords < 0 ? "behind" : "ahead") << ") at "
+					   << ((driftField & 0x8000) ? "last-word" : "header") << " check";
+			output << "\n";
+		}
+		{
+			const uint32_t slotHealth = readRaw(static_cast<uint16_t>(DTC_Register_EVBSlotHealth));
+			// hw agent 2026-11-08: [31] sticky, [30:16] stale-inventory events, [15:8] slot evictions by the DDR side, [7:0] slot clears
+			output << "  EVB slot health (0x9260): " << hex8(slotHealth) << "  sticky [31] = " << ((slotHealth >> 31) & 1)
+				   << ", stale-inventory events [30:16] = " << ((slotHealth >> 16) & 0x7FFF)
+				   << ", slot turn-overs that re-read [15:8] = " << ((slotHealth >> 8) & 0xFF)
+				   << ", slot clears [7:0] = " << (slotHealth & 0xFF) << "\n";
+		}
+		{
+			const uint32_t patternWatch = readRaw(static_cast<uint16_t>(DTC_Register_EVBPatternWatch));
+			output << "  EVB pattern watch (0x926C): " << hex8(patternWatch) << "  non-consecutive words: write " << ((patternWatch >> 24) & 0xFF)
+				   << " / read " << ((patternWatch >> 16) & 0xFF) << " / wire " << ((patternWatch >> 8) & 0xFF)
+				   << " / dest " << ((patternWatch >> 3) & 0x1F) << "; sticky write " << ((patternWatch >> 2) & 1)
+				   << " read " << ((patternWatch >> 1) & 1) << " wire " << (patternWatch & 1) << "\n";
+			const uint32_t rxPosGap = readRaw(static_cast<uint16_t>(DTC_Register_EVBRxPosGap));
+			output << "  EVB RX position gap (0x9270): " << hex8(rxPosGap) << "  data frames refused ahead of position [31:16] = " << ((rxPosGap >> 16) & 0xFFFF)
+				   << ", idle frames ahead asking resend [15:0] = " << (rxPosGap & 0xFFFF) << "\n";
+			const uint32_t rxRepeatRefusal = readRaw(static_cast<uint16_t>(DTC_Register_EVBRxRepeatRefusal));
+			output << "  EVB RX repeat refusal (0x9274): " << hex8(rxRepeatRefusal) << "  data frames refused as repeats [31:16] = " << ((rxRepeatRefusal >> 16) & 0xFFFF)
+				   << ", sequence gaps in order [15:8] = " << ((rxRepeatRefusal >> 8) & 0xFF) << ", sender restarts [7:0] = " << (rxRepeatRefusal & 0xFF) << "\n";
+		}
+
+		output << "  VFIFO SERDES (0x9374): " << hex8(readRaw(static_cast<uint16_t>(DTC_Register_InputBufferErrorFlags)))
+			   << "  PCI (0x9378): " << hex8(readRaw(static_cast<uint16_t>(DTC_Register_OutputBufferErrorFlags))) << "\n";
+	}
+
+	output << "\n=== Counters ===\n";
+	{
+		auto formatLinkArray = [&](const std::string& label, int linkCount, const std::function<uint32_t(int)>& readFunction) {
+			output << "  " << label << ": ";
+			for (int linkIndex = 0; linkIndex < linkCount; ++linkIndex)
+			{
+				if (linkIndex) output << " / ";
+				output << readFunction(linkIndex);
+			}
+			output << "\n";
+		};
+		formatLinkArray("Not-in-table (0x9500)  ", 7, [&](int linkIndex) { return ReadSERDESCharacterNotInTableErrorCount(static_cast<DTC_Link_ID>(linkIndex)); });
+		formatLinkArray("CDR unlock (0x93B0)    ", 7, [&](int linkIndex) { return ReadRXCDRUnlockCount(static_cast<DTC_Link_ID>(linkIndex)); });
+		formatLinkArray("Missed CFO pkt (0x9340)", 6, [&](int linkIndex) { return ReadMissedCFOPacketCount(static_cast<DTC_Link_ID>(linkIndex)); });
+		formatLinkArray("DH timeout (0xA420)    ", 6, [&](int linkIndex) { return ReadReceiveDHTimeoutCount(static_cast<DTC_Link_ID>(linkIndex)); });
+		// 2026-11-04: wrong-tag Data Headers and their payload (or headerless payload) dropped, SoftReset clear
+		formatLinkArray("DH wrong-tag drop (0xA4A0)", 6, [&](int linkIndex) { return ReadReceiveDroppedDHCount(static_cast<DTC_Link_ID>(linkIndex)); });
+		formatLinkArray("DP dropped (0xA4C0)    ", 6, [&](int linkIndex) { return ReadReceiveDroppedDPCount(static_cast<DTC_Link_ID>(linkIndex)); });
+
+		output << "  Local event drop (0x9360): " << ReadLocalFragmentDropCount() << "\n";
+		output << "  10G RX pkt err (0x9590): " << ReadEVBSERDESRXPacketErrorCounter() << "\n";
+		output << "  JA lock loss (0x93CC): " << ReadJitterAttenuatorUnlockCount()
+			   << "   JA sig loss: " << ReadJitterAttenuatorRecoveredClockLOSCount() << " / " << ReadJitterAttenuatorExternalClockLOSCount() << "\n";
+		output << "  CFO evt-start err (0x93D0): " << readRaw(static_cast<uint16_t>(DTC_Register_CFOLinkEventStartErrorCount))
+			   << "   CFO 40MHz err (0x93D4): " << readRaw(static_cast<uint16_t>(DTC_Register_CFOLink40MHzErrorCount)) << "\n";
+		const uint32_t cdcDiag = ReadCFOCDCDiag();
+		output << "  CFO CDC diag (0x9688): parity=" << ((cdcDiag >> 16) & 0xFFFF) << ", batch_slip=" << (cdcDiag & 0xFFFF) << "\n";
+	}
+
+	output << "\n=== System ===\n";
+	{
+		output << "  XADC alarm (0x9020): " << hex8(readRaw(static_cast<uint16_t>(CFOandDTC_Register_FPGA_MonitorAlarm))) << "\n";
+		output << "  Slow optical (0x9410): " << hex8(readRaw(static_cast<uint16_t>(DTC_Register_SlowOpticalLinksDiag))) << "\n";
+	}
+
+	return output.str();
+}  // end ReadDTCErrors()
+
+void DTCLib::DTC::logDTCErrorsOnCorruption(const char* extractionFunctionName)
+{
+	try
+	{
+		DTC_TLOG(TLVL_ERROR) << extractionFunctionName << ": DTC error registers at corruption:\n"
+							 << ReadDTCErrors();
+	}
+	catch (const std::exception& e)
+	{
+		DTC_TLOG(TLVL_ERROR) << extractionFunctionName << ": could not read DTC error registers: " << e.what();
+	}
+	catch (...)
+	{
+		DTC_TLOG(TLVL_ERROR) << extractionFunctionName << ": could not read DTC error registers";
+	}
+}  // end logDTCErrorsOnCorruption()
+
 // ---------------------------------------------------------------------------
 // GetSubEventData v2 -- simplified, one-buffer-per-call subevent extractor
 // ---------------------------------------------------------------------------
@@ -1270,6 +1735,17 @@ std::vector<std::unique_ptr<DTCLib::DTC_SubEvent>> DTCLib::DTC::GetSubEventData(
 							 << " pendingTotal=" << pendingSubEventTotalBytes_
 							 << " pendingPrefixConsumed=" << pendingPrefixConsumed_
 							 << " daqBufs=" << daqDMAInfo_.buffer.size();
+
+	// Every throw in this function is a corrupt stream (header consistency, partial-header sanity,
+	// SetupSubEvent failure): log the DTC error registers alongside it, then let it propagate.
+	struct CorruptionLogger
+	{
+		DTC& dtc;
+		~CorruptionLogger()
+		{
+			if (std::uncaught_exceptions() > 0) dtc.logDTCErrorsOnCorruption("GetSubEventData");
+		}
+	} corruptionLogger{*this};
 
 	// Release the previous buffer NOW — we are done with it.
 	// (Pending bytes have already been copied out of it into pendingSubEventBytes_.)

@@ -1,0 +1,26 @@
+// Default On-Spill run plan
+//	One event window per RF0 accelerator marker.
+//	Based on "Default plans" in otsdaq-mu2e/doc/CFO_RunPlan_Loading.md
+//
+//	The first WAIT runs once per spill and sets the minimum event window length (100 us).
+//	The plan must loop with LABEL/GOTO_LABEL (not REPEAT) so that first WAIT is not run again.
+//
+//	Compile with FE Macro 'Compile Runplan' using keyword Onspill,
+//	then load with FE Macro 'Set Runplan' using address keyword Onspill (instruction 256).
+//
+//	NOTE: GOTO_LABEL is compiled as an instruction count from the first line of this plan
+//	(here 2, the WAIT NEXT RF0 line). The firmware adds the plan's base address, so the
+//	same compiled binary can be loaded at any address. This needs CFO firmware with
+//	GOTO relative to the plan base (see the doc above); older firmware treats the GOTO
+//	target as an absolute address, which is only correct for a plan loaded at address 0.
+//
+//	NOTE: event_mode 0xA1 is the test bench placeholder value from the doc;
+//	put the real On-Spill event mode value in the HEARTBEAT line.
+
+WAIT 100 us						// minimum event window length (4000 clocks of 25 ns), runs once per spill
+LABEL							// loop start
+	WAIT NEXT RF0				// hold until the next RF0 marker
+	HEARTBEAT event_mode= 0xA1
+	MARKER
+	INC_TAG						// increment event window tag
+GOTO_LABEL						// jump back to the line after LABEL

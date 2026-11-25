@@ -11,6 +11,7 @@
 #include <memory>
 #include <mutex>
 #include <queue>
+#include <random>
 #include <thread>
 #include <unordered_map>
 
@@ -139,6 +140,7 @@ class mu2esim
 	void                  CFOEmulator_();
 	void                  packetSimulator_(DTCLib::DTC_EventWindowTag ts, DTCLib::DTC_Link_ID link, uint16_t packetCount);
 	void                  dcsPacketSimulator_(DTCLib::DTC_DCSRequestPacket in, DTCLib::DTC_Link_ID rocLink);
+	void                  updateFakeTemperature_(DTCLib::DTC_Link_ID rocLink);
 
 	void eventSimulator_(DTCLib::DTC_EventWindowTag ts);
 	void trackerBlockSimulator_(DTCLib::DTC_EventWindowTag ts, DTCLib::DTC_Link_ID link, int DTCID);
@@ -151,6 +153,16 @@ class mu2esim
 	std::unordered_map<DTCLib::DTC_Link_ID,
 	                   std::unordered_map<uint16_t /* ROC address*/, uint16_t /* ROC data*/>>
 	         rocRegisters_;
+
+	/// Simulated ROC register that acts like a temperature sensor, in units of 0.01 degC:
+	/// every read moves it by a small random step (a random walk); a write sets it.
+	static constexpr uint16_t fakeTemperatureRocAddress_ = 1000;
+	static constexpr uint16_t fakeTemperatureStartValue_ = 2500;
+	static constexpr uint16_t fakeTemperatureMinimumValue_ = 1500;
+	static constexpr uint16_t fakeTemperatureMaximumValue_ = 3500;
+	static constexpr int      fakeTemperatureMaximumStep_  = 5;
+	std::mt19937              fakeTemperatureRandomGenerator_{std::random_device{}()};
+
 	unsigned swIdx_[MU2E_MAX_CHANNELS];
 	unsigned hwIdx_[MU2E_MAX_CHANNELS];
 	// uint32_t detSimLoopCount_;

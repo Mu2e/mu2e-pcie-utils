@@ -2422,6 +2422,20 @@ uint8_t DTCLib::DTC_Registers::ReadEVBLoopbackCalibratedOffset(std::optional<uin
 {
 	return static_cast<uint8_t>((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBPacketControl)) >> 0);
 }
+/// Set only the DTC's EVB delay offset (0x915C [7:0], 200MHz clocks = 5 ns steps); idle words and gap in [31:8] are kept.
+/// Returns the register value read back after the write
+uint32_t DTCLib::DTC_Registers::SetEVBLoopbackCalibratedOffset(uint8_t loopbackCalibratedOffset)
+{
+	uint32_t regVal = ReadRegister_(DTC_Register_EVBPacketControl);
+	regVal          = (regVal & 0xFFFFFF00u) | loopbackCalibratedOffset;
+	WriteRegister_(regVal, DTC_Register_EVBPacketControl);
+	return ReadRegister_(DTC_Register_EVBPacketControl);
+}
+/// Read the whole Hardware Event Building Packet Control Info Register (0x915C)
+uint32_t DTCLib::DTC_Registers::ReadEVBPacketControlRaw()
+{
+	return ReadRegister_(DTC_Register_EVBPacketControl);
+}
 
 /// Formats the Hardware Event Building Packet Control Info Register's current value for register dumps
 DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatEVBPacketControlInfo()
@@ -2517,12 +2531,25 @@ uint32_t DTCLib::DTC_Registers::ReadEVBStats(DTC_EVBStatsType type, uint8_t dtc_
 	t |= dtc_mac;  // address fully built now
 	__COUTT__ << "Read EVB Stat address: 0x" << std::hex << t << __E__;
 
+	// the Buffer Test thread and an FE Macro may both read stats: address write and reads must stay together
+	std::lock_guard<std::mutex> evbStatsReadLock(evbStatsReadMutex_);
+
 	WriteRegister_(t, DTC_Register_EVBStats);
 
 	// first read drains any stale capture from the TX FSM holding the BRAM port
 	ReadRegister_(DTC_Register_EVBStats);
 	return ReadRegister_(DTC_Register_EVBStats);
 }  // end ReadEVBStats()
+
+// Read one EVB stats type for every DTC of the cluster: entry i is the value for the DTC with EVB address (start node + i), as signed 32-bit
+std::vector<int32_t> DTCLib::DTC_Registers::ReadEVBStatsRow(DTC_EVBStatsType type)
+{
+	std::vector<int32_t> rowValues;
+	const uint8_t        numberOfNodes = ReadEVBNumberOfDestinationNodes();
+	for (uint8_t nodeIndex = 0; nodeIndex < numberOfNodes && nodeIndex < (1 << DTC_EVBStatsType_BRAM_TYPE_SIZE); ++nodeIndex)
+		rowValues.push_back(static_cast<int32_t>(ReadEVBStats(type, nodeIndex)));
+	return rowValues;
+}  // end ReadEVBStatsRow()
 
 // Get the last packet count and its timestamp for a DTC
 std::pair<uint32_t, std::chrono::steady_clock::time_point> DTCLib::DTC_Registers::getPacketCountInfo(uint8_t dtc) const
@@ -7560,6 +7587,106 @@ DTCLib::DTC_Register DTCLib::DTC_Registers::GetReceiveDHTimeoutCountLinkRegister
 	return reg;
 }  // end GetReceiveDHTimeoutCountLinkRegister()
 
+// RX Wrong-Tag DH Dropped Count (2026-11-04)
+uint32_t DTCLib::DTC_Registers::ReadReceiveDroppedDHCount(DTC_Link_ID const& link, std::optional<uint32_t> val)
+{
+	return val.has_value() ? *val : ReadRegister_(GetReceiveDroppedDHCountLinkRegister(link));
+}  // end ReadReceiveDroppedDHCount()
+
+DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatReceiveDroppedDHCountLink(DTC_Link_ID const& link)
+{
+	auto form = CreateFormatter(GetReceiveDroppedDHCountLinkRegister(link));
+	form.description = "RX Wrong-Tag DH Dropped Count on Link " +
+					   std::to_string((GetReceiveDroppedDHCountLinkRegister(link) -
+									   GetReceiveDroppedDHCountLinkRegister(DTC_Link_0)) /
+									  4);
+	std::stringstream o;
+	o << std::dec << ReadReceiveDroppedDHCount(link, form.value);
+	form.vals.push_back(o.str());
+	return form;
+}  // end FormatReceiveDroppedDHCountLink()
+
+DTCLib::DTC_Register DTCLib::DTC_Registers::GetReceiveDroppedDHCountLinkRegister(DTC_Link_ID const& link)
+{
+	DTC_Register reg;
+	switch (link)
+	{
+		case DTC_Link_0:
+			reg = DTC_Register_ReceiveDroppedDHCount_Link0;
+			break;
+		case DTC_Link_1:
+			reg = DTC_Register_ReceiveDroppedDHCount_Link1;
+			break;
+		case DTC_Link_2:
+			reg = DTC_Register_ReceiveDroppedDHCount_Link2;
+			break;
+		case DTC_Link_3:
+			reg = DTC_Register_ReceiveDroppedDHCount_Link3;
+			break;
+		case DTC_Link_4:
+			reg = DTC_Register_ReceiveDroppedDHCount_Link4;
+			break;
+		case DTC_Link_5:
+			reg = DTC_Register_ReceiveDroppedDHCount_Link5;
+			break;
+		default: {
+			__SS__ << "Illegal link index provided: " << link << __E__;
+			__SS_THROW__;
+		}
+	}
+	return reg;
+}  // end GetReceiveDroppedDHCountLinkRegister()
+
+// RX DP Dropped Count (2026-11-04)
+uint32_t DTCLib::DTC_Registers::ReadReceiveDroppedDPCount(DTC_Link_ID const& link, std::optional<uint32_t> val)
+{
+	return val.has_value() ? *val : ReadRegister_(GetReceiveDroppedDPCountLinkRegister(link));
+}  // end ReadReceiveDroppedDPCount()
+
+DTCLib::RegisterFormatter DTCLib::DTC_Registers::FormatReceiveDroppedDPCountLink(DTC_Link_ID const& link)
+{
+	auto form = CreateFormatter(GetReceiveDroppedDPCountLinkRegister(link));
+	form.description = "RX DP Dropped Count on Link " +
+					   std::to_string((GetReceiveDroppedDPCountLinkRegister(link) -
+									   GetReceiveDroppedDPCountLinkRegister(DTC_Link_0)) /
+									  4);
+	std::stringstream o;
+	o << std::dec << ReadReceiveDroppedDPCount(link, form.value);
+	form.vals.push_back(o.str());
+	return form;
+}  // end FormatReceiveDroppedDPCountLink()
+
+DTCLib::DTC_Register DTCLib::DTC_Registers::GetReceiveDroppedDPCountLinkRegister(DTC_Link_ID const& link)
+{
+	DTC_Register reg;
+	switch (link)
+	{
+		case DTC_Link_0:
+			reg = DTC_Register_ReceiveDroppedDPCount_Link0;
+			break;
+		case DTC_Link_1:
+			reg = DTC_Register_ReceiveDroppedDPCount_Link1;
+			break;
+		case DTC_Link_2:
+			reg = DTC_Register_ReceiveDroppedDPCount_Link2;
+			break;
+		case DTC_Link_3:
+			reg = DTC_Register_ReceiveDroppedDPCount_Link3;
+			break;
+		case DTC_Link_4:
+			reg = DTC_Register_ReceiveDroppedDPCount_Link4;
+			break;
+		case DTC_Link_5:
+			reg = DTC_Register_ReceiveDroppedDPCount_Link5;
+			break;
+		default: {
+			__SS__ << "Illegal link index provided: " << link << __E__;
+			__SS_THROW__;
+		}
+	}
+	return reg;
+}  // end GetReceiveDroppedDPCountLinkRegister()
+
 uint32_t DTCLib::DTC_Registers::ReadTXNullHeartbeatCount(DTC_Link_ID const& link, std::optional<uint32_t> val)
 {
 	return val.has_value() ? *val : ReadRegister_(GetTXNullHeartbeatCountLinkRegister(link));
@@ -7974,6 +8101,91 @@ void DTCLib::DTC_Registers::SetEVBLocalChunkCap(uint16_t words)
 	WriteRegister_(upperHalf | words, DTC_Register_EVBLocalChunkCap);
 }  // end SetEVBLocalChunkCap()
 
+bool DTCLib::DTC_Registers::ReadEVBSecondCreditRead(std::optional<uint32_t> val)
+{
+	return ((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBLocalChunkCap)) & 0x00010000u) != 0;
+}  // end ReadEVBSecondCreditRead()
+
+void DTCLib::DTC_Registers::SetEVBSecondCreditRead(bool enable)
+{
+	const uint32_t otherBits = ReadRegister_(DTC_Register_EVBLocalChunkCap) & ~0x00010000u;
+	WriteRegister_(otherBits | (enable ? 0x00010000u : 0u), DTC_Register_EVBLocalChunkCap);
+}  // end SetEVBSecondCreditRead()
+
+uint32_t DTCLib::DTC_Registers::ReadEVBLocalChunkCapRegister()
+{
+	return ReadRegister_(DTC_Register_EVBLocalChunkCap);
+}  // end ReadEVBLocalChunkCapRegister()
+
+bool DTCLib::DTC_Registers::ReadEVBShortLastFrame(std::optional<uint32_t> val)
+{
+	return ((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBLocalChunkCap)) & 0x00020000u) != 0;
+}  // end ReadEVBShortLastFrame()
+
+bool DTCLib::DTC_Registers::ReadEVBMeasuredWindow(std::optional<uint32_t> val)
+{
+	return ((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBLocalChunkCap)) & 0x00040000u) != 0;
+}  // end ReadEVBMeasuredWindow()
+
+bool DTCLib::DTC_Registers::ReadEVBAlignedStart(std::optional<uint32_t> val)
+{
+	return ((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBLocalChunkCap)) & 0x00080000u) != 0;
+}  // end ReadEVBAlignedStart()
+
+bool DTCLib::DTC_Registers::ReadEVBMarkerFill(std::optional<uint32_t> val)
+{
+	return ((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBLocalChunkCap)) & 0x00100000u) != 0;
+}  // end ReadEVBMarkerFill()
+
+uint8_t DTCLib::DTC_Registers::ReadEVBMissingClockMarkerCount(std::optional<uint32_t> val)
+{
+	return static_cast<uint8_t>((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBLocalChunkCap)) >> 24);
+}  // end ReadEVBMissingClockMarkerCount()
+
+bool DTCLib::DTC_Registers::ReadEVBDeepPrefetch(std::optional<uint32_t> val)
+{
+	return ((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBLocalChunkCap)) & 0x00200000u) != 0;
+}  // end ReadEVBDeepPrefetch()
+
+uint32_t DTCLib::DTC_Registers::ReadEVBMissingClockMarkerCountFull(std::optional<uint32_t> val)
+{
+	return val.has_value() ? *val : ReadRegister_(DTC_Register_EVBMissingClockMarkerCount);
+}  // end ReadEVBMissingClockMarkerCountFull()
+
+uint16_t DTCLib::DTC_Registers::ReadEVBMarkerDelay(std::optional<uint32_t> val)
+{
+	return static_cast<uint16_t>((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBMarkerDelay)) & 0x1FFu);
+}  // end ReadEVBMarkerDelay()
+
+uint16_t DTCLib::DTC_Registers::SetEVBMarkerDelay(uint16_t markerDelay)
+{
+	WriteRegister_(markerDelay & 0x1FFu, DTC_Register_EVBMarkerDelay);
+	return ReadEVBMarkerDelay();
+}  // end SetEVBMarkerDelay()
+
+uint16_t DTCLib::DTC_Registers::ReadEVBPlanningGap(std::optional<uint32_t> val)
+{
+	return static_cast<uint16_t>((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBPlanningGap)) & 0x3FFu);
+}  // end ReadEVBPlanningGap()
+
+uint16_t DTCLib::DTC_Registers::SetEVBPlanningGap(uint16_t planningGap)
+{
+	WriteRegister_(planningGap & 0x3FFu, DTC_Register_EVBPlanningGap);
+	return ReadEVBPlanningGap();
+}  // end SetEVBPlanningGap()
+
+uint8_t DTCLib::DTC_Registers::ReadEVBMarkersPerSendWindow(std::optional<uint32_t> val)
+{
+	const uint32_t markersPerWindowField = ((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBLocalChunkCap)) >> 22) & 0x3u;
+	return static_cast<uint8_t>(4 - markersPerWindowField);
+}  // end ReadEVBMarkersPerSendWindow()
+
+uint32_t DTCLib::DTC_Registers::SetEVBLocalChunkCapRegister(uint32_t value)
+{
+	WriteRegister_(value, DTC_Register_EVBLocalChunkCap);
+	return ReadRegister_(DTC_Register_EVBLocalChunkCap);
+}  // end SetEVBLocalChunkCapRegister()
+
 uint32_t DTCLib::DTC_Registers::ReadEVBRemoteChunkControl(std::optional<uint32_t> val)
 {
 	return val.has_value() ? *val : ReadRegister_(DTC_Register_EVBRemoteChunkControl);
@@ -8006,6 +8218,96 @@ uint16_t DTCLib::DTC_Registers::ReadEVBRxIllegalDestCount(std::optional<uint32_t
 {
 	return static_cast<uint16_t>((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBRxIllegalDestCount)) & 0xFFFFu);
 }  // end ReadEVBRxIllegalDestCount()
+
+uint32_t DTCLib::DTC_Registers::ReadEVBSlotHealthRaw(std::optional<uint32_t> val)
+{
+	return val.has_value() ? *val : ReadRegister_(DTC_Register_EVBSlotHealth);
+}  // end ReadEVBSlotHealthRaw()
+
+DTCLib::DTC_Registers::EVBSlotHealth DTCLib::DTC_Registers::ReadEVBSlotHealth()
+{
+	EVBSlotHealth health;
+	health.raw = ReadEVBSlotHealthRaw();
+	health.staleEmptySeen = (health.raw >> 31) & 1u;
+	health.episodes = static_cast<uint16_t>((health.raw >> 16) & 0x7FFFu);
+	health.slotClears = static_cast<uint16_t>(health.raw & 0xFFFFu);
+	return health;
+}  // end ReadEVBSlotHealth()
+
+std::string DTCLib::DTC_Registers::FormatEVBSlotHealthText(const EVBSlotHealth& health, const std::string& indent)
+{
+	std::ostringstream o;
+	o << indent << "0x9260 = 0x" << std::hex << std::setw(8) << std::setfill('0') << health.raw << std::dec << std::setfill(' ')
+	  << ": stale-empty seen " << (health.staleEmptySeen ? "YES" : "no") << ", episodes " << health.episodes << ", staging-slot clears "
+	  << health.slotClears << "\n";
+	if (health.raw == 0xFFFFFFFFu)
+		o << indent << "  (reads 0xFFFFFFFF: register not in this bitfile)\n";
+	else if (health.staleEmptySeen && health.slotClears > 0)
+		o << indent << "  verdict: the staging-slot clear is the cause (bit 31 with clears > 0)\n";
+	else if (health.staleEmptySeen)
+		o << indent << "  verdict: gray-sync / hand-over (bit 31 with no clears)\n";
+	else if (health.slotClears == 0xFFFFu)
+		o << indent << "  verdict: good (bit 31 clear, no episodes); slot clears saturated at 65535 is EXPECTED at 8 nodes with\n"
+		  << indent << "  two staging slots (a clear nearly every window, ~55k/s; each clear re-reads words from DDR = the N=8 rate\n"
+		  << indent << "  ceiling, a throughput item, not a fault; hw agent 2026-10-26)\n";
+	else if (health.slotClears > 0)
+		o << indent << "  verdict: " << health.slotClears << " slot clears, no stale-empty episode\n";
+	else
+		o << indent << "  verdict: clean (nothing set)\n";
+	return o.str();
+}  // end FormatEVBSlotHealthText()
+
+bool DTCLib::DTC_Registers::EVBRxBadEndHasRefusedWholeFrames(uint32_t designDate)
+{
+	// hw agent 2026-11-09: compare the low 28 bits of 0x9004 (the top nibble is the flavor, d or e).
+	// Bit 7 is the 6-ROC flag, so compare without it too, as the retransmission check does.
+	constexpr uint32_t comparableBits     = 0x0FFFFF7Fu;
+	constexpr uint32_t lastOldLayoutBuild = 0xd6110995u;
+	return (designDate & comparableBits) > (lastOldLayoutBuild & comparableBits);
+}  // end EVBRxBadEndHasRefusedWholeFrames()
+
+DTCLib::DTC_Registers::EVBRxBadEnd DTCLib::DTC_Registers::DecodeEVBRxBadEnd(uint32_t raw, uint32_t designDate)
+{
+	EVBRxBadEnd rxBadEnd;
+	rxBadEnd.raw = raw;
+	rxBadEnd.hasRefusedWholeFrames = EVBRxBadEndHasRefusedWholeFrames(designDate);
+	rxBadEnd.sticky = (raw >> 31) & 1u;
+	if (rxBadEnd.hasRefusedWholeFrames)
+	{
+		rxBadEnd.badEndWord = static_cast<uint16_t>((raw >> 24) & 0x7Fu);
+		rxBadEnd.refusedWholeFrames = static_cast<uint8_t>((raw >> 16) & 0xFFu);
+	}
+	else
+		rxBadEnd.badEndWord = static_cast<uint16_t>((raw >> 16) & 0x7FFFu);
+	rxBadEnd.droppedAtEnd = static_cast<uint16_t>(raw & 0xFFFFu);
+	return rxBadEnd;
+}  // end DecodeEVBRxBadEnd()
+
+std::string DTCLib::DTC_Registers::FormatEVBRxBadEndText(const EVBRxBadEnd& rxBadEnd)
+{
+	std::ostringstream o;
+	o << "sticky " << (rxBadEnd.sticky ? 1 : 0) << ", bad_end_word " << rxBadEnd.badEndWord;
+	if (rxBadEnd.hasRefusedWholeFrames)
+	{
+		if (rxBadEnd.badEndWord == 0x7Fu) o << " (saturated)";
+		o << ", refused_whole_frames " << static_cast<unsigned>(rxBadEnd.refusedWholeFrames);
+		if (rxBadEnd.refusedWholeFrames == 0xFFu) o << " (saturated)";
+	}
+	o << ", dropped_at_end " << rxBadEnd.droppedAtEnd;
+	if (!rxBadEnd.hasRefusedWholeFrames)
+		o << "; layout of bitfiles up to 0xd6110995, no refused_whole_frames count";
+	return o.str();
+}  // end FormatEVBRxBadEndText()
+
+uint32_t DTCLib::DTC_Registers::ReadEVBLatestRewindRefusalRaw()
+{
+	return ReadRegister_(DTC_Register_EVBLatestRewindRefusal);
+}  // end ReadEVBLatestRewindRefusalRaw()
+
+DTCLib::DTC_Registers::EVBRxBadEnd DTCLib::DTC_Registers::ReadEVBRxBadEnd()
+{
+	return DecodeEVBRxBadEnd(ReadRegister_(DTC_Register_EVBRxBadEnd), ReadRegister_(CFOandDTC_Register_DesignDate));
+}  // end ReadEVBRxBadEnd()
 
 DTCLib::DTC_Registers::EVBTxHistory DTCLib::DTC_Registers::ReadEVBTxHistory(bool readEntries)
 {
@@ -8515,6 +8817,18 @@ void DTCLib::DTC_Registers::VerifyRegisterWrite_(const CFOandDTC_Register& addre
 				return;
 			case DTC_Register_EVBStats:  // addrs for write, data on read
 				return;
+			case DTC_Register_EVBLocalChunkCap:  // 0x9178 [31:24] is the read-only missing clock marker count, so only check [23:0]
+				dataToWrite &= 0x00ffffff;
+				readbackValue &= 0x00ffffff;
+				break;
+			case DTC_Register_EVBMarkerDelay:  // 0x92B8 [8:0] is the value written; higher bits can read back the delay in use, so only check [8:0]
+				dataToWrite &= 0x000001ff;
+				readbackValue &= 0x000001ff;
+				break;
+			case DTC_Register_EVBPlanningGap:  // 0x92C4 only [9:0] is the planning gap
+				dataToWrite &= 0x000003ff;
+				readbackValue &= 0x000003ff;
+				break;
 
 			default:;  // do direct comparison of each bit
 		}              // end readback verification address case handling
