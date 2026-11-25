@@ -4,6 +4,7 @@
 #include <bitset>  // std::bitset
 // #include <cstdint> // uint8_t, uint16_t
 #include <functional>  // std::bind, std::function
+#include <mutex>       // std::mutex
 #include <vector>      // std::vector
 
 #include "CFOandDTC_Registers.h"
@@ -116,10 +117,11 @@ enum DTC_Register : uint16_t
 	// 0x92A0 Reserved
 	DTC_Register_TXPRBSControl = 0x92B0,
 	DTC_Register_RXPRBSControl = 0x92B4,
-	// 0x92B8 Reserved
-	// 0x92BC Reserved
+	DTC_Register_EVBMarkerDelay = 0x92B8,  // [8:0] clock marker delay in 5 ns steps, 0 to 300 (larger is stored as 300); moved here from 0x915C [7:0] (hw agent 2026-11-24)
+	DTC_Register_EVBMissingClockMarkerCount = 0x92BC,  // [31:0] read-only: clock markers this DTC found missing since SoftReset (hw agent 2026-11-23, bitfile 0xd6112399)
 	DTC_Register_EventModeLookupTableControl = 0x92C0,
-	// 0x92C4-0x92EC Reserved
+	DTC_Register_EVBPlanningGap = 0x92C4,  // [9:0] gap between clock markers that the EVB sender plans its send window with, in 10GbE transmit clocks (6.206 ns), reset 254; kept through SoftReset, takes effect at the next SoftReset (hw agent 2026-11-24)
+	// 0x92C8-0x92EC Reserved
 	DTC_Register_DD3TestRegister = 0x92F0,
 	// 0x92F4 Reserved
 	// 0x92F8 Reserved
@@ -674,6 +676,8 @@ class DTC_Registers : public CFOandDTC_Registers
 	// EVB Stats
 	uint32_t                                           ReadEVBStats(DTC_EVBStatsType type, uint8_t dtc_mac, std::optional<uint32_t> val = std::nullopt);
 	RegisterFormatter                                  FormatEVBStats(DTC_EVBStatsType type = DTC_EVBStatsType::DTC_EVBStatsType_All);
+	std::vector<int32_t>                               ReadEVBStatsRow(DTC_EVBStatsType type);
+	std::mutex                                         evbStatsReadMutex_;  ///< 0x9160 takes an address write and then the reads; keeps two threads from mixing their addresses
 	std::chrono::time_point<std::chrono::steady_clock> EVB_startDataTime, EVB_endDataTime;
 
 	//----------------- end Hardware Event Building configuration -----------------------
@@ -1283,7 +1287,17 @@ class DTC_Registers : public CFOandDTC_Registers
 	uint32_t ReadEVBLocalChunkCapRegister();                                         // 0x9178 raw
 	bool     ReadEVBShortLastFrame(std::optional<uint32_t> val = std::nullopt);      // 0x9178 bit 17 (hw agent 2026-11-20, bitfile 0xd6112095): a data frame that no longer fits the end of the sender's window is cut to what fits and sent
 	bool     ReadEVBMeasuredWindow(std::optional<uint32_t> val = std::nullopt);      // 0x9178 bit 18 (hw agent 2026-11-20, bitfile 0xd6112095): sender times its window from the measured clock marker spacing, not a fixed 254 clocks
-	uint32_t SetEVBLocalChunkCapRegister(uint32_t value);                            // 0x9178 whole word; returns the value read back
+	bool     ReadEVBAlignedStart(std::optional<uint32_t> val = std::nullopt);        // 0x9178 bit 19 (hw agent 2026-11-21, bitfile 0xd6112193): sender starts its send rotation aligned to the clock marker
+	bool     ReadEVBMarkerFill(std::optional<uint32_t> val = std::nullopt);          // 0x9178 bit 20 (hw agent 2026-11-22, bitfile 0xd6112289): if a clock marker does not arrive, the DTC supplies it to its send-window count
+	uint8_t  ReadEVBMissingClockMarkerCount(std::optional<uint32_t> val = std::nullopt);  // 0x9178 [31:24], read-only (hw agent 2026-11-22, bitfile 0xd6112289): clock markers found missing since SoftReset, saturates at 255
+	bool     ReadEVBDeepPrefetch(std::optional<uint32_t> val = std::nullopt);        // 0x9178 bit 21 (hw agent 2026-11-23, bitfile 0xd6112399): sender stages the next window's words ahead (up to 832 instead of 352)
+	uint32_t ReadEVBMissingClockMarkerCountFull(std::optional<uint32_t> val = std::nullopt);  // 0x92BC [31:0], read-only (hw agent 2026-11-23, bitfile 0xd6112399): clock markers found missing since SoftReset, does not saturate in a run
+	uint16_t ReadEVBMarkerDelay(std::optional<uint32_t> val = std::nullopt);         // 0x92B8 [8:0] (hw agent 2026-11-24): clock marker delay in 5 ns steps, 0 to 300; replaces 0x915C [7:0], which now reads 0
+	uint16_t ReadEVBPlanningGap(std::optional<uint32_t> val = std::nullopt);         // 0x92C4 [9:0] (hw agent 2026-11-24): clock marker gap the EVB sender plans with, in 10GbE transmit clocks, reset 254
+	uint16_t SetEVBPlanningGap(uint16_t planningGap);                                // 0x92C4 [9:0]; returns the gap read back; takes effect at the next SoftReset
+	uint16_t SetEVBMarkerDelay(uint16_t markerDelay);                                // 0x92B8 [8:0]; returns the delay read back (a value above 300 is stored as 300)
+	uint8_t  ReadEVBMarkersPerSendWindow(std::optional<uint32_t> val = std::nullopt);  // 0x9178 [23:22] (hw agent 2026-11-24): returns the number of clock markers per send window: field 0 = 4, 1 = 3, 2 = 2, 3 = 1
+	uint32_t SetEVBLocalChunkCapRegister(uint32_t value);                          // 0x9178 whole word; returns the value read back
 	uint32_t ReadEVBRemoteChunkControl(std::optional<uint32_t> val = std::nullopt);  // 0x917C raw
 	// EVB3 TX packet history (0x925C status, 0x91F0 readback; hw agent 2026-10-13).  The log records every
 	// 10GbE TX packet until a peer requests a retransmission, then freezes: the entries around the peer's

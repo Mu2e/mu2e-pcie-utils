@@ -831,6 +831,64 @@ std::vector<std::shared_ptr<DTCLib::DTC_Event>> DTCLib::DTC::GetEVBDataAsEvents(
 
 			size_t chunkBytes = static_cast<size_t>(chunk_wc) * sizeof(uint64_t);
 			evbDrainedBytes_ += chunkBytes;
+
+			// Follow this source's record stream just far enough to read the event tag of every subevent
+			// header (also in drain-only mode).  A record is its 8-byte count word followed by the subevent;
+			// a subevent larger than one DMA transfer continues in records that are a count word plus raw words.
+			{
+				EVBTagTrackOfSource& tagTrack = evbTagTrackOfSource_[chunk_src];
+				const uint8_t* chunkBytesPointer = reinterpret_cast<const uint8_t*>(&words[ptr + 1]);
+				size_t chunkOffset = 0;
+				while (!tagTrack.streamLost && chunkOffset < chunkBytes)
+				{
+					if (tagTrack.recordBytesRemaining == 0)
+					{
+						const size_t bytesNeeded = RECORD_HEADER_SIZE + (tagTrack.subeventBytesRemaining == 0 ? sizeof(DTC_SubEventHeader) : 0);
+						if (chunkBytes - chunkOffset < bytesNeeded)
+						{
+							tagTrack.streamLost = true;  // header cut by the chunk edge
+							break;
+						}
+						const uint64_t countWord = *reinterpret_cast<const uint64_t*>(chunkBytesPointer + chunkOffset);
+						const bool countWordValid = (countWord >> 16) == 0 && (countWord & 0xF) == 0x8 && (countWord & 0xFFFF) > RECORD_HEADER_SIZE;
+						uint64_t recordBytes = countWord & 0xFFFF;
+						if (tagTrack.subeventBytesRemaining == 0)
+						{
+							const auto* subeventHeader = reinterpret_cast<const DTC_SubEventHeader*>(chunkBytesPointer + chunkOffset + RECORD_HEADER_SIZE);
+							const uint64_t subeventBytes = subeventHeader->inclusive_subevent_byte_count;
+							if (subeventBytes < sizeof(DTC_SubEventHeader))
+							{
+								tagTrack.streamLost = true;
+								break;
+							}
+							// one record holds the whole subevent unless the count word says it is a shorter first piece
+							if (!countWordValid || recordBytes >= RECORD_HEADER_SIZE + subeventBytes || recordBytes <= RECORD_HEADER_SIZE + sizeof(DTC_SubEventHeader))
+								recordBytes = RECORD_HEADER_SIZE + subeventBytes;
+							tagTrack.subeventBytesRemaining = subeventBytes - (recordBytes - RECORD_HEADER_SIZE);
+							const uint64_t eventTag = static_cast<uint64_t>(subeventHeader->event_tag_low) | (static_cast<uint64_t>(subeventHeader->event_tag_high) << 32);
+							if (evbSubeventHeadersSeen_ == 0)
+								evbFirstTagSeen_ = evbLowestTagSeen_ = evbHighestTagSeen_ = eventTag;
+							evbLastTagSeen_ = eventTag;
+							if (eventTag < evbLowestTagSeen_) evbLowestTagSeen_ = eventTag;
+							if (eventTag > evbHighestTagSeen_) evbHighestTagSeen_ = eventTag;
+							++evbSubeventHeadersSeen_;
+						}
+						else
+						{
+							if (!countWordValid || recordBytes - RECORD_HEADER_SIZE > tagTrack.subeventBytesRemaining)
+							{
+								tagTrack.streamLost = true;
+								break;
+							}
+							tagTrack.subeventBytesRemaining -= recordBytes - RECORD_HEADER_SIZE;
+						}
+						tagTrack.recordBytesRemaining = recordBytes;
+					}
+					const size_t bytesTaken = std::min(static_cast<size_t>(tagTrack.recordBytesRemaining), chunkBytes - chunkOffset);
+					tagTrack.recordBytesRemaining -= bytesTaken;
+					chunkOffset += bytesTaken;
+				}
+			}
 			if (!evbDrainOnly_)
 			{
 				auto& srcBuf = evbPerSourceReassembly_[chunk_src];
@@ -1365,6 +1423,21 @@ std::string DTCLib::DTC::FormatEVBReadProfile() const
 	row("(unaccounted: clock reads, returns)", profile.totalNs > accounted ? profile.totalNs - accounted : 0, 0, "");
 	return o.str();
 }  // end FormatEVBReadProfile()
+
+std::string DTCLib::DTC::FormatEVBEventTagsSeen() const
+{
+	std::stringstream ss;
+	if (evbSubeventHeadersSeen_ == 0)
+		ss << "no subevent header seen";
+	else
+		ss << "first " << evbFirstTagSeen_ << ", last " << evbLastTagSeen_ << ", lowest " << evbLowestTagSeen_ << ", highest " << evbHighestTagSeen_
+		   << ", subevent headers " << evbSubeventHeadersSeen_;
+	size_t sourcesLost = 0;
+	for (const auto& tagTrack : evbTagTrackOfSource_)
+		if (tagTrack.streamLost) ++sourcesLost;
+	ss << ", sources no longer followed " << sourcesLost;
+	return ss.str();
+}  // end FormatEVBEventTagsSeen()
 
 std::string DTCLib::DTC::FormatEVBRemoteChunkSizes() const
 {

@@ -2531,12 +2531,25 @@ uint32_t DTCLib::DTC_Registers::ReadEVBStats(DTC_EVBStatsType type, uint8_t dtc_
 	t |= dtc_mac;  // address fully built now
 	__COUTT__ << "Read EVB Stat address: 0x" << std::hex << t << __E__;
 
+	// the Buffer Test thread and an FE Macro may both read stats: address write and reads must stay together
+	std::lock_guard<std::mutex> evbStatsReadLock(evbStatsReadMutex_);
+
 	WriteRegister_(t, DTC_Register_EVBStats);
 
 	// first read drains any stale capture from the TX FSM holding the BRAM port
 	ReadRegister_(DTC_Register_EVBStats);
 	return ReadRegister_(DTC_Register_EVBStats);
 }  // end ReadEVBStats()
+
+// Read one EVB stats type for every DTC of the cluster: entry i is the value for the DTC with EVB address (start node + i), as signed 32-bit
+std::vector<int32_t> DTCLib::DTC_Registers::ReadEVBStatsRow(DTC_EVBStatsType type)
+{
+	std::vector<int32_t> rowValues;
+	const uint8_t        numberOfNodes = ReadEVBNumberOfDestinationNodes();
+	for (uint8_t nodeIndex = 0; nodeIndex < numberOfNodes && nodeIndex < (1 << DTC_EVBStatsType_BRAM_TYPE_SIZE); ++nodeIndex)
+		rowValues.push_back(static_cast<int32_t>(ReadEVBStats(type, nodeIndex)));
+	return rowValues;
+}  // end ReadEVBStatsRow()
 
 // Get the last packet count and its timestamp for a DTC
 std::pair<uint32_t, std::chrono::steady_clock::time_point> DTCLib::DTC_Registers::getPacketCountInfo(uint8_t dtc) const
@@ -8114,6 +8127,59 @@ bool DTCLib::DTC_Registers::ReadEVBMeasuredWindow(std::optional<uint32_t> val)
 	return ((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBLocalChunkCap)) & 0x00040000u) != 0;
 }  // end ReadEVBMeasuredWindow()
 
+bool DTCLib::DTC_Registers::ReadEVBAlignedStart(std::optional<uint32_t> val)
+{
+	return ((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBLocalChunkCap)) & 0x00080000u) != 0;
+}  // end ReadEVBAlignedStart()
+
+bool DTCLib::DTC_Registers::ReadEVBMarkerFill(std::optional<uint32_t> val)
+{
+	return ((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBLocalChunkCap)) & 0x00100000u) != 0;
+}  // end ReadEVBMarkerFill()
+
+uint8_t DTCLib::DTC_Registers::ReadEVBMissingClockMarkerCount(std::optional<uint32_t> val)
+{
+	return static_cast<uint8_t>((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBLocalChunkCap)) >> 24);
+}  // end ReadEVBMissingClockMarkerCount()
+
+bool DTCLib::DTC_Registers::ReadEVBDeepPrefetch(std::optional<uint32_t> val)
+{
+	return ((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBLocalChunkCap)) & 0x00200000u) != 0;
+}  // end ReadEVBDeepPrefetch()
+
+uint32_t DTCLib::DTC_Registers::ReadEVBMissingClockMarkerCountFull(std::optional<uint32_t> val)
+{
+	return val.has_value() ? *val : ReadRegister_(DTC_Register_EVBMissingClockMarkerCount);
+}  // end ReadEVBMissingClockMarkerCountFull()
+
+uint16_t DTCLib::DTC_Registers::ReadEVBMarkerDelay(std::optional<uint32_t> val)
+{
+	return static_cast<uint16_t>((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBMarkerDelay)) & 0x1FFu);
+}  // end ReadEVBMarkerDelay()
+
+uint16_t DTCLib::DTC_Registers::SetEVBMarkerDelay(uint16_t markerDelay)
+{
+	WriteRegister_(markerDelay & 0x1FFu, DTC_Register_EVBMarkerDelay);
+	return ReadEVBMarkerDelay();
+}  // end SetEVBMarkerDelay()
+
+uint16_t DTCLib::DTC_Registers::ReadEVBPlanningGap(std::optional<uint32_t> val)
+{
+	return static_cast<uint16_t>((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBPlanningGap)) & 0x3FFu);
+}  // end ReadEVBPlanningGap()
+
+uint16_t DTCLib::DTC_Registers::SetEVBPlanningGap(uint16_t planningGap)
+{
+	WriteRegister_(planningGap & 0x3FFu, DTC_Register_EVBPlanningGap);
+	return ReadEVBPlanningGap();
+}  // end SetEVBPlanningGap()
+
+uint8_t DTCLib::DTC_Registers::ReadEVBMarkersPerSendWindow(std::optional<uint32_t> val)
+{
+	const uint32_t markersPerWindowField = ((val.has_value() ? *val : ReadRegister_(DTC_Register_EVBLocalChunkCap)) >> 22) & 0x3u;
+	return static_cast<uint8_t>(4 - markersPerWindowField);
+}  // end ReadEVBMarkersPerSendWindow()
+
 uint32_t DTCLib::DTC_Registers::SetEVBLocalChunkCapRegister(uint32_t value)
 {
 	WriteRegister_(value, DTC_Register_EVBLocalChunkCap);
@@ -8751,6 +8817,18 @@ void DTCLib::DTC_Registers::VerifyRegisterWrite_(const CFOandDTC_Register& addre
 				return;
 			case DTC_Register_EVBStats:  // addrs for write, data on read
 				return;
+			case DTC_Register_EVBLocalChunkCap:  // 0x9178 [31:24] is the read-only missing clock marker count, so only check [23:0]
+				dataToWrite &= 0x00ffffff;
+				readbackValue &= 0x00ffffff;
+				break;
+			case DTC_Register_EVBMarkerDelay:  // 0x92B8 [8:0] is the value written; higher bits can read back the delay in use, so only check [8:0]
+				dataToWrite &= 0x000001ff;
+				readbackValue &= 0x000001ff;
+				break;
+			case DTC_Register_EVBPlanningGap:  // 0x92C4 only [9:0] is the planning gap
+				dataToWrite &= 0x000003ff;
+				readbackValue &= 0x000003ff;
+				break;
 
 			default:;  // do direct comparison of each bit
 		}              // end readback verification address case handling

@@ -2162,6 +2162,17 @@ uint32_t CFOLib::CFO_Registers::ReadRunPlanSubrunPredOffset(std::optional<uint32
 	return val.has_value() ? *val : ReadRegister_(CFO_Register_RunPlanSubrunPredOffset);
 }
 
+// Clock Marker Spacing Register
+void CFOLib::CFO_Registers::SetClockMarkerSpacing(uint32_t ticks)
+{
+	WriteRegister_(ticks, CFO_Register_ClockMarkerSpacing);
+}
+
+uint32_t CFOLib::CFO_Registers::ReadClockMarkerSpacing(std::optional<uint32_t> val)
+{
+	return (val.has_value() ? *val : ReadRegister_(CFO_Register_ClockMarkerSpacing)) & 0xFF;  // spacing is bits 7:0
+}
+
 DTCLib::RegisterFormatter CFOLib::CFO_Registers::FormatRunPlanSubrunPredOffset()
 {
 	auto form = CreateFormatter(CFO_Register_RunPlanSubrunPredOffset);

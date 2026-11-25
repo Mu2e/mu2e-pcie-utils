@@ -28,6 +28,7 @@ enum CFO_Register : uint16_t
 	// CFO_Register_ClockMarkerIntervalCount  = 0x9154,
 	CFO_Register_RunPlanSubrunEvtLimit     = 0x9154,
 	CFO_Register_RunPlanSubrunPredOffset   = 0x9158,
+	CFO_Register_ClockMarkerSpacing        = 0x915C,  // gap between clock markers in 25 ns ticks, default 65 (1625 ns), firmware accepts 40 to 140; reads 0 on firmware older than 0xC6112415 (CFO firmware agent 2026-11-24)
 	CFO_Register_SERDESOscillatorFrequency = 0x9160,
 	CFO_Register_SERDESClock_IICBusControl = 0x9164,
 	CFO_Register_TimestampPreset0          = 0x9180,
@@ -1131,6 +1132,16 @@ class CFO_Registers : public DTCLib::CFOandDTC_Registers
 	/// </summary>
 	/// <returns>Current subrun prediction offset value</returns>
 	uint32_t ReadRunPlanSubrunPredOffset(std::optional<uint32_t> val = std::nullopt);
+	/// <summary>
+	/// Set the gap between clock markers (0x915C)
+	/// </summary>
+	/// <param name="ticks">Gap in 25 ns ticks (default 65)</param>
+	void SetClockMarkerSpacing(uint32_t ticks);
+	/// <summary>
+	/// Read the gap between clock markers (0x915C)
+	/// </summary>
+	/// <returns>Gap in 25 ns ticks; 0 when the firmware does not have the register</returns>
+	uint32_t ReadClockMarkerSpacing(std::optional<uint32_t> val = std::nullopt);
 	/// <summary>
 	/// Formats the register's current value for register dumps
 	/// </summary>

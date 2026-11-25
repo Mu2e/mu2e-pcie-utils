@@ -119,6 +119,10 @@ class DTC : public DTC_Registers
 	bool     GetEVBDrainOnly() const { return evbDrainOnly_; }
 	uint64_t GetEVBDrainedBytes() const { return evbDrainedBytes_; }  ///< chunk payload bytes seen (both modes)
 	uint64_t GetEVBDMABuffersRead() const { return evbDMABuffersRead_; }
+	/// Event tags of the subevent headers seen in the FAFA chunk stream (both modes, also drain-only):
+	/// first and last tag in arrival order, lowest and highest tag, number of subevent headers, and
+	/// the sources whose stream could not be followed (a header cut by a chunk edge or a bad count).
+	std::string FormatEVBEventTagsSeen() const;
 	/// Step profile of GetEVBDataAsEvents: wall time (steady_clock ns) accumulated per step over all
 	/// calls since ResetEVBAssembly, plus call/record counts.  Always on; one clock read per step
 	/// boundary (about 25 ns each, ~0.1 us per call), negligible against the ~60 us a DMA buffer takes.
@@ -179,6 +183,12 @@ class DTC : public DTC_Registers
 		evbRemoteChunkSizeHistogram_.assign(8192, 0);
 		evbDrainedBytes_   = 0;
 		evbDMABuffersRead_ = 0;
+		evbTagTrackOfSource_.assign(256, EVBTagTrackOfSource{});
+		evbSubeventHeadersSeen_ = 0;
+		evbFirstTagSeen_        = 0;
+		evbLastTagSeen_         = 0;
+		evbLowestTagSeen_       = 0;
+		evbHighestTagSeen_      = 0;
 		evbReadProfile_    = EVBReadProfile{};
 		evbSourcesKnown_   = false;
 	}
@@ -470,6 +480,19 @@ class DTC : public DTC_Registers
 	bool                                                   evbDrainOnly_{false};
 	uint64_t                                               evbDrainedBytes_{0};
 	uint64_t                                               evbDMABuffersRead_{0};
+	/// Where one source's record stream stands, to find the subevent headers without reassembly
+	struct EVBTagTrackOfSource
+	{
+		uint64_t recordBytesRemaining{0};    ///< bytes of the current record still to come
+		uint64_t subeventBytesRemaining{0};  ///< subevent bytes still to come in later records (split subevents)
+		bool     streamLost{false};          ///< a header was cut by a chunk edge or a count was bad: no longer followed
+	};
+	std::vector<EVBTagTrackOfSource>                       evbTagTrackOfSource_ = std::vector<EVBTagTrackOfSource>(256);
+	uint64_t                                               evbSubeventHeadersSeen_{0};
+	uint64_t                                               evbFirstTagSeen_{0};
+	uint64_t                                               evbLastTagSeen_{0};
+	uint64_t                                               evbLowestTagSeen_{0};
+	uint64_t                                               evbHighestTagSeen_{0};
 	EVBReadProfile                                         evbReadProfile_;
 	uint8_t                                                evbNumSources_{1};
 	bool                                                   evbSourcesKnown_{false};
